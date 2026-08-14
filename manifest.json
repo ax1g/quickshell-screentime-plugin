@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "agx.screen-time",
+  "name": "Screen Time",
+  "version": "1.0.0",
+  "author": "agx",
+  "description": "Tracks daily screen time per app, shows today's total in the bar, and summarizes usage patterns",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Screen Time",
+    "description": "Daily screen time per app with usage insights",
+    "category": "Wellbeing",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
