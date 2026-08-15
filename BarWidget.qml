@@ -51,8 +51,15 @@ BarWidget {
   }
 
   // The bar's open-panel indicator (underline) tracks the painted label
-  // width instead of a fraction of the slot, mirroring omarchy.clock.
-  readonly property real openPanelIndicatorWidth: button.labelWidth
+  // width instead of a fraction of the slot, mirroring omarchy.clock. In
+  // icon-only mode the glyph is painted through an OpticalGlyph so its ink
+  // (not its advance box) is centred, and the mark takes that painted width
+  // so it lines up with the visible glyph rather than drifting off it.
+  readonly property real openPanelIndicatorWidth: {
+    if (root.iconOnly && !root.vertical && iconGlyph)
+      return Math.max(1, Math.round(iconGlyph.tightWidth))
+    return button.labelWidth
+  }
   readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
 
   // ---- Panel shape contract for shell.summon/hide/toggle routing ---------
@@ -116,7 +123,7 @@ BarWidget {
     text: root.vertical
       ? ""
       : root.iconOnly ? root.glyph : root.glyph + " " + root.label
-    labelVisible: !root.vertical
+    labelVisible: !root.vertical && !root.iconOnly
     hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
     fixedHeight: root.vertical ? root.verticalLines.length * Style.bar.iconSlot : -1
     horizontalMargin: 8.5
@@ -124,6 +131,20 @@ BarWidget {
     onPressed: function(b) {
       if (b === Qt.RightButton) root.toggleIconOnly()
       else root.togglePanel()
+    }
+
+    // Icon-only mode: the Text label is hidden (the slot still sizes off its
+    // advance width) and the glyph is painted through an OpticalGlyph, which
+    // shifts the Text so the glyph's ink is centred instead of sitting
+    // somewhere inside its advance box.
+    OpticalGlyph {
+      id: iconGlyph
+      visible: !root.vertical && root.iconOnly
+      anchors.fill: parent
+      text: root.glyph
+      fontFamily: button.fontFamily
+      fontSize: button.fontSize
+      color: button.foreground
     }
 
     Column {
