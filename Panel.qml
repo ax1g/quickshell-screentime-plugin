@@ -24,6 +24,13 @@ Panel {
 
   readonly property var apps: Model.groupedApps(Model.appList(root.today), Model.DONUT_MAX_SLICES)
   readonly property var insightRows: Model.insights(root.today, root.days, root.todayKey)
+  readonly property var weekTrend: Model.weekTrend(root.days, root.todayKey)
+  readonly property double weekMax: {
+    var max = 0
+    var list = root.weekTrend
+    for (var i = 0; i < list.length; i++) max = Math.max(max, Number(list[i].ms) || 0)
+    return max
+  }
   readonly property double todayTotal: root.today ? (root.today.total || 0) : 0
   property bool patternsExpanded: false
 
@@ -31,35 +38,43 @@ Panel {
   readonly property var segments: Model.arcSegments(root.apps)
   readonly property var sliceColors: Model.sliceColors(root.apps.length, Color.accent)
 
-  // Index of the legend row under the pointer, -1 when nothing is hovered.
-  property int hoveredIndex: -1
-
-  readonly property string hoveredAppName: {
-    if (root.hoveredIndex >= 0 && root.hoveredIndex < root.apps.length)
-      return String(root.apps[root.hoveredIndex].app || "")
-    return ""
-  }
-  readonly property double hoveredAppMs: {
-    if (root.hoveredIndex >= 0 && root.hoveredIndex < root.apps.length)
-      return Number(root.apps[root.hoveredIndex].ms) || 0
-    return root.todayTotal
-  }
-
-  // Ring geometry: the radius is fixed for the widest (hovered) stroke so
-  // growing the stroke never clips against the Shape bounds.
+  // Ring geometry: the radius is fixed for the base stroke so it never
+  // clips against the Shape bounds.
   readonly property real ringSize: Style.space(116)
   readonly property real ringBaseWidth: Style.space(14)
-  readonly property real ringHoverWidth: Style.space(19)
-  readonly property real ringRadius: root.ringSize / 2 - root.ringHoverWidth / 2
+  readonly property real ringRadius: root.ringSize / 2 - root.ringBaseWidth / 2
 
-  // Slice color at a given alpha. ShapePath has no opacity property, so
-  // dimming (and the hover highlight) has to come through the stroke color.
+  // Slice color at a given alpha (alpha 1 for the ring, dimmed variants
+  // used by the trend bars).
   function sliceColor(index, alpha) {
     var hex = String(root.sliceColors[index] || Color.accent).replace(/[#\s]/g, "")
     var r = parseInt(hex.substr(0, 2), 16) / 255
     var g = parseInt(hex.substr(2, 2), 16) / 255
     var b = parseInt(hex.substr(4, 2), 16) / 255
     return Qt.rgba(r, g, b, alpha)
+  }
+
+  // Per-row glyph for the patterns section: a filled star for the top app,
+  // a trend arrow for vs-yesterday, a hollow star for the busiest day.
+  function insightIcon(label, value) {
+    if (label === "Top app") return "\u2605"
+    if (label === "vs yesterday") return root.deltaArrow(value)
+    if (label === "Busiest day (7d)") return "\u2606"
+    return ""
+  }
+
+  // More time than yesterday reads full, less time reads dimmed.
+  function insightIconColor(label, value) {
+    if (label === "vs yesterday" && String(value).charAt(0) === "-")
+      return Qt.darker(root.contentForeground, 1.5)
+    return root.contentForeground
+  }
+
+  function deltaArrow(value) {
+    var sign = String(value).charAt(0)
+    if (sign === "+") return "\u2197"
+    if (sign === "-") return "\u2198"
+    return "\u2192"
   }
 
   // Guarded so the widget renders before the bar is injected.
@@ -150,36 +165,46 @@ Panel {
               text: "󰔟"
               color: root.contentForeground
               font.family: root.contentFontFamily
-              font.pixelSize: Style.font.display
+              font.pixelSize: Style.font.displayLarge
               anchors.left: parent.left
-              anchors.verticalCenter: parent.verticalCenter
-              // Nerd Font glyphs paint ~15% of the em above their text box
-              // (see PanelSectionHeader), so the clock reads ~2px high; drop
-              // it half the overshoot to sit on the label's true center.
-              anchors.verticalCenterOffset: Math.ceil(heroIcon.font.pixelSize * 0.15 / 2)
+              anchors.top: parent.top
             }
 
-            Text {
+            Row {
               id: patternsCorner
-              text: root.patternsExpanded ? "PATTERNS \u25be" : "PATTERNS \u25b8"
-              color: patternsCornerMouse.containsMouse
-                ? root.contentForeground
-                : Qt.darker(root.contentForeground, 1.4)
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.caption
-              font.bold: true
-              font.letterSpacing: 1.2
-              elide: Text.ElideRight
+              spacing: Style.space(2)
               anchors.right: parent.right
-              anchors.verticalCenter: parent.verticalCenter
+              anchors.top: parent.top
 
-              MouseArea {
-                id: patternsCornerMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.togglePatterns()
+              Text {
+                text: "PATTERNS"
+                color: patternsCornerMouse.containsMouse
+                  ? root.contentForeground
+                  : Qt.darker(root.contentForeground, 1.4)
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.2
+                anchors.verticalCenter: parent.verticalCenter
               }
+
+              Text {
+                text: root.patternsExpanded ? "\u25be" : "\u25b8"
+                color: patternsCornerMouse.containsMouse
+                  ? root.contentForeground
+                  : Qt.darker(root.contentForeground, 1.4)
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.title
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            MouseArea {
+              id: patternsCornerMouse
+              anchors.fill: patternsCorner
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.togglePatterns()
             }
 
             Column {
@@ -220,14 +245,6 @@ Panel {
             visible: root.apps.length > 0
             implicitHeight: visible ? Math.max(root.ringSize, legendColumn.implicitHeight) : 0
 
-            // Clear the hover highlight once the pointer leaves the whole
-            // breakdown row (donut or legend).
-            MouseArea {
-              anchors.fill: parent
-              hoverEnabled: true
-              onExited: root.hoveredIndex = -1
-            }
-
             Item {
               id: donutItem
               width: root.ringSize
@@ -246,7 +263,6 @@ Panel {
                 Connections {
                   target: root
                   function onSegmentsChanged() { donutCanvas.requestPaint() }
-                  function onHoveredIndexChanged() { donutCanvas.requestPaint() }
                   function onSliceColorsChanged() { donutCanvas.requestPaint() }
                 }
 
@@ -259,13 +275,11 @@ Panel {
                   var cx = size / 2
                   var cy = size / 2
                   var rad = root.ringRadius
-                  var hovered = root.hoveredIndex
-                  var anyHovered = hovered >= 0
                   var toRad = Math.PI / 180
                   for (var i = 0; i < segs.length; i++) {
                     var seg = segs[i]
-                    ctx.lineWidth = hovered === i ? root.ringHoverWidth : root.ringBaseWidth
-                    ctx.strokeStyle = root.sliceColor(i, anyHovered && hovered !== i ? 0.45 : 1.0)
+                    ctx.lineWidth = root.ringBaseWidth
+                    ctx.strokeStyle = root.sliceColor(i, 1.0)
                     ctx.beginPath()
                     ctx.arc(cx, cy, rad, seg.startAngle * toRad, (seg.startAngle + seg.sweepAngle) * toRad, false)
                     ctx.stroke()
@@ -273,25 +287,25 @@ Panel {
                 }
               }
 
-              // Center readout: hovered app's name + time, else today's total.
+              // Center readout: today's total.
               Column {
                 anchors.centerIn: parent
                 width: parent.width * 0.6
                 spacing: Style.space(1)
 
                 Text {
-                  text: root.hoveredAppName !== "" ? root.hoveredAppName : "TODAY"
+                  text: "TODAY"
                   color: root.contentForeground
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.bodySmall
-                  font.bold: root.hoveredAppName !== ""
+                  font.bold: true
                   elide: Text.ElideRight
                   width: parent.width
                   horizontalAlignment: Text.AlignHCenter
                 }
 
                 Text {
-                  text: Model.fmt(root.hoveredAppMs)
+                  text: Model.fmt(root.todayTotal)
                   color: Qt.darker(root.contentForeground, 1.4)
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.caption
@@ -323,14 +337,6 @@ Panel {
 
                   width: parent.width
                   implicitHeight: Math.max(swatch.implicitHeight, Math.max(appNameText.implicitHeight, appTimeText.implicitHeight))
-
-                  MouseArea {
-                    id: legendRowMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: root.hoveredIndex = index
-                    onExited: if (root.hoveredIndex === index) root.hoveredIndex = -1
-                  }
 
                   Rectangle {
                     id: swatch
@@ -380,7 +386,58 @@ Panel {
             Column {
               id: patternsColumn
               width: parent.width
-              spacing: Style.space(6)
+              spacing: Style.space(10)
+
+              PanelSeparator {
+                width: parent.width
+                foreground: root.contentForeground
+              }
+
+              // 7-day trend strip: bars scale to the busiest day; today's
+              // bar is the full accent, the rest read dimmed.
+              Row {
+                width: parent.width
+                spacing: Style.space(6)
+
+                Repeater {
+                  model: root.weekTrend
+
+                  Column {
+                    required property var modelData
+
+                    width: (parent.width - parent.spacing * 6) / 7
+                    spacing: Style.space(3)
+
+                    Item {
+                      id: trendSlot
+                      width: parent.width
+                      height: Style.space(42)
+
+                      Rectangle {
+                        width: parent.width * 0.42
+                        radius: Style.space(2)
+                        color: modelData.isToday ? root.sliceColor(0, 1.0) : root.sliceColor(0, 0.28)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        height: {
+                          if (modelData.ms <= 0 || root.weekMax <= 0) return 3
+                          return Math.max(3, trendSlot.height * Number(modelData.ms) / root.weekMax)
+                        }
+                      }
+                    }
+
+                    Text {
+                      text: modelData.label
+                      color: root.contentForeground
+                      opacity: modelData.isToday ? 1.0 : 0.5
+                      font.family: root.contentFontFamily
+                      font.pixelSize: Style.font.caption
+                      width: parent.width
+                      horizontalAlignment: Text.AlignHCenter
+                    }
+                  }
+                }
+              }
 
               PanelSeparator {
                 width: parent.width
@@ -397,7 +454,19 @@ Panel {
                   readonly property string value: String(modelData.value || "")
 
                   width: parent.width
-                  implicitHeight: Math.max(labelText.implicitHeight, valueText.implicitHeight)
+                  implicitHeight: Math.max(iconText.implicitHeight, Math.max(labelText.implicitHeight, valueText.implicitHeight))
+
+                  Text {
+                    id: iconText
+                    text: root.insightIcon(label, value)
+                    color: root.insightIconColor(label, value)
+                    font.family: root.contentFontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    width: Style.space(16)
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                  }
 
                   Text {
                     id: labelText
@@ -406,7 +475,7 @@ Panel {
                     opacity: 0.6
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall
-                    anchors.left: parent.left
+                    anchors.left: iconText.right
                     anchors.verticalCenter: parent.verticalCenter
                   }
 
@@ -419,7 +488,7 @@ Panel {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     elide: Text.ElideRight
-                    width: parent.width * 0.62
+                    width: parent.width * 0.55
                     horizontalAlignment: Text.AlignRight
                   }
                 }

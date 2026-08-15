@@ -112,6 +112,25 @@ test("busiestWeekDay picks the largest total in the trailing week", () => {
   assert.equal(best.total, 9000)
 })
 
+test("weekTrend returns the trailing 7 days oldest first with totals", () => {
+  const days = {
+    "2026-08-09": { total: 1000 },
+    "2026-08-11": { total: 9000 },
+    "2026-08-15": { total: 3000 }
+  }
+  const trend = Model.weekTrend(days, "2026-08-15")
+  assert.equal(trend.length, 7)
+  assert.equal(trend[0].key, "2026-08-09")
+  assert.equal(trend[6].key, "2026-08-15")
+  assert.equal(trend[6].isToday, true)
+  assert.equal(trend[6].label, "Sat")
+  assert.equal(trend[5].label, "Fri")
+  assert.equal(trend[0].label, "Sun")
+  assert.equal(trend[0].ms, 1000)
+  assert.equal(trend[2].ms, 9000)
+  assert.equal(trend[6].ms, 3000)
+})
+
 test("pruneDays keeps only the retention window", () => {
   const days = {
     "2026-07-15": { total: 1 },

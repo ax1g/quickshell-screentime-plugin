@@ -173,6 +173,25 @@ function busiestWeekDay(days, todayKey) {
   return best
 }
 
+// Trailing-7-day usage for the trend strip, oldest first. Each entry:
+// { key, ms, label, isToday } where label is the consistent 3-letter
+// weekday; today is told apart by its full-accent bar instead.
+function weekTrend(days, todayKey) {
+  var keys = weekKeys(todayKey)
+  var out = []
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i]
+    var parts = String(key).split("-")
+    out.push({
+      key: key,
+      ms: totalFor(days, key),
+      label: WEEKDAY_NAMES[new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getDay()],
+      isToday: key === todayKey
+    })
+  }
+  return out
+}
+
 // Drops history older than keepDays (cutoff = todayKey - (keepDays - 1)).
 // Keys are ISO "YYYY-MM-DD", so plain string comparison orders them
 // correctly. Returns the original object when nothing is pruned so callers
@@ -328,6 +347,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     relativeDayLabel: relativeDayLabel,
     weekKeys: weekKeys,
     busiestWeekDay: busiestWeekDay,
+    weekTrend: weekTrend,
     pruneDays: pruneDays,
     insights: insights,
     groupedApps: groupedApps,
