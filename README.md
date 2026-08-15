@@ -7,6 +7,7 @@ busiest day). A long-running service tracks focused time per app and persists
 it to disk, so data survives shell restarts and plugin reloads.
 
 ![Screenshot](preview.png)
+![Screenshot](preview-2.png)
 
 ## Requirements
 
