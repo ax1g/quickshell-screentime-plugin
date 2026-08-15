@@ -5,7 +5,7 @@ and a few behaviour insights (top app, vs. yesterday, busiest day). A
 long-running service tracks focused time per app and persists it to disk, so
 data survives shell restarts and plugin reloads.
 
-![Screenshot](screenshot.png)
+![Screenshot](preview.png)
 
 ## Requirements
 
@@ -27,6 +27,15 @@ or install by hand:
 2. `omarchy-shell shell rescanPlugins`
 3. `omarchy plugin enable agx.screen-time`
 
+## Remove
+
+```bash
+omarchy plugin remove agx.screen-time
+```
+
+That disables and removes the plugin. Your history is kept at
+`~/.config/omarchy/screen-time/history.json`; delete it to clear your data.
+
 ## How tracking works
 
 The service listens to the compositor's active toplevel and accrues focused
@@ -39,9 +48,14 @@ every few seconds in case the foreground command changes.
 
 Screen-time history is stored as append-only JSON at
 `~/.config/omarchy/screen-time/history.json`, shaped as
-`{ "<YYYY-MM-DD>": { "total": <ms>, "apps": { "<appId>": <ms> } } }`.
+`{ "days": { "<YYYY-MM-DD>": { "total": <ms>, "apps": { "<appId>": <ms> } } } }`
+(the `days` wrapper is Quickshell's JsonAdapter key for the adapter property).
 Deleting the file resets tracking.
 
 Right-click toggles the bar label between "glyph + time" and the glyph
 alone; the choice is remembered in the widget's entry.
+
+## License
+
+MIT
 
