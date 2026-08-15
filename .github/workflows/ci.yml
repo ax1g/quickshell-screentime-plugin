@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  js:
+    name: Model.js checks + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check
+        run: node --check Model.js
+      - name: Unit tests
+        run: node --test tests/model.test.js
+
+  python:
+    name: resolve_app.py checks + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile check
+        run: python3 -m py_compile resolve_app.py tests/test_resolve_app.py
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests
+
+  qml:
+    name: QML syntax check (best-effort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # qmllint lives in qt6-declarative-tools; the omarchy imports are not
+      # resolvable on a bare runner, so this step reports only genuine syntax
+      # errors (import noise is filtered) and never fails the build.
+      - name: Install qmllint
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qt6-declarative-tools >/dev/null 2>&1 || true
+      - name: Lint QML files
+        run: |
+          for f in BarWidget.qml Panel.qml Service.qml; do
+            if command -v qmllint >/dev/null 2>&1; then
+              echo "== $f =="
+              qmllint "$f" 2>&1 | grep -Ev "warning: .*(not found|Missing|required)" || true
+            else
+              echo "qmllint unavailable; skipping $f"
+            fi
+          done

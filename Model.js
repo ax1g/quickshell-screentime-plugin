@@ -101,6 +101,32 @@ function appList(today) {
   return out
 }
 
+// A donut this large is unreadable, so beyond maxSlices the tail collapses
+// into a single "Other" slice. The percentage of the bucket is recomputed
+// from its own accumulated ms, never by summing rounded slice percentages.
+// maxSlices must be passed explicitly: QML's JS engine has no default
+// parameters, and `undefined` would silently collapse every app into Other.
+var DONUT_MAX_SLICES = 6
+function groupedApps(apps, maxSlices) {
+  var list = apps || []
+  var max = typeof maxSlices === "number" ? maxSlices : DONUT_MAX_SLICES
+  if (list.length <= max) return list
+  var head = []
+  var tailMs = 0
+  for (var i = 0; i < list.length; i++) {
+    if (i < max - 1) {
+      head.push(list[i])
+    } else {
+      tailMs += Number(list[i].ms) || 0
+    }
+  }
+  var total = 0
+  for (var j = 0; j < list.length; j++) total += Number(list[j].ms) || 0
+  var other = { app: "Other", ms: tailMs, pct: total > 0 ? Math.round(100 * tailMs / total) : 0 }
+  head.push(other)
+  return head
+}
+
 function totalFor(days, key) {
   var d = days && days[key]
   return d && d.total ? d.total : 0
@@ -145,6 +171,23 @@ function busiestWeekDay(days, todayKey) {
     if (total > best.total) best = { key: keys[i], total: total }
   }
   return best
+}
+
+// Drops history older than keepDays (cutoff = todayKey - (keepDays - 1)).
+// Keys are ISO "YYYY-MM-DD", so plain string comparison orders them
+// correctly. Returns the original object when nothing is pruned so callers
+// can avoid needless object churn on every persist.
+function pruneDays(days, todayKey, keepDays) {
+  if (!days || keepDays <= 0) return days
+  var cutoff = todayKey
+  for (var i = 1; i < keepDays; i++) cutoff = prevKey(cutoff)
+  var out = {}
+  var changed = false
+  for (var k in days) {
+    if (k >= cutoff) out[k] = days[k]
+    else changed = true
+  }
+  return changed ? out : days
 }
 
 // Ordered list of insight rows: [{ label, value }]. Empty when nothing has
@@ -222,17 +265,18 @@ function hslToHex(h, s, l) {
 
 // Donut slice colors for n apps. Hue rotates away from the theme accent so
 // slices stay distinguishable while the palette follows theme swaps. For a
-// near-grayscale accent there is no hue to lean on, so lightness alternates
-// in both directions around the accent (safe on dark and light surfaces).
+// near-grayscale accent there is no hue to lean on, so a fixed lightness
+// ramp that always fits the usable band guarantees distinct shades whether
+// the accent is near-white or near-black.
 function sliceColors(count, accentHex) {
   var base = hexToHsl(accentHex)
+  var GRAY_RAMP = [50, 70, 32, 82, 40, 62, 28, 76]
   var out = []
   for (var i = 0; i < count; i++) {
     var h = base.h + i * 38
     var l = base.l
     if (base.s < 12) {
-      var deltas = [0, 12, -12, 24, -24]
-      l = Math.max(25, Math.min(88, base.l + deltas[i % deltas.length]))
+      l = GRAY_RAMP[i % GRAY_RAMP.length]
     } else if (i % 2 === 1) {
       l = Math.max(32, Math.min(80, base.l - 14))
     }
@@ -265,4 +309,31 @@ function arcSegments(apps) {
     angle += frac * 360
   }
   return out
+}
+
+// Node-style exports only so `node --test` can drive these pure functions;
+// QML's JS engine never defines `module`, so this guard is inert there.
+if (typeof module !== "undefined" && module && module.exports) {
+  module.exports = {
+    pad2: pad2,
+    canonicalApp: canonicalApp,
+    dayKey: dayKey,
+    newDay: newDay,
+    fmt: fmt,
+    fmtDelta: fmtDelta,
+    fmtWords: fmtWords,
+    appList: appList,
+    totalFor: totalFor,
+    prevKey: prevKey,
+    relativeDayLabel: relativeDayLabel,
+    weekKeys: weekKeys,
+    busiestWeekDay: busiestWeekDay,
+    pruneDays: pruneDays,
+    insights: insights,
+    groupedApps: groupedApps,
+    hexToHsl: hexToHsl,
+    hslToHex: hslToHex,
+    sliceColors: sliceColors,
+    arcSegments: arcSegments
+  }
 }

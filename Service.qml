@@ -39,6 +39,10 @@ Item {
   readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty",
     "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st"]
 
+  // Retention window in days. History older than this is pruned on load and
+  // before every write, so the append-only JSON can't grow without bound.
+  readonly property int keepDays: 31
+
   // ---- Live state, exposed to the bar widget and panel. These are always
   //      REPLACED with fresh objects, never mutated in place, so QML
   //      bindings on them fire and the persistence adapter sees the change.
@@ -180,6 +184,7 @@ Item {
     if (root.startupPhase) return
     var merged = Object.assign({}, root.days)
     merged[root.todayKey] = root.today
+    merged = Model.pruneDays(merged, root.todayKey, root.keepDays)
     root.days = merged
     historyAdapter.days = merged
   }
@@ -191,6 +196,7 @@ Item {
 
   function onHistoryLoaded() {
     var d = historyAdapter.days && typeof historyAdapter.days === "object" ? historyAdapter.days : {}
+    d = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
     root.days = d
     if (!root.ready) {
       root.todayKey = Model.dayKey(new Date())

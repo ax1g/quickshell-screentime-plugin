@@ -22,7 +22,7 @@ Panel {
   readonly property var days: service ? service.days : {}
   readonly property string todayKey: service ? service.todayKey : ""
 
-  readonly property var apps: Model.appList(root.today)
+  readonly property var apps: Model.groupedApps(Model.appList(root.today), Model.DONUT_MAX_SLICES)
   readonly property var insightRows: Model.insights(root.today, root.days, root.todayKey)
   readonly property double todayTotal: root.today ? (root.today.total || 0) : 0
   property bool patternsExpanded: false
@@ -425,11 +425,6 @@ Panel {
                 }
               }
             }
-          }
-
-          Item {
-            width: parent.width
-            height: Style.space(2)
           }
         }
       }
