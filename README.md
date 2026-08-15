@@ -5,6 +5,8 @@ and a few behaviour insights (top app, vs. yesterday, busiest day). A
 long-running service tracks focused time per app and persists it to disk, so
 data survives shell restarts and plugin reloads.
 
+![Screenshot](screenshot.png)
+
 ## Requirements
 
 - Omarchy shell (Quickshell-based)
@@ -15,7 +17,7 @@ data survives shell restarts and plugin reloads.
 ## Install
 
 ```bash
-omarchy plugin add <repo-url>
+omarchy plugin add https://github.com/ax1g/quickshell-screentime-plugin.git
 omarchy plugin enable agx.screen-time
 ```
 
