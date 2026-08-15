@@ -6,7 +6,7 @@ time in the centre) plus a few behaviour insights (top app, vs. yesterday,
 busiest day). A long-running service tracks focused time per app and persists
 it to disk, so data survives shell restarts and plugin reloads.
 
-![Screenshot](preview.png)
+![Screenshot](screenshot-2026-08-15_14-09-48.png)
 ![Screenshot](preview-2.png)
 
 ## Requirements
