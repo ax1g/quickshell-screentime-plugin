@@ -13,8 +13,7 @@ import "Model.js" as Model
 // Persistence is a single append-only JSON file
 //   ~/.config/omarchy/screen-time/history.json
 // shaped as
-//   { "<YYYY-MM-DD>": { "total": <ms>, "apps": { "<appId>": <ms> },
-//                       "sessions": [ { "app", "start", "dur" } ] } }
+//   { "<YYYY-MM-DD>": { "total": <ms>, "apps": { "<appId>": <ms> } } }
 //
 // Writes are event-driven (on focus change) and debounced through the
 // adapter; a 60s commit bounds how much of an in-flight bucket can be lost
@@ -88,7 +87,7 @@ Item {
       root.resolveInFlight = true
       resolverProc.running = true
     } else {
-      root.activeApp = app
+      root.activeApp = Model.canonicalApp(app)
       root.activeStart = app ? now : 0
     }
   }
@@ -101,6 +100,7 @@ Item {
     root.resolveInFlight = false
     if (root.rawApp !== root.resolveForApp) return  // focus moved mid-resolve
     if (!name) name = root.rawApp
+    name = Model.canonicalApp(name)
     if (name === root.activeApp) return
     var now = Date.now()
     root.closeActiveBucket(now)
@@ -109,8 +109,7 @@ Item {
   }
 
   // Closes the open bucket: accrues elapsed ms to the app that was focused
-  // when it started, appending a session entry. Safe to call with no open
-  // bucket.
+  // when it started. Safe to call with no open bucket.
   function closeActiveBucket(now) {
     if (!root.ready) return
     var app = root.activeApp
@@ -125,34 +124,28 @@ Item {
     if (startDay === root.todayKey) {
       var apps = Object.assign({}, root.today.apps)
       apps[app] = (apps[app] || 0) + dur
-      var sessions = root.today.sessions.slice()
-      sessions.push({ app: app, start: startMs, dur: dur })
-      root.today = { total: root.today.total + dur, apps: apps, sessions: sessions }
+      root.today = { total: root.today.total + dur, apps: apps }
     } else {
       // Bucket spans midnight: attribute it to the day it started on.
       var d = Object.assign({}, root.days)
       var day = d[startDay] || Model.newDay()
       var dApps = Object.assign({}, day.apps || {})
       dApps[app] = (dApps[app] || 0) + dur
-      var dSessions = (day.sessions || []).slice()
-      dSessions.push({ app: app, start: startMs, dur: dur })
-      d[startDay] = { total: (day.total || 0) + dur, apps: dApps, sessions: dSessions }
+      d[startDay] = { total: (day.total || 0) + dur, apps: dApps }
       root.days = d
     }
-    root.todayKey = Model.dayKey(new Date())
     root.persist()
   }
 
-  // Bounds crash loss: folds the in-flight bucket into today without making
-  // a session entry, then restarts it. Sessions therefore only appear on
-  // real app switches; "longest session" stays a meaningful metric.
+  // Bounds crash loss: folds the in-flight bucket into today, then restarts
+  // the timer so a crash loses at most the current interval.
   function commitElapsed(now) {
     if (!root.ready || !root.activeApp || !root.activeStart) return
     var dur = Math.max(0, now - root.activeStart)
     if (dur <= 0) return
     var apps = Object.assign({}, root.today.apps)
     apps[root.activeApp] = (apps[root.activeApp] || 0) + dur
-    root.today = { total: root.today.total + dur, apps: apps, sessions: root.today.sessions.slice() }
+    root.today = { total: root.today.total + dur, apps: apps }
     root.activeStart = now
     root.persist()
   }
@@ -160,12 +153,20 @@ Item {
   function rolloverIfNeeded() {
     var key = Model.dayKey(new Date())
     if (key === root.todayKey) return
+    var app = root.activeApp
     root.closeActiveBucket(Date.now())
-    if (Model.dayKey(new Date()) === root.todayKey) return
     root.todayKey = key
-    root.today = Model.newDay()
-    root.activeApp = ""
-    root.activeStart = 0
+    // A bucket may already have been folded onto the new day before this
+    // rollover ran (focus switch across midnight); carry it forward.
+    var prev = root.days[key]
+    root.today = prev && typeof prev === "object"
+      ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}) }
+      : Model.newDay()
+    // Reopen the still-focused app's bucket so tracking keeps running past
+    // midnight without a focus change; the closed bucket went to the day it
+    // started on.
+    root.activeApp = app
+    root.activeStart = app ? Date.now() : 0
     root.persist()
   }
 
@@ -195,7 +196,7 @@ Item {
       root.todayKey = Model.dayKey(new Date())
       var prev = d[root.todayKey]
       root.today = prev && typeof prev === "object"
-        ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}), sessions: (prev.sessions || []).slice() }
+        ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}) }
         : Model.newDay()
       root.ready = true
       root.startupPhase = false

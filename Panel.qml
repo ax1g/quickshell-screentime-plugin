@@ -25,12 +25,7 @@ Panel {
   readonly property var apps: Model.appList(root.today)
   readonly property var insightRows: Model.insights(root.today, root.days, root.todayKey)
   readonly property double todayTotal: root.today ? (root.today.total || 0) : 0
-  readonly property double yesterdayTotal: Model.totalFor(root.days, Model.prevKey(root.todayKey))
-  readonly property string deltaLabel: {
-    if (yesterdayTotal <= 0 || todayTotal <= 0) return ""
-    var d = todayTotal - yesterdayTotal
-    return "vs yesterday " + (d < 0 ? "-" : "+") + Model.fmtWords(Math.abs(d))
-  }
+  property bool patternsExpanded: false
 
   // Guarded so the widget renders before the bar is injected.
   readonly property color contentForeground: bar ? bar.foreground : Color.foreground
@@ -61,6 +56,17 @@ Panel {
     flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY + dy))
   }
 
+  // p key / corner-label click: expand the pattern rows below the app list,
+  // scrolling them into view so the toggle is visible wherever the list ends.
+  function togglePatterns() {
+    root.patternsExpanded = !root.patternsExpanded
+    if (root.patternsExpanded) {
+      Qt.callLater(function() {
+        panelScroll.contentY = Math.max(0, panelScroll.contentHeight - panelScroll.height)
+      })
+    }
+  }
+
   KeyboardPanel {
     id: panel
     anchorItem: root.anchorItem
@@ -82,6 +88,7 @@ Panel {
       onTextKey: function(t) {
         if (t === "g") panelScroll.contentY = 0
         else if (t === "G") panelScroll.contentY = Math.max(0, panelScroll.contentHeight - panelScroll.height)
+        else if (t === "p" || t === "P") root.togglePatterns()
       }
 
       Flickable {
@@ -98,19 +105,46 @@ Panel {
           width: panelScroll.width
           spacing: Style.space(12)
 
-          // ---- Hero: today's total -------------------------------------
+          // ---- Hero: today's total, PATTERNS marker top-right ----------
           Item {
             width: parent.width
             implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight)
 
             Text {
               id: heroIcon
-              text: "󰥔"
+              text: "󰔟"
               color: root.contentForeground
               font.family: root.contentFontFamily
               font.pixelSize: Style.font.display
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
+              // Nerd Font glyphs paint ~15% of the em above their text box
+              // (see PanelSectionHeader), so the clock reads ~2px high; drop
+              // it half the overshoot to sit on the label's true center.
+              anchors.verticalCenterOffset: Math.ceil(heroIcon.font.pixelSize * 0.15 / 2)
+            }
+
+            Text {
+              id: patternsCorner
+              text: root.patternsExpanded ? "PATTERNS \u25be" : "PATTERNS \u25b8"
+              color: patternsCornerMouse.containsMouse
+                ? root.contentForeground
+                : Qt.darker(root.contentForeground, 1.4)
+              font.family: root.contentFontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+              elide: Text.ElideRight
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+
+              MouseArea {
+                id: patternsCornerMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.togglePatterns()
+              }
             }
 
             Column {
@@ -118,6 +152,7 @@ Panel {
               anchors.left: heroIcon.right
               anchors.leftMargin: Style.space(14)
               anchors.right: parent.right
+              anchors.rightMargin: patternsCorner.implicitWidth + Style.space(12)
               anchors.verticalCenter: parent.verticalCenter
               spacing: Style.space(2)
 
@@ -132,9 +167,7 @@ Panel {
               }
 
               Text {
-                text: root.todayTotal > 0
-                  ? Model.fmtWords(root.todayTotal) + (root.deltaLabel ? "  \u00b7  " + root.deltaLabel : "")
-                  : "0 MINUTES"
+                text: root.todayTotal > 0 ? Model.fmtWords(root.todayTotal) : "0 MINUTES"
                 color: Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.caption
@@ -155,7 +188,7 @@ Panel {
             Column {
               id: appColumn
               width: parent.width
-              spacing: Style.space(10)
+              spacing: Style.space(6)
 
               Repeater {
                 model: root.apps
@@ -166,75 +199,46 @@ Panel {
 
                   readonly property string appName: String(modelData.app || "")
                   readonly property string timeLabel: Model.fmt(modelData.ms)
-                  readonly property int pct: modelData.pct
-                  readonly property int barHeight: Style.space(5)
-                  readonly property int barGap: Style.space(5)
 
                   width: parent.width
-                  implicitHeight: appRow.implicitHeight + barGap + barHeight
+                  implicitHeight: Math.max(appNameText.implicitHeight, appTimeText.implicitHeight)
 
-                  Row {
-                    id: appRow
+                  Text {
+                    id: appNameText
+                    text: appName
+                    color: root.contentForeground
+                    opacity: 0.6
+                    font.family: root.contentFontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    elide: Text.ElideRight
+                    width: parent.width - appTimeText.implicitWidth - Style.space(8)
                     anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    spacing: Style.space(8)
-
-                    Text {
-                      id: nameLabel
-                      text: appName
-                      color: root.contentForeground
-                      font.family: root.contentFontFamily
-                      font.pixelSize: Style.font.body
-                      elide: Text.ElideRight
-                      width: parent.width - appTime.width - parent.spacing
-                      anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                      id: appTime
-                      text: timeLabel
-                      color: root.contentForeground
-                      font.family: root.contentFontFamily
-                      font.pixelSize: Style.font.body
-                      width: Style.space(64)
-                      horizontalAlignment: Text.AlignRight
-                      elide: Text.ElideRight
-                      anchors.verticalCenter: parent.verticalCenter
-                    }
+                    anchors.verticalCenter: parent.verticalCenter
                   }
 
-                  Rectangle {
-                    anchors.left: parent.left
+                  Text {
+                    id: appTimeText
+                    text: timeLabel
+                    color: root.contentForeground
+                    font.family: root.contentFontFamily
+                    font.pixelSize: Style.font.bodySmall
                     anchors.right: parent.right
-                    anchors.top: appRow.bottom
-                    anchors.topMargin: barGap
-                    height: barHeight
-                    radius: Style.cornerRadius > 0 ? height / 2 : 0
-                    color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.12)
-
-                    Rectangle {
-                      width: Math.round(parent.width * (pct / 100))
-                      height: parent.height
-                      radius: parent.radius
-                      color: Style.selectedStateColor(root.contentForeground, Color.accent)
-
-                      Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                    }
+                    anchors.verticalCenter: parent.verticalCenter
+                    elide: Text.ElideRight
                   }
                 }
               }
             }
           }
 
-          // ---- Insights -------------------------------------------------
+          // ---- Patterns (collapsed by default, toggle with p/click) ----
           Item {
             width: parent.width
-            visible: root.insightRows.length > 0
-            implicitHeight: visible ? insightColumn.implicitHeight : 0
+            visible: root.patternsExpanded && root.insightRows.length > 0
+            implicitHeight: visible ? patternsColumn.implicitHeight : 0
 
             Column {
-              id: insightColumn
+              id: patternsColumn
               width: parent.width
               spacing: Style.space(6)
 
@@ -243,22 +247,13 @@ Panel {
                 foreground: root.contentForeground
               }
 
-              Text {
-                text: "PATTERNS"
-                color: Qt.darker(root.contentForeground, 1.5)
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.caption
-                font.letterSpacing: 1.2
-                font.bold: true
-              }
-
               Repeater {
                 model: root.insightRows
 
                 Item {
                   required property var modelData
 
-                  readonly property string label: String(modelData.label || "").toUpperCase()
+                  readonly property string label: String(modelData.label || "")
                   readonly property string value: String(modelData.value || "")
 
                   width: parent.width
@@ -267,9 +262,10 @@ Panel {
                   Text {
                     id: labelText
                     text: label
-                    color: Qt.darker(root.contentForeground, 1.5)
+                    color: root.contentForeground
+                    opacity: 0.6
                     font.family: root.contentFontFamily
-                    font.pixelSize: Style.font.body
+                    font.pixelSize: Style.font.bodySmall
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                   }
@@ -279,7 +275,7 @@ Panel {
                     text: value
                     color: root.contentForeground
                     font.family: root.contentFontFamily
-                    font.pixelSize: Style.font.body
+                    font.pixelSize: Style.font.bodySmall
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     elide: Text.ElideRight

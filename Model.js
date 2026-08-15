@@ -7,13 +7,47 @@ function pad2(n) {
   return n < 10 ? "0" + n : String(n)
 }
 
+// Canonical tracking keys for multi-process browsers. A browser launched
+// from a terminal resolves to its binary name (e.g. "zen-bin"), and its
+// subprocesses can leak process names (Web Content, forkserver, …). Screen
+// time must fold all of those into the single per-app key, otherwise a
+// browser shows up as several individual rows.
+var BROWSER_ALIASES = {
+  "zen-bin": "zen",
+  "zen_browser": "zen",
+  "zen": "zen",
+  "firefox": "firefox",
+  "librewolf": "librewolf",
+  "waterfox": "waterfox",
+  "tor-browser": "tor-browser",
+  "mullvad-browser": "mullvad-browser",
+  "google-chrome": "google-chrome",
+  "chrome": "google-chrome",
+  "chromium": "chromium",
+  "brave": "brave",
+  "brave-browser": "brave",
+  "vivaldi": "vivaldi",
+  "microsoft-edge": "microsoft-edge",
+  "edge": "microsoft-edge"
+}
+
+// Map any app name to its canonical tracking key. Unknown names pass
+// through unchanged so non-browser apps keep their own identity.
+function canonicalApp(name) {
+  if (!name) return ""
+  var key = String(name)
+  return Object.prototype.hasOwnProperty.call(BROWSER_ALIASES, key)
+    ? BROWSER_ALIASES[key]
+    : key
+}
+
 // Local-time calendar key, e.g. "2026-08-13".
 function dayKey(date) {
   return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate())
 }
 
 function newDay() {
-  return { total: 0, apps: {}, sessions: [] }
+  return { total: 0, apps: {} }
 }
 
 // Compact human duration: "0m", "45s", "23m", "3h", "2h 14m".
@@ -51,6 +85,8 @@ function fmtWords(ms) {
 }
 
 // Sorted per-app list for today: [{ app, ms, pct }], most-used first.
+// Apps with under a minute of use are dropped so the panel only lists
+// meaningful entries.
 function appList(today) {
   var apps = today && today.apps ? today.apps : {}
   var total = today && today.total ? today.total : 0
@@ -58,7 +94,7 @@ function appList(today) {
   for (var app in apps) {
     if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
     var ms = Number(apps[app]) || 0
-    if (ms <= 0) continue
+    if (ms < 60000) continue
     out.push({ app: app, ms: ms, pct: total > 0 ? Math.round(100 * ms / total) : 0 })
   }
   out.sort(function(a, b) { return b.ms - a.ms })
@@ -111,37 +147,6 @@ function busiestWeekDay(days, todayKey) {
   return best
 }
 
-// Hour (0-23) during which the most focused time accrued today, else -1.
-function peakHour(today) {
-  var sessions = today && today.sessions ? today.sessions : []
-  if (!sessions.length) return -1
-  var hours = {}
-  for (var i = 0; i < sessions.length; i++) {
-    var s = sessions[i]
-    if (!s || !s.start) continue
-    var h = new Date(s.start).getHours()
-    hours[h] = (hours[h] || 0) + (s.dur || 0)
-  }
-  var best = -1
-  var bestMs = 0
-  for (var h2 in hours) {
-    if (hours[h2] > bestMs) {
-      bestMs = hours[h2]
-      best = Number(h2)
-    }
-  }
-  return best
-}
-
-function longestSession(today) {
-  var sessions = today && today.sessions ? today.sessions : []
-  var longest = 0
-  for (var i = 0; i < sessions.length; i++) {
-    if (sessions[i] && sessions[i].dur > longest) longest = sessions[i].dur
-  }
-  return longest
-}
-
 // Ordered list of insight rows: [{ label, value }]. Empty when nothing has
 // been tracked yet today.
 function insights(today, days, todayKey) {
@@ -157,15 +162,6 @@ function insights(today, days, todayKey) {
 
   var yesterday = totalFor(days, prevKey(todayKey))
   if (yesterday > 0) list.push({ label: "vs yesterday", value: fmtDelta(total - yesterday) })
-
-  var sessions = today.sessions || []
-  if (sessions.length) list.push({ label: "Sessions", value: String(sessions.length) })
-
-  var longest = longestSession(today)
-  if (longest > 0) list.push({ label: "Longest session", value: fmt(longest) })
-
-  var peak = peakHour(today)
-  if (peak >= 0) list.push({ label: "Peak hour", value: pad2(peak) + ":00" })
 
   var busiest = busiestWeekDay(days, todayKey)
   if (busiest.total > 0)
