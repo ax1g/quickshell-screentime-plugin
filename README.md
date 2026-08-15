@@ -1,9 +1,10 @@
 # Screen Time
 
-A bar widget showing today's screen time with a popup listing per-app usage
-and a few behaviour insights (top app, vs. yesterday, busiest day). A
-long-running service tracks focused time per app and persists it to disk, so
-data survives shell restarts and plugin reloads.
+A bar widget showing today's screen time with a popup rendering per-app usage
+as a donut chart (hover a legend row to highlight its slice and see the app's
+time in the centre) plus a few behaviour insights (top app, vs. yesterday,
+busiest day). A long-running service tracks focused time per app and persists
+it to disk, so data survives shell restarts and plugin reloads.
 
 ![Screenshot](preview.png)
 

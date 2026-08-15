@@ -169,3 +169,100 @@ function insights(today, days, todayKey) {
 
   return list
 }
+
+// ---- Donut chart helpers -----------------------------------------------
+
+// #rrggbb -> { h: 0-360, s: 0-100, l: 0-100 }.
+function hexToHsl(hex) {
+  var m = /^#?([0-9a-fA-F]{6})$/.exec(String(hex || "").replace(/^\s+|\s+$/g, ""))
+  if (!m) return { h: 0, s: 0, l: 60 }
+  var n = parseInt(m[1], 16)
+  var r = ((n >> 16) & 255) / 255
+  var g = ((n >> 8) & 255) / 255
+  var b = (n & 255) / 255
+  var max = Math.max(r, g, b)
+  var min = Math.min(r, g, b)
+  var h = 0
+  var s = 0
+  var l = (max + min) / 2
+  if (max !== min) {
+    var d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h *= 60
+  }
+  return { h: h, s: s * 100, l: l * 100 }
+}
+
+// { h: 0-360, s: 0-100, l: 0-100 } -> #rrggbb.
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360
+  s /= 100
+  l /= 100
+  var c = (1 - Math.abs(2 * l - 1)) * s
+  var x = c * (1 - Math.abs((h / 60) % 2 - 1))
+  var m = l - c / 2
+  var r = 0
+  var g = 0
+  var b = 0
+  if (h < 60) { r = c; g = x }
+  else if (h < 120) { r = x; g = c }
+  else if (h < 180) { g = c; b = x }
+  else if (h < 240) { g = x; b = c }
+  else if (h < 300) { r = x; b = c }
+  else { r = c; b = x }
+  function ch(v) {
+    var t = Math.max(0, Math.min(255, Math.round((v + m) * 255)))
+    return (t < 16 ? "0" : "") + t.toString(16)
+  }
+  return "#" + ch(r) + ch(g) + ch(b)
+}
+
+// Donut slice colors for n apps. Hue rotates away from the theme accent so
+// slices stay distinguishable while the palette follows theme swaps. For a
+// near-grayscale accent there is no hue to lean on, so lightness alternates
+// in both directions around the accent (safe on dark and light surfaces).
+function sliceColors(count, accentHex) {
+  var base = hexToHsl(accentHex)
+  var out = []
+  for (var i = 0; i < count; i++) {
+    var h = base.h + i * 38
+    var l = base.l
+    if (base.s < 12) {
+      var deltas = [0, 12, -12, 24, -24]
+      l = Math.max(25, Math.min(88, base.l + deltas[i % deltas.length]))
+    } else if (i % 2 === 1) {
+      l = Math.max(32, Math.min(80, base.l - 14))
+    }
+    out.push(hslToHex(h, base.s, l))
+  }
+  return out
+}
+
+// Donut segments for a sorted app list: [{ app, ms, pct, startAngle,
+// sweepAngle }]. Angles start at 12 o'clock (sweep 0 = -90deg) and go
+// clockwise; a small gap separates slices. A single app owns the full circle.
+var ARC_GAP_DEG = 1.5
+function arcSegments(apps) {
+  var list = apps || []
+  var total = 0
+  for (var i = 0; i < list.length; i++) total += Number(list[i].ms) || 0
+  var gap = list.length > 1 ? ARC_GAP_DEG : 0
+  var angle = -90
+  var out = []
+  for (var j = 0; j < list.length; j++) {
+    var frac = total > 0 ? (Number(list[j].ms) || 0) / total : 0
+    var sweep = j < list.length - 1 ? Math.max(0, frac * 360 - gap) : frac * 360
+    out.push({
+      app: list[j].app,
+      ms: list[j].ms,
+      pct: list[j].pct,
+      startAngle: angle,
+      sweepAngle: sweep
+    })
+    angle += frac * 360
+  }
+  return out
+}
