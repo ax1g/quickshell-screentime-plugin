@@ -136,9 +136,7 @@ Panel {
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onTextKey: function(t) {
-        if (t === "g") panelScroll.contentY = 0
-        else if (t === "G") panelScroll.contentY = Math.max(0, panelScroll.contentHeight - panelScroll.height)
-        else if (t === "p" || t === "P") root.togglePatterns()
+        if (t === "p" || t === "P") root.togglePatterns()
       }
 
       Flickable {

@@ -27,9 +27,9 @@ down into a donut chart with a 7-day usage trend.
 
 ## Usage
 
-Click the bar widget to open the panel. `g` / `G` scroll to the top / bottom,
-`Esc` closes it, and `p` toggles the patterns section. Right-click the widget
-to switch between "glyph + time" and glyph-only.
+Click the bar widget to open the panel. `Esc` closes it, `p` toggles the
+patterns section, and `j` / `k` (or arrows) scroll if the panel overflows.
+Right-click the widget to switch between "glyph + time" and glyph-only.
 
 ## Install
 
