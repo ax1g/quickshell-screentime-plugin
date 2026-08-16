@@ -133,8 +133,11 @@ function totalFor(days, key) {
 }
 
 function prevKey(key) {
+  if (!key) return ""
   var parts = String(key).split("-")
+  if (parts.length !== 3) return ""
   var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  if (isNaN(d.getTime())) return ""
   d.setDate(d.getDate() - 1)
   return dayKey(d)
 }
@@ -144,15 +147,19 @@ function prevKey(key) {
 var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 function relativeDayLabel(key, todayKey) {
+  if (!key) return ""
   if (key === todayKey) return "Today"
   if (key === prevKey(todayKey)) return "Yesterday"
   var parts = String(key).split("-")
+  if (parts.length !== 3) return ""
   var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  if (isNaN(d.getTime())) return ""
   return WEEKDAY_NAMES[d.getDay()]
 }
 
 // Last 7 day keys ending at todayKey, oldest first.
 function weekKeys(todayKey) {
+  if (!todayKey) return []
   var keys = []
   var key = todayKey
   for (var i = 0; i < 7; i++) {
@@ -177,6 +184,7 @@ function busiestWeekDay(days, todayKey) {
 // { key, ms, label, isToday } where label is the consistent 3-letter
 // weekday; today is told apart by its full-accent bar instead.
 function weekTrend(days, todayKey) {
+  if (!todayKey) return []
   var keys = weekKeys(todayKey)
   var out = []
   for (var i = 0; i < keys.length; i++) {

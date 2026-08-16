@@ -37,11 +37,18 @@ Item {
   // When the active toplevel is one of these, Service resolves the pty's
   // foreground process group via resolve_app.py.
   readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty",
-    "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st"]
+    "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st",
+    "org.omarchy.terminal"]
 
   // Retention window in days. History older than this is pruned on load and
   // before every write, so the append-only JSON can't grow without bound.
   readonly property int keepDays: 31
+
+  // A timer tick arriving far later than its cadence means the machine was
+  // suspended (or the clock jumped); wall-clock deltas across that gap are
+  // not screen time. Mirrors the lock service's suspend-gap heuristic.
+  readonly property int suspendGapMs: 5 * 60 * 1000
+  property double lastTick: 0
 
   // ---- Live state, exposed to the bar widget and panel. These are always
   //      REPLACED with fresh objects, never mutated in place, so QML
@@ -76,6 +83,21 @@ Item {
     return appId && root.terminalAppIds.indexOf(appId.toLowerCase()) !== -1
   }
 
+  // Windows that are never user-facing screen time — the idle screensaver,
+  // xdg desktop portal windows that steal focus. These open no bucket, so
+  // they count neither as an app nor into today's total.
+  function shouldTrack(appId) {
+    if (!appId) return false
+    var id = String(appId).toLowerCase()
+    if (id === "org.omarchy.screensaver") return false
+    if (id.indexOf("xdg-desktop-portal") === 0) return false
+    return true
+  }
+
+  function isSuspendGap(now) {
+    return root.lastTick > 0 && (now - root.lastTick) > root.suspendGapMs
+  }
+
   function switchActive() {
     var now = Date.now()
     root.closeActiveBucket(now)
@@ -83,13 +105,18 @@ Item {
     var app = tl && tl.appId ? tl.appId : ""
     root.rawApp = app
     root.resolveInFlight = false
+    if (app && !root.shouldTrack(app)) {
+      root.activeApp = ""
+      root.activeStart = 0
+      return
+    }
     if (app && root.isTerminal(app)) {
       // Open the bucket once the pty's foreground app is known.
       root.activeApp = ""
       root.activeStart = 0
       root.resolveForApp = app
       root.resolveInFlight = true
-      resolverProc.running = true
+      if (!resolverProc.running) resolverProc.running = true
     } else {
       root.activeApp = Model.canonicalApp(app)
       root.activeStart = app ? now : 0
@@ -118,6 +145,13 @@ Item {
     if (!root.ready) return
     var app = root.activeApp
     if (!app || !root.activeStart) return
+    if (root.isSuspendGap(now)) {
+      // The machine was asleep; don't credit the wall-clock gap as screen
+      // time. Drop the stale bucket and let tracking restart fresh.
+      root.activeApp = ""
+      root.activeStart = 0
+      return
+    }
     var dur = Math.max(0, now - root.activeStart)
     var startMs = root.activeStart
     root.activeApp = ""
@@ -145,6 +179,10 @@ Item {
   // the timer so a crash loses at most the current interval.
   function commitElapsed(now) {
     if (!root.ready || !root.activeApp || !root.activeStart) return
+    if (root.isSuspendGap(now)) {
+      root.activeStart = now
+      return
+    }
     var dur = Math.max(0, now - root.activeStart)
     if (dur <= 0) return
     var apps = Object.assign({}, root.today.apps)
@@ -206,6 +244,7 @@ Item {
         : Model.newDay()
       root.ready = true
       root.startupPhase = false
+      root.lastTick = Date.now()
       root.switchActive()
     } else {
       // Retry after a seed: keep the live bucket, just refresh the mirror.
@@ -217,12 +256,18 @@ Item {
 
   function onHistoryLoadFailed() {
     // Expected on the very first run (file seeded by ensureDirProc) and on
-    // a malformed file. Start empty rather than refusing to track.
+    // a malformed file. Preserve a corrupt file before the next persist
+    // overwrites it, then start empty rather than refusing to track.
     console.warn("agx.screen-time: history load failed, starting empty")
+    if (!root.backupAttempted) {
+      root.backupAttempted = true
+      backupProc.running = true
+    }
     if (!root.ready) {
       root.days = {}
       root.ready = true
       root.startupPhase = false
+      root.lastTick = Date.now()
       root.switchActive()
     }
   }
@@ -263,6 +308,16 @@ Item {
     }
   }
 
+  // Preserve a corrupt history file before the next persist overwrites it.
+  // Only a non-empty file that fails to parse is moved aside, so transient
+  // load errors never destroy a valid history.
+  property bool backupAttempted: false
+  Process {
+    id: backupProc
+    command: ["bash", "-c",
+      "f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
+  }
+
   // A terminal's foreground process changes without the compositor noticing
   // (opencode exits, leaving bash). Re-resolve while a terminal is focused.
   Timer {
@@ -273,8 +328,19 @@ Item {
     onTriggered: {
       root.resolveForApp = root.rawApp
       root.resolveInFlight = true
-      resolverProc.running = true
+      if (!resolverProc.running) resolverProc.running = true
     }
+  }
+
+  // If a resolver run never exits (hung hyprctl, wedged /proc read), clear
+  // the in-flight flag so the refresh timer can re-arm instead of stalling
+  // terminal tracking until the next focus change.
+  Timer {
+    id: resolveWatchdog
+    interval: 10000
+    repeat: false
+    running: root.resolveInFlight
+    onTriggered: root.resolveInFlight = false
   }
 
   // Resolves the app running in the focused terminal (see resolve_app.py).
@@ -296,8 +362,10 @@ Item {
     repeat: true
     running: root.ready
     onTriggered: {
+      var now = Date.now()
       root.rolloverIfNeeded()
-      root.commitElapsed(Date.now())
+      root.commitElapsed(now)
+      root.lastTick = now
     }
   }
 

@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Suspend and clock jumps no longer accrue wall-clock time as screen time: a
+  bucket crossing a suspend gap is dropped instead of counting the whole
+  sleep against today.
+- The idle screensaver and xdg desktop-portal windows no longer count as
+  tracked apps, matching the "idle and locked time is never counted" claim.
+- A corrupt `history.json` is preserved (moved aside) before tracking
+  resumes, instead of being silently overwritten and losing all history.
+- Terminal resolution now also covers Omarchy's own terminal
+  (`org.omarchy.terminal`), which was previously tracked as itself.
+- Panel no longer emits `Unable to assign [undefined] to QString` warnings at
+  startup: chart data is gated on the service being ready, and the Model
+  helpers tolerate empty day keys.
+- Resolver runs are guarded against overlap and a watchdog clears a stuck
+  in-flight resolution so terminal tracking can't stall.
+
+### Changed
+
+- README gains a concise "At a glance" feature list for the plugin listing.
+
 ## [1.0.0] - 2026-08-15
 
 Initial marketplace release.

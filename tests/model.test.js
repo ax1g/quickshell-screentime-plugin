@@ -88,6 +88,15 @@ test("prevKey handles month and year boundaries", () => {
   assert.equal(Model.prevKey("2026-01-01"), "2025-12-31")
 })
 
+test("empty or malformed keys never produce garbage day keys", () => {
+  assert.equal(Model.prevKey(""), "")
+  assert.equal(Model.prevKey("not-a-date"), "")
+  assert.deepEqual(Model.weekKeys(""), [])
+  assert.deepEqual(Model.weekTrend({}, ""), [])
+  assert.equal(Model.relativeDayLabel("", "2026-08-15"), "")
+  assert.equal(Model.relativeDayLabel("2026-08-15", ""), "Sat")
+})
+
 test("weekKeys returns 7 keys ending today", () => {
   const keys = Model.weekKeys("2026-08-15")
   assert.equal(keys.length, 7)
