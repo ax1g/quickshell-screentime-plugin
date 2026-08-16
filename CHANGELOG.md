@@ -4,14 +4,15 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-08-16
 
 ### Fixed
 
 - Suspend and clock jumps no longer accrue wall-clock time as screen time: a
-  bucket crossing a suspend gap is dropped instead of counting the whole
-  sleep against today, and the gap baseline is re-anchored so tracking
-  resumes from the moment of wake.
+  bucket crossing a suspend gap is dropped instead of counting the sleep,
+  and the gap baseline is re-anchored so tracking resumes from the moment of
+  wake. A 5s heartbeat keeps the baseline fresh, so suspends from ~30s up
+  are detected instead of only multi-minute ones.
 - The idle screensaver and xdg desktop-portal windows no longer count as
   tracked apps, matching the "idle and locked time is never counted" claim.
 - A corrupt `history.json` is preserved (moved aside) before tracking

@@ -44,10 +44,11 @@ Item {
   // before every write, so the append-only JSON can't grow without bound.
   readonly property int keepDays: 31
 
-  // A timer tick arriving far later than its cadence means the machine was
-  // suspended (or the clock jumped); wall-clock deltas across that gap are
-  // not screen time. Mirrors the lock service's suspend-gap heuristic.
-  readonly property int suspendGapMs: 5 * 60 * 1000
+  // The gap check resolves suspends down to roughly this threshold: a 5s
+  // heartbeat keeps lastTick fresh, so a tick arriving more than
+  // suspendGapMs after the last one means the event loop was frozen —
+  // the machine was asleep (or the clock jumped).
+  readonly property int suspendGapMs: 30 * 1000
   property double lastTick: 0
 
   // ---- Live state, exposed to the bar widget and panel. These are always
@@ -149,7 +150,7 @@ Item {
       // The machine was asleep; don't credit the wall-clock gap as screen
       // time. Drop the stale bucket and re-anchor the gap baseline so the
       // next bucket counts from wake time instead of looking like another
-      // gap until the commit timer refreshes lastTick.
+      // gap until the next heartbeat refreshes lastTick.
       root.activeApp = ""
       root.activeStart = 0
       root.lastTick = now
@@ -361,6 +362,22 @@ Item {
     }
     onExited: {
       root.applyResolvedApp(resolverOut.text.trim())
+    }
+  }
+
+  // Keeps the suspend-gap baseline fresh every few seconds so the gap check
+  // resolves suspends down to ~30s instead of being locked to the 60s commit
+  // cadence. On a detected gap the open bucket is dropped without accrual
+  // (closeActiveBucket's gap branch) and tracking restarts from wake time.
+  Timer {
+    id: heartbeatTimer
+    interval: 5000
+    repeat: true
+    running: root.ready
+    onTriggered: {
+      var now = Date.now()
+      if (root.isSuspendGap(now)) root.closeActiveBucket(now)
+      root.lastTick = now
     }
   }
 
