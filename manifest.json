@@ -4,7 +4,7 @@
   "name": "Screen Time",
   "version": "1.0.0",
   "author": "agx",
-  "description": "Tracks daily screen time per app, shows today's total in the bar, and summarizes usage patterns",
+  "description": "Per-app screen time in your bar: live today's total, donut breakdown and 7-day patterns. Icon-only mode, terminal-aware, fully local.",
   "kinds": [
     "service",
     "bar-widget"

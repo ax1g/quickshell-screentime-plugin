@@ -9,6 +9,16 @@ down into a donut chart with a 7-day usage trend.
   <img src="assets/patterns.png" width="47%" alt="Panel with the usage-patterns section expanded"/>
 </p>
 
+## At a glance
+
+- **Time in the bar** — today's total, live, right next to your tray.
+- **Icon-only mode** — right-click to collapse the widget to a single glyph; remembered.
+- **Per-app tracking** — focus time per app; idle, locked and desktop time never counted.
+- **Terminal-aware** — a focused terminal reports what's really running inside (opencode, not foot).
+- **Donut breakdown** — today's apps in a ring with a legend; six biggest + "Other".
+- **Usage patterns** — press `p` for a 7-day trend, top app, vs. yesterday, and your busiest day.
+- **Private by design** — local append-only JSON, pruned after 31 days; colours follow your theme.
+
 ## Features
 
 - **Per-app tracking** — focus time is accrued per app; idle, locked and

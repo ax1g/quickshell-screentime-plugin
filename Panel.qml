@@ -18,20 +18,24 @@ Panel {
   // The bar tracks the widget mounted in its slot — BarWidget.qml — so the
   // popout coordinator and panel switching must identify us by that widget.
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor("agx.screen-time") : null
+  readonly property bool serviceReady: service && service.ready === true
   readonly property var today: service ? service.today : null
   readonly property var days: service ? service.days : {}
-  readonly property string todayKey: service ? service.todayKey : ""
+  readonly property string todayKey: serviceReady ? service.todayKey : ""
 
-  readonly property var apps: Model.groupedApps(Model.appList(root.today), Model.DONUT_MAX_SLICES)
-  readonly property var insightRows: Model.insights(root.today, root.days, root.todayKey)
-  readonly property var weekTrend: Model.weekTrend(root.days, root.todayKey)
+  // All derived data is gated on service.ready: before the service has
+  // loaded its history, todayKey is "" and the Model helpers would produce
+  // garbage labels ("NaN-NaN-NaN") instead of an empty chart.
+  readonly property var apps: serviceReady ? Model.groupedApps(Model.appList(root.today), Model.DONUT_MAX_SLICES) : []
+  readonly property var insightRows: serviceReady ? Model.insights(root.today, root.days, root.todayKey) : []
+  readonly property var weekTrend: serviceReady ? Model.weekTrend(root.days, root.todayKey) : []
   readonly property double weekMax: {
     var max = 0
     var list = root.weekTrend
     for (var i = 0; i < list.length; i++) max = Math.max(max, Number(list[i].ms) || 0)
     return max
   }
-  readonly property double todayTotal: root.today ? (root.today.total || 0) : 0
+  readonly property double todayTotal: serviceReady ? (root.today.total || 0) : 0
   property bool patternsExpanded: false
 
   // ---- Donut chart state ------------------------------------------------
