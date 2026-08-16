@@ -10,7 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Suspend and clock jumps no longer accrue wall-clock time as screen time: a
   bucket crossing a suspend gap is dropped instead of counting the whole
-  sleep against today.
+  sleep against today, and the gap baseline is re-anchored so tracking
+  resumes from the moment of wake.
 - The idle screensaver and xdg desktop-portal windows no longer count as
   tracked apps, matching the "idle and locked time is never counted" claim.
 - A corrupt `history.json` is preserved (moved aside) before tracking
@@ -20,8 +21,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Panel no longer emits `Unable to assign [undefined] to QString` warnings at
   startup: chart data is gated on the service being ready, and the Model
   helpers tolerate empty day keys.
-- Resolver runs are guarded against overlap and a watchdog clears a stuck
-  in-flight resolution so terminal tracking can't stall.
+- Resolver runs are guarded against overlap, and a watchdog kills a stuck
+  resolver process and re-arms the refresh timer so terminal tracking
+  recovers instead of stalling forever.
 
 ### Changed
 

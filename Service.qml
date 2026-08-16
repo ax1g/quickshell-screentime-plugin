@@ -147,9 +147,12 @@ Item {
     if (!app || !root.activeStart) return
     if (root.isSuspendGap(now)) {
       // The machine was asleep; don't credit the wall-clock gap as screen
-      // time. Drop the stale bucket and let tracking restart fresh.
+      // time. Drop the stale bucket and re-anchor the gap baseline so the
+      // next bucket counts from wake time instead of looking like another
+      // gap until the commit timer refreshes lastTick.
       root.activeApp = ""
       root.activeStart = 0
+      root.lastTick = now
       return
     }
     var dur = Math.max(0, now - root.activeStart)
@@ -332,15 +335,20 @@ Item {
     }
   }
 
-  // If a resolver run never exits (hung hyprctl, wedged /proc read), clear
-  // the in-flight flag so the refresh timer can re-arm instead of stalling
-  // terminal tracking until the next focus change.
+  // If a resolver run never exits (hung hyprctl, wedged /proc read), kill it
+  // and clear the in-flight flag so the refresh timer can start a fresh
+  // process instead of stalling terminal tracking forever. The killed
+  // process's onExited is ignored: applyResolvedApp returns early once
+  // resolveInFlight is false.
   Timer {
     id: resolveWatchdog
     interval: 10000
     repeat: false
     running: root.resolveInFlight
-    onTriggered: root.resolveInFlight = false
+    onTriggered: {
+      root.resolveInFlight = false
+      if (resolverProc.running) resolverProc.running = false
+    }
   }
 
   // Resolves the app running in the focused terminal (see resolve_app.py).
