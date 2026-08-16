@@ -14,26 +14,10 @@ down into a donut chart with a 7-day usage trend.
 - **Time in the bar** — today's total, live, right next to your tray.
 - **Icon-only mode** — right-click to collapse the widget to a single glyph; remembered.
 - **Per-app tracking** — focus time per app; idle, locked and desktop time never counted.
-- **Terminal-aware** — a focused terminal reports what's really running inside (opencode, not foot).
-- **Donut breakdown** — today's apps in a ring with a legend; six biggest + "Other".
-- **Usage patterns** — press `p` for a 7-day trend, top app, vs. yesterday, and your busiest day.
-- **Private by design** — local append-only JSON, pruned after 31 days; colours follow your theme.
-
-## Features
-
-- **Per-app tracking** — focus time is accrued per app; idle, locked and
-  desktop time is never counted.
-- **Terminal-aware** — with a terminal focused, `resolve_app.py` reports what
-  is actually running inside it (`opencode`, not `foot`), re-resolving every
-  few seconds. Browser subprocesses are canonicalized into one app.
-- **Donut chart** — today's apps as a ring with a legend and the day's total
-  in the centre. Apps beyond the six biggest fold into an "Other" slice.
-- **Usage patterns** — press `p` (or click **PATTERNS**) to unfold a 7-day
-  trend strip, top app, today vs. yesterday, and your busiest day.
-- **Icon-only mode** — right-click the bar widget to collapse it to a single
-  glyph; the choice is remembered.
-- **Private by design** — history is local append-only JSON, pruned after
-  31 days, and colours are generated from your theme's accent.
+- **Terminal-aware** — with a terminal focused, `resolve_app.py` reports what's actually running inside it (`opencode`, not `foot`), re-resolving every few seconds; browser subprocesses are canonicalized into one app.
+- **Donut breakdown** — today's apps in a ring with a legend and the day's total in the centre; six biggest + "Other".
+- **Usage patterns** — press `p` (or click **PATTERNS**) for a 7-day trend, top app, vs. yesterday, and your busiest day.
+- **Private by design** — local append-only JSON, pruned after 31 days; colours generated from your theme's accent.
 
 ## Usage
 
