@@ -5,8 +5,13 @@ each app keeps focus, the bar shows today's total, and a popup breaks the day
 down into a donut chart with a 7-day usage trend.
 
 <p align="center">
-  <img src="assets/panel.png" width="47%" alt="Screen Time panel: today's total, donut and legend"/>
-  <img src="assets/patterns.png" width="47%" alt="Panel with the usage-patterns section expanded"/>
+  <img src="assets/preview.png" width="47%" alt="Screen Time panel preview"/>
+</p>
+
+<p align="center">
+  <img src="assets/image1.png" width="23%" alt="Today's donut breakdown"/>
+  <img src="assets/image2.png" width="23%" alt="Clickable week-trend bars"/>
+  <img src="assets/image3.png" width="23%" alt="Insights with weekday labels"/>
 </p>
 
 ## Features
@@ -34,6 +39,19 @@ omarchy plugin enable agx.screen-time
 ```
 
 Requires Omarchy, Hyprland, and a Nerd Font for the glyphs.
+
+## Uninstall
+
+```bash
+omarchy plugin disable agx.screen-time
+omarchy plugin remove agx.screen-time
+```
+
+To also delete the history file:
+
+```bash
+rm ~/.config/omarchy/screen-time/history.json
+```
 
 ## Data
 
