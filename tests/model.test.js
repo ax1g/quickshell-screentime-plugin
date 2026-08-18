@@ -33,6 +33,16 @@ test("canonicalApp folds browser subprocess names", () => {
   assert.equal(Model.canonicalApp(""), "")
 })
 
+test("displayName shortens reverse-DNS ids and passes plain names", () => {
+  assert.equal(Model.displayName("com.github.user.Codium"), "Codium")
+  assert.equal(Model.displayName("org.mozilla.firefox"), "Firefox")
+  assert.equal(Model.displayName("io.github.pkruow.Cli"), "Cli")
+  assert.equal(Model.displayName("opencode"), "opencode")
+  assert.equal(Model.displayName("google-chrome"), "google-chrome")
+  assert.equal(Model.displayName(""), "")
+  assert.equal(Model.displayName(null), "")
+})
+
 test("appList drops sub-minute apps and sorts descending", () => {
   const today = {
     total: 300000,
@@ -80,6 +90,43 @@ test("groupedApps folds the tail into an Other slice with recomputed pct", () =>
   assert.equal(out[3].pct, 8)
   const total = out.reduce((s, a) => s + a.ms, 0)
   assert.equal(total, 100000)
+})
+
+test("groupedApps merges sub-minPct apps into Other", () => {
+  const apps = [
+    { app: "a", ms: 50000, pct: 50 },
+    { app: "b", ms: 30000, pct: 30 },
+    { app: "c", ms: 12000, pct: 12 },
+    { app: "d", ms: 5000, pct: 5 },
+    { app: "e", ms: 2000, pct: 2 },
+    { app: "f", ms: 1000, pct: 1 }
+  ]
+  const out = Model.groupedApps(apps, 6, 5)
+  assert.deepEqual(out.map(a => a.app), ["a", "b", "c", "d", "Other"])
+  assert.equal(out[4].ms, 2000 + 1000)
+})
+
+test("dayFor returns live today when nothing is selected", () => {
+  const today = { total: 100, apps: { a: 100 } }
+  const days = { "2026-08-17": { total: 50, apps: { b: 50 } } }
+  assert.equal(Model.dayFor(days, today, "", "2026-08-18"), today)
+})
+
+test("dayFor returns live today when today's key is selected", () => {
+  const today = { total: 100, apps: { a: 100 } }
+  assert.equal(Model.dayFor({}, today, "2026-08-18", "2026-08-18"), today)
+})
+
+test("dayFor returns stored day for a past key", () => {
+  const today = { total: 100, apps: { a: 100 } }
+  const past = { total: 50, apps: { b: 50 } }
+  const days = { "2026-08-17": past }
+  assert.equal(Model.dayFor(days, today, "2026-08-17", "2026-08-18"), past)
+})
+
+test("dayFor returns null for unknown keys", () => {
+  const today = { total: 1, apps: {} }
+  assert.equal(Model.dayFor({}, today, "2026-01-01", "2026-08-18"), null)
 })
 
 test("prevKey handles month and year boundaries", () => {
