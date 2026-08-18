@@ -205,7 +205,7 @@ Panel {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 font.letterSpacing: 1.2
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.top: parent.top
               }
 
               Text {
@@ -215,7 +215,7 @@ Panel {
                   : Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.title
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.top: parent.top
               }
             }
 
@@ -237,7 +237,7 @@ Panel {
               spacing: Style.space(2)
 
               Text {
-                text: root.activeDayKey === root.todayKey ? "Screen Time" : root.activeDayLabel.toUpperCase()
+                text: "Screen Time"
                 color: root.contentForeground
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.title
