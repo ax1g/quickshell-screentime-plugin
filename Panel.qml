@@ -188,6 +188,7 @@ Panel {
               font.pixelSize: Style.fontPx(2.8)
               anchors.left: parent.left
               anchors.top: parent.top
+              anchors.topMargin: -Style.space(4)
             }
 
             Row {
@@ -233,7 +234,7 @@ Panel {
               anchors.leftMargin: Style.space(14)
               anchors.right: parent.right
               anchors.rightMargin: showMoreCorner.implicitWidth + Style.space(12)
-              anchors.verticalCenter: parent.verticalCenter
+              anchors.top: parent.top
               spacing: Style.space(2)
 
               Text {
