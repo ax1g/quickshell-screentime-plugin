@@ -33,6 +33,16 @@ test("canonicalApp folds browser subprocess names", () => {
   assert.equal(Model.canonicalApp(""), "")
 })
 
+test("displayName shortens reverse-DNS ids and passes plain names", () => {
+  assert.equal(Model.displayName("com.github.user.Codium"), "Codium")
+  assert.equal(Model.displayName("org.mozilla.firefox"), "Firefox")
+  assert.equal(Model.displayName("io.github.pkruow.Cli"), "Cli")
+  assert.equal(Model.displayName("opencode"), "opencode")
+  assert.equal(Model.displayName("google-chrome"), "google-chrome")
+  assert.equal(Model.displayName(""), "")
+  assert.equal(Model.displayName(null), "")
+})
+
 test("appList drops sub-minute apps and sorts descending", () => {
   const today = {
     total: 300000,
@@ -80,6 +90,43 @@ test("groupedApps folds the tail into an Other slice with recomputed pct", () =>
   assert.equal(out[3].pct, 8)
   const total = out.reduce((s, a) => s + a.ms, 0)
   assert.equal(total, 100000)
+})
+
+test("groupedApps merges sub-minPct apps into Other", () => {
+  const apps = [
+    { app: "a", ms: 50000, pct: 50 },
+    { app: "b", ms: 30000, pct: 30 },
+    { app: "c", ms: 12000, pct: 12 },
+    { app: "d", ms: 5000, pct: 5 },
+    { app: "e", ms: 2000, pct: 2 },
+    { app: "f", ms: 1000, pct: 1 }
+  ]
+  const out = Model.groupedApps(apps, 6, 5)
+  assert.deepEqual(out.map(a => a.app), ["a", "b", "c", "d", "Other"])
+  assert.equal(out[4].ms, 2000 + 1000)
+})
+
+test("dayFor returns live today when nothing is selected", () => {
+  const today = { total: 100, apps: { a: 100 } }
+  const days = { "2026-08-17": { total: 50, apps: { b: 50 } } }
+  assert.equal(Model.dayFor(days, today, "", "2026-08-18"), today)
+})
+
+test("dayFor returns live today when today's key is selected", () => {
+  const today = { total: 100, apps: { a: 100 } }
+  assert.equal(Model.dayFor({}, today, "2026-08-18", "2026-08-18"), today)
+})
+
+test("dayFor returns stored day for a past key", () => {
+  const today = { total: 100, apps: { a: 100 } }
+  const past = { total: 50, apps: { b: 50 } }
+  const days = { "2026-08-17": past }
+  assert.equal(Model.dayFor(days, today, "2026-08-17", "2026-08-18"), past)
+})
+
+test("dayFor returns null for unknown keys", () => {
+  const today = { total: 1, apps: {} }
+  assert.equal(Model.dayFor({}, today, "2026-01-01", "2026-08-18"), null)
 })
 
 test("prevKey handles month and year boundaries", () => {
@@ -165,15 +212,77 @@ test("insights lists top app, delta, and busiest day", () => {
     "2026-08-14": { total: 7200000 },
     "2026-08-11": { total: 14400000 }
   }
-  const rows = Model.insights(today, days, "2026-08-15")
+  const rows = Model.insights(today, days, "2026-08-15", "2026-08-15")
   const labels = rows.map(r => r.label)
   assert.deepEqual(labels, ["Top app", "vs yesterday", "Busiest day (7d)"])
   assert.ok(rows[0].value.includes("browser"))
   assert.ok(rows[1].value.includes("-"))
 })
 
-test("insights returns empty when no activity today", () => {
-  assert.deepEqual(Model.insights(Model.newDay(), {}, "2026-08-15"), [])
+test("insights returns 3 rows with dashes when no activity", () => {
+  const rows = Model.insights(Model.newDay(), {}, "2026-08-15", "2026-08-15")
+  assert.equal(rows.length, 3)
+  assert.ok(rows[0].value.includes("\u2014"))
+  assert.ok(rows[1].value.includes("\u2014"))
+  assert.ok(rows[2].value.includes("\u2014"))
+})
+
+test("weekdayLabel returns short weekday for valid keys", () => {
+  assert.equal(Model.weekdayLabel("2026-08-15"), "Sat")
+  assert.equal(Model.weekdayLabel("2026-08-10"), "Mon")
+})
+
+test("weekdayLabel handles empty and malformed keys", () => {
+  assert.equal(Model.weekdayLabel(""), "")
+  assert.equal(Model.weekdayLabel("not-a-date"), "")
+})
+
+test("insights shows correct labels when viewing a past day", () => {
+  const today = { total: 100000, apps: { a: 100000 } }
+  const days = {
+    "2026-08-13": { total: 50000 },
+    "2026-08-14": { total: 80000 }
+  }
+  const rows = Model.insights(today, days, "2026-08-15", "2026-08-14")
+  assert.equal(rows[0].label, "Top app (Fri)")
+  assert.ok(rows[1].label.startsWith("vs ("))
+  assert.ok(rows[1].label.includes("Thu"))
+  assert.equal(rows[2].label, "Busiest day (7d)")
+})
+
+test("fmtDelta prefixes + and - correctly", () => {
+  assert.equal(Model.fmtDelta(60000), "+1m")
+  assert.equal(Model.fmtDelta(-120000), "-2m")
+})
+
+test("fmtWords renders singular for 1 SECOND and 1 HOUR 1 MINUTE", () => {
+  assert.equal(Model.fmtWords(1000), "1 SECOND")
+  assert.equal(Model.fmtWords(3660000), "1 HOUR 1 MINUTE")
+})
+
+test("formatDate returns month and day for valid keys", () => {
+  assert.equal(Model.formatDate("2026-08-15"), "Aug 15")
+  assert.equal(Model.formatDate("2026-01-01"), "Jan 1")
+})
+
+test("formatDate returns empty for empty or malformed keys", () => {
+  assert.equal(Model.formatDate(""), "")
+  assert.equal(Model.formatDate("not-a-date"), "")
+})
+
+test("busiestWeekDay returns zero total when all days are empty", () => {
+  const days = {
+    "2026-08-13": { total: 0 },
+    "2026-08-14": { total: 0 },
+    "2026-08-15": { total: 0 }
+  }
+  const best = Model.busiestWeekDay(days, "2026-08-15")
+  assert.equal(best.total, 0)
+})
+
+test("arcSegments returns empty array for empty list", () => {
+  assert.deepEqual(Model.arcSegments([]), [])
+  assert.deepEqual(Model.arcSegments(null), [])
 })
 
 test("hexToHsl and hslToHex round-trip", () => {

@@ -5,8 +5,13 @@ each app keeps focus, the bar shows today's total, and a popup breaks the day
 down into a donut chart with a 7-day usage trend.
 
 <p align="center">
-  <img src="assets/panel.png" width="47%" alt="Screen Time panel: today's total, donut and legend"/>
-  <img src="assets/patterns.png" width="47%" alt="Panel with the usage-patterns section expanded"/>
+  <img src="assets/preview.png" width="47%" alt="Screen Time panel preview"/>
+</p>
+
+<p align="center">
+  <img src="assets/image1.png" width="23%" alt="Today's donut breakdown"/>
+  <img src="assets/image2.png" width="23%" alt="Clickable week-trend bars"/>
+  <img src="assets/image3.png" width="23%" alt="Insights with weekday labels"/>
 </p>
 
 ## Features
@@ -17,6 +22,9 @@ down into a donut chart with a 7-day usage trend.
 | **Per-app tracking** | Focus time per app; idle, locked, asleep and desktop time never counted. |
 | **Terminal-aware** | A focused terminal reports what's actually running inside it (`opencode`, not `foot`), re-resolving every few seconds; browser subprocesses are canonicalized into one app. |
 | **Donut breakdown** | Today's apps in a ring with a legend and the day's total in the centre; six biggest + "Other". |
+| **Clickable week bars** | Click any day in the 7-day trend to view that day's apps, donut, and insights; click again or close the panel to return to today. |
+| **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list inline. |
+| **Clean app names** | Reverse-DNS IDs shortened to the last segment and title-cased (`com.github.user.Codium` → `Codium`). |
 | **Usage patterns** | Press `p` for a 7-day trend, top app, vs. yesterday, and your busiest day. |
 | **Icon-only mode** | Right-click to collapse the widget to a single glyph; remembered. |
 | **Keyboard-first** | `Esc` closes the panel, `p` toggles patterns, `j`/`k`/arrows scroll; mouse wheel works too. |
@@ -31,6 +39,19 @@ omarchy plugin enable agx.screen-time
 ```
 
 Requires Omarchy, Hyprland, and a Nerd Font for the glyphs.
+
+## Uninstall
+
+```bash
+omarchy plugin disable agx.screen-time
+omarchy plugin remove agx.screen-time
+```
+
+To also delete the history file:
+
+```bash
+rm ~/.config/omarchy/screen-time/history.json
+```
 
 ## Data
 

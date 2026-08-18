@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "agx.screen-time",
   "name": "Screen Time",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "agx",
   "description": "Per-app screen time in your bar: live today's total, donut breakdown and 7-day patterns. Icon-only mode, terminal-aware, fully local.",
   "kinds": [

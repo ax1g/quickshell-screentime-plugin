@@ -41,6 +41,25 @@ function canonicalApp(name) {
     : key
 }
 
+// Human-readable label for the panel. Reverse-DNS app IDs from the
+// compositor (e.g. "com.github.user.Codium") are shortened to the last
+// segment and title-cased; plain binary names pass through unchanged.
+function displayName(app) {
+  if (!app) return ""
+  var s = String(app)
+  if (s.indexOf(".") === -1) return s
+  var last = s.split(".").pop()
+  if (!last) return s
+  return last.charAt(0).toUpperCase() + last.slice(1)
+}
+
+// The day object to render: live today when nothing is selected (or the
+// selected key is today), otherwise the stored history day.
+function dayFor(days, today, key, todayKey) {
+  if (!key || key === todayKey) return today
+  return days && days[key] ? days[key] : null
+}
+
 // Local-time calendar key, e.g. "2026-08-13".
 function dayKey(date) {
   return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate())
@@ -80,7 +99,7 @@ function fmtWords(ms) {
   var h = Math.floor(mins / 60)
   var m = mins % 60
   var part = h + (h === 1 ? " HOUR" : " HOURS")
-  if (m > 0) part += " " + m + " MINUTES"
+  if (m > 0) part += " " + m + (m === 1 ? " MINUTE" : " MINUTES")
   return part
 }
 
@@ -101,29 +120,34 @@ function appList(today) {
   return out
 }
 
-// A donut this large is unreadable, so beyond maxSlices the tail collapses
-// into a single "Other" slice. The percentage of the bucket is recomputed
-// from its own accumulated ms, never by summing rounded slice percentages.
-// maxSlices must be passed explicitly: QML's JS engine has no default
-// parameters, and `undefined` would silently collapse every app into Other.
+// Beyond maxSlices the tail collapses into a single "Other" slice. Any
+// app below minPct percent is also folded into Other even if it would
+// otherwise be within the top maxSlices. The percentage of the bucket is
+// recomputed from its own accumulated ms, never by summing rounded slice
+// percentages. Both params must be passed explicitly: QML's JS engine has
+// no default parameters, and undefined would silently collapse every app.
 var DONUT_MAX_SLICES = 6
-function groupedApps(apps, maxSlices) {
+var DONUT_MIN_PCT = 3
+function groupedApps(apps, maxSlices, minPct) {
   var list = apps || []
   var max = typeof maxSlices === "number" ? maxSlices : DONUT_MAX_SLICES
-  if (list.length <= max) return list
+  var floor = typeof minPct === "number" ? minPct : DONUT_MIN_PCT
+  var total = 0
+  for (var j = 0; j < list.length; j++) total += Number(list[j].ms) || 0
   var head = []
   var tailMs = 0
   for (var i = 0; i < list.length; i++) {
-    if (i < max - 1) {
+    var pct = total > 0 ? (Number(list[i].ms) || 0) / total * 100 : 0
+    if (head.length < max - 1 && pct >= floor) {
       head.push(list[i])
     } else {
       tailMs += Number(list[i].ms) || 0
     }
   }
-  var total = 0
-  for (var j = 0; j < list.length; j++) total += Number(list[j].ms) || 0
-  var other = { app: "Other", ms: tailMs, pct: total > 0 ? Math.round(100 * tailMs / total) : 0 }
-  head.push(other)
+  if (tailMs > 0) {
+    var other = { app: "Other", ms: tailMs, pct: total > 0 ? Math.round(100 * tailMs / total) : 0 }
+    head.push(other)
+  }
   return head
 }
 
@@ -142,9 +166,33 @@ function prevKey(key) {
   return dayKey(d)
 }
 
+var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+var MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+// Full date label for a dayKey, e.g. "Aug 15".
+function formatDate(key) {
+  if (!key) return ""
+  var parts = String(key).split("-")
+  if (parts.length !== 3) return ""
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  if (isNaN(d.getTime())) return ""
+  return MONTH_NAMES[d.getMonth()] + " " + d.getDate()
+}
+
+// Short weekday name for any key, e.g. "Mon".  Unlike relativeDayLabel
+// this never returns "Today" or "Yesterday".
+function weekdayLabel(key) {
+  if (!key) return ""
+  var parts = String(key).split("-")
+  if (parts.length !== 3) return ""
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  if (isNaN(d.getTime())) return ""
+  return WEEKDAY_NAMES[d.getDay()]
+}
+
 // Weekday label for a dayKey relative to today: "Today", "Yesterday", or
 // the short weekday name.
-var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 function relativeDayLabel(key, todayKey) {
   if (!key) return ""
@@ -172,6 +220,7 @@ function weekKeys(todayKey) {
 // Busiest day in the trailing 7 days: { key, total }.
 function busiestWeekDay(days, todayKey) {
   var keys = weekKeys(todayKey)
+  if (!keys.length) return { key: "", total: 0 }
   var best = { key: keys[keys.length - 1], total: 0 }
   for (var i = 0; i < keys.length; i++) {
     var total = totalFor(days, keys[i])
@@ -217,25 +266,34 @@ function pruneDays(days, todayKey, keepDays) {
   return changed ? out : days
 }
 
-// Ordered list of insight rows: [{ label, value }]. Empty when nothing has
-// been tracked yet today.
-function insights(today, days, todayKey) {
-  var list = []
-  var total = today && today.total ? today.total : 0
-  if (total <= 0) return list
+// Ordered list of insight rows: [{ label, value }]. Always returns three
+// rows; missing data shows "—" placeholders.
+function insights(day, days, todayKey, activeKey) {
+  var key = activeKey || todayKey
+  var isToday = key === todayKey
+  var dayLabel = isToday ? "" : " (" + weekdayLabel(key) + ")"
+  var total = day && day.total ? day.total : 0
 
-  var apps = appList(today)
-  if (apps.length) {
-    var top = apps[0]
-    list.push({ label: "Top app", value: top.app + " \u00b7 " + fmt(top.ms) + " (" + top.pct + "%)" })
-  }
+  var apps = appList(day)
+  var topApp = apps.length ? apps[0] : null
+  var topLabel = topApp
+    ? topApp.app + " \u00b7 " + fmt(topApp.ms) + " (" + topApp.pct + "%)"
+    : "\u2014"
+  var list = [{ label: "Top app" + dayLabel, value: topLabel }]
 
-  var yesterday = totalFor(days, prevKey(todayKey))
-  if (yesterday > 0) list.push({ label: "vs yesterday", value: fmtDelta(total - yesterday) })
+  var compareKey = prevKey(key)
+  var compareTotal = totalFor(days, compareKey)
+  var compareLabel = compareTotal > 0
+    ? fmtDelta(total - compareTotal)
+    : "\u2014"
+  var vsLabel = isToday ? "vs yesterday" : "vs (" + weekdayLabel(compareKey) + ")"
+  list.push({ label: vsLabel, value: compareLabel })
 
   var busiest = busiestWeekDay(days, todayKey)
-  if (busiest.total > 0)
-    list.push({ label: "Busiest day (7d)", value: relativeDayLabel(busiest.key, todayKey) + " \u00b7 " + fmt(busiest.total) })
+  var busiestLabel = busiest.total > 0
+    ? weekdayLabel(busiest.key) + " \u00b7 " + fmt(busiest.total)
+    : "\u2014"
+  list.push({ label: "Busiest day (7d)", value: busiestLabel })
 
   return list
 }
@@ -344,15 +402,20 @@ if (typeof module !== "undefined" && module && module.exports) {
   module.exports = {
     pad2: pad2,
     canonicalApp: canonicalApp,
+    displayName: displayName,
+    dayFor: dayFor,
     dayKey: dayKey,
     newDay: newDay,
     fmt: fmt,
     fmtDelta: fmtDelta,
     fmtWords: fmtWords,
+
     appList: appList,
     totalFor: totalFor,
     prevKey: prevKey,
     relativeDayLabel: relativeDayLabel,
+    weekdayLabel: weekdayLabel,
+    formatDate: formatDate,
     weekKeys: weekKeys,
     busiestWeekDay: busiestWeekDay,
     weekTrend: weekTrend,
