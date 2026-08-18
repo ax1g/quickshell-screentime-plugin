@@ -80,7 +80,7 @@ Panel {
   function insightIcon(label, value) {
     if (label.indexOf("Top app") === 0) return "\u2605"
     if (label.indexOf("vs") === 0) return root.deltaArrow(value)
-    if (label.indexOf("Busiest day") === 0) return "\u2606"
+    if (label.indexOf("Busiest") === 0) return "\u2606"
     return ""
   }
 
@@ -206,7 +206,7 @@ Panel {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 font.letterSpacing: 1.2
-                anchors.top: parent.top
+                anchors.verticalCenter: parent.verticalCenter
               }
 
               Text {
@@ -216,7 +216,7 @@ Panel {
                   : Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.title
-                anchors.top: parent.top
+                anchors.verticalCenter: parent.verticalCenter
               }
             }
 
@@ -290,12 +290,24 @@ Panel {
                   var ctx = getContext("2d")
                   ctx.reset()
                   var segs = root.segments
-                  if (!segs || segs.length === 0) return
                   var size = width
                   var cx = size / 2
                   var cy = size / 2
                   var rad = root.ringRadius
                   var toRad = Math.PI / 180
+
+                  if (!segs || segs.length === 0) {
+                    ctx.lineWidth = root.ringBaseWidth
+                    ctx.strokeStyle = Qt.rgba(
+                      root.contentForeground.r,
+                      root.contentForeground.g,
+                      root.contentForeground.b, 0.1)
+                    ctx.beginPath()
+                    ctx.arc(cx, cy, rad, 0, Math.PI * 2, false)
+                    ctx.stroke()
+                    return
+                  }
+
                   for (var i = 0; i < segs.length; i++) {
                     var seg = segs[i]
                     ctx.lineWidth = root.ringBaseWidth
@@ -360,12 +372,13 @@ Panel {
                 // Empty-state message when the selected day has no data.
                 Text {
                   visible: root.groupedApps.length === 0
-                  text: "No screen time recorded"
+                  text: "No data"
                   color: root.contentForeground
                   opacity: 0.4
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.bodySmall
                   width: parent.width
+                  horizontalAlignment: Text.AlignHCenter
                 }
 
                 Repeater {

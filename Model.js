@@ -103,6 +103,22 @@ function fmtWords(ms) {
   return part
 }
 
+// Structured time parts for the hero subtitle: { h, m, s }.
+// Each value is a string; empty string means that unit is not shown.
+function fmtTimeParts(ms) {
+  ms = Math.max(0, Math.round(Number(ms) || 0))
+  if (ms <= 0) return { h: "0", m: "MINUTES", s: "" }
+  if (ms < 60000) {
+    var sec = Math.max(1, Math.round(ms / 1000))
+    return { h: String(sec), m: sec === 1 ? "SECOND" : "SECONDS", s: "" }
+  }
+  var mins = Math.round(ms / 60000)
+  if (mins < 60) return { h: String(mins), m: mins === 1 ? "MINUTE" : "MINUTES", s: "" }
+  var hr = Math.floor(mins / 60)
+  var rem = mins % 60
+  return { h: String(hr), m: hr === 1 ? "HOUR" : "HOURS", s: rem > 0 ? String(rem) + " MIN" : "" }
+}
+
 // Sorted per-app list for today: [{ app, ms, pct }], most-used first.
 // Apps with under a minute of use are dropped so the panel only lists
 // meaningful entries.
@@ -254,28 +270,34 @@ function pruneDays(days, todayKey, keepDays) {
   return changed ? out : days
 }
 
-// Ordered list of insight rows: [{ label, value }]. Empty when nothing has
-// been tracked yet today.
+// Ordered list of insight rows: [{ label, value }]. Always returns three
+// rows; missing data shows "—" placeholders.
 function insights(day, days, todayKey, activeKey) {
-  var list = []
+  var key = activeKey || todayKey
+  var isToday = key === todayKey
+  var dayLabel = isToday ? "" : " (" + relativeDayLabel(key, todayKey) + ")"
   var total = day && day.total ? day.total : 0
-  if (total <= 0) return list
-
-  var dayLabel = relativeDayLabel(activeKey || todayKey, todayKey)
 
   var apps = appList(day)
-  if (apps.length) {
-    var top = apps[0]
-    list.push({ label: "Top app (" + dayLabel + ")", value: top.app + " \u00b7 " + fmt(top.ms) + " (" + top.pct + "%)" })
-  }
+  var topApp = apps.length ? apps[0] : null
+  var topLabel = topApp
+    ? topApp.app + " \u00b7 " + fmt(topApp.ms) + " (" + topApp.pct + "%)"
+    : "\u2014"
+  var list = [{ label: "Top app" + dayLabel, value: topLabel }]
 
-  var compareKey = prevKey(activeKey || todayKey)
+  var compareKey = prevKey(key)
   var compareTotal = totalFor(days, compareKey)
-  if (compareTotal > 0) list.push({ label: "vs (" + relativeDayLabel(compareKey, todayKey) + ")", value: fmtDelta(total - compareTotal) })
+  var compareLabel = compareTotal > 0
+    ? fmtDelta(total - compareTotal)
+    : "\u2014"
+  var vsLabel = isToday ? "vs yesterday" : "vs (" + relativeDayLabel(compareKey, todayKey) + ")"
+  list.push({ label: vsLabel, value: compareLabel })
 
   var busiest = busiestWeekDay(days, todayKey)
-  if (busiest.total > 0)
-    list.push({ label: "Busiest day (7d)", value: weekdayLabel(busiest.key) + " \u00b7 " + fmt(busiest.total) })
+  var busiestLabel = busiest.total > 0
+    ? weekdayLabel(busiest.key) + " \u00b7 " + fmt(busiest.total)
+    : "\u2014"
+  list.push({ label: "Busiest day (7d)", value: busiestLabel })
 
   return list
 }
@@ -391,6 +413,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     fmt: fmt,
     fmtDelta: fmtDelta,
     fmtWords: fmtWords,
+    fmtTimeParts: fmtTimeParts,
     appList: appList,
     totalFor: totalFor,
     prevKey: prevKey,

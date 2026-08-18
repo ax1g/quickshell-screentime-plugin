@@ -214,13 +214,17 @@ test("insights lists top app, delta, and busiest day", () => {
   }
   const rows = Model.insights(today, days, "2026-08-15", "2026-08-15")
   const labels = rows.map(r => r.label)
-  assert.deepEqual(labels, ["Top app (Today)", "vs (Yesterday)", "Busiest day (7d)"])
+  assert.deepEqual(labels, ["Top app", "vs yesterday", "Busiest day (7d)"])
   assert.ok(rows[0].value.includes("browser"))
   assert.ok(rows[1].value.includes("-"))
 })
 
-test("insights returns empty when no activity today", () => {
-  assert.deepEqual(Model.insights(Model.newDay(), {}, "2026-08-15", "2026-08-15"), [])
+test("insights returns 3 rows with dashes when no activity", () => {
+  const rows = Model.insights(Model.newDay(), {}, "2026-08-15", "2026-08-15")
+  assert.equal(rows.length, 3)
+  assert.ok(rows[0].value.includes("\u2014"))
+  assert.ok(rows[1].value.includes("\u2014"))
+  assert.ok(rows[2].value.includes("\u2014"))
 })
 
 test("weekdayLabel returns short weekday for valid keys", () => {
@@ -241,8 +245,9 @@ test("insights shows correct labels when viewing a past day", () => {
   }
   const rows = Model.insights(today, days, "2026-08-15", "2026-08-14")
   assert.equal(rows[0].label, "Top app (Yesterday)")
-  assert.ok(rows[1].label.startsWith("vs"))
+  assert.ok(rows[1].label.startsWith("vs ("))
   assert.ok(rows[1].label.includes("Thu"))
+  assert.equal(rows[2].label, "Busiest day (7d)")
 })
 
 test("fmtDelta prefixes + and - correctly", () => {
