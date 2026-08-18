@@ -25,6 +25,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Panel close resets selected day only (expanded state preserved) so
   the panel always opens showing today's live data.
+- Hero hourglass icon and total time subtitle enlarged for better
+  readability.
+- Insights labels now use day names: "Top app (Fri)", "vs (Wed)",
+  instead of hardcoded "Top app" / "vs yesterday".
+
+### Fixed
+
+- Week-trend bars no longer vanish when the selected past day has no
+  data; the section stays visible so the user can switch days.
 
 ## [1.1.0] - 2026-08-16
 
