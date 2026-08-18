@@ -5,13 +5,13 @@ each app keeps focus, the bar shows today's total, and a popup breaks the day
 down into a donut chart with a 7-day usage trend.
 
 <p align="center">
-  <img src="assets/preview.png" width="47%" alt="Screen Time panel preview"/>
+  <img src="assets/preview.png" width="47%" alt="Screen Time bar widget"/>
+  <img src="assets/image2.png" width="47%" alt="Clickable week-trend bars"/>
 </p>
 
 <p align="center">
-  <img src="assets/image1.png" width="23%" alt="Today's donut breakdown"/>
-  <img src="assets/image2.png" width="23%" alt="Clickable week-trend bars"/>
-  <img src="assets/image3.png" width="23%" alt="Insights with weekday labels"/>
+  <img src="assets/image1.png" width="47%" alt="Today's donut breakdown"/>
+  <img src="assets/image3.png" width="47%" alt="Insights with weekday labels"/>
 </p>
 
 ## Features
