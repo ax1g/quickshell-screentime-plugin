@@ -18,22 +18,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   segment and title-cased (`com.github.user.Codium` → `Codium`).
 - Donut slices below 3% auto-collapse into the "Other" bucket so the
   chart stays readable with many small apps.
-- Donut centre label shows the selected day name ("TODAY", "YESTERDAY",
-  "MON", etc.) instead of a hardcoded "TODAY".
+- Donut centre now shows the full date ("Aug 15") instead of a
+  hardcoded "TODAY" label.
+- Insights always show three rows; missing data shows an em-dash
+  placeholder instead of omitting the row.
+- Empty donut draws a dim ring so the chart area is visible even with
+  no tracked data for the selected day.
 
 ### Changed
 
 - Panel close resets selected day only (expanded state preserved) so
   the panel always opens showing today's live data.
-- Hero hourglass icon and total time subtitle enlarged for better
-  readability.
-- Insights labels now use day names: "Top app (Fri)", "vs (Wed)",
-  instead of hardcoded "Top app" / "vs yesterday".
+- Hero hourglass icon enlarged for better readability; subtitle font
+  reduced to caption size.
+- Insights labels use weekday names for all non-today items:
+  "Top app (Fri)", "vs (Thu)"; today keeps "Top app" / "vs yesterday".
+- Extra spacing between insights icon and label text.
 
 ### Fixed
 
-- Week-trend bars no longer vanish when the selected past day has no
+- Week-trend bars no longer vanish when the selected past day has
   data; the section stays visible so the user can switch days.
+- Insight icons (star, arrow, circle) render correctly with day-name
+  labels via prefix matching instead of exact equality.
+- Scrollbar ratio guarded against Infinity when content is empty.
+- `busiestWeekDay` guarded against empty `todayKey` input.
 
 ## [1.1.0] - 2026-08-16
 

@@ -29,7 +29,7 @@ Panel {
   property string selectedKey: ""
   readonly property var activeDay: serviceReady ? Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey) : null
   readonly property string activeDayKey: root.selectedKey || root.todayKey
-  readonly property string activeDayLabel: serviceReady ? Model.relativeDayLabel(root.activeDayKey, root.todayKey) : ""
+  readonly property string activeDayLabel: serviceReady ? Model.formatDate(root.activeDayKey) : ""
   readonly property double dayTotal: root.activeDay ? (root.activeDay.total || 0) : 0
 
   // All derived data is gated on service.ready: before the service has
@@ -251,9 +251,8 @@ Panel {
                 text: root.dayTotal > 0 ? Model.fmtWords(root.dayTotal) : "0 MINUTES"
                 color: Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
-                font.pixelSize: Style.font.body
+                font.pixelSize: Style.font.caption
                 font.bold: true
-                font.letterSpacing: 1.2
                 elide: Text.ElideRight
                 width: parent.width
               }
@@ -326,7 +325,7 @@ Panel {
                 spacing: Style.space(1)
 
                 Text {
-                  text: root.activeDayLabel.toUpperCase()
+                  text: root.activeDayLabel
                   color: root.contentForeground
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.bodySmall
@@ -578,6 +577,7 @@ Panel {
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall
                     anchors.left: iconText.right
+                    anchors.leftMargin: Style.space(2)
                     anchors.verticalCenter: parent.verticalCenter
                   }
 

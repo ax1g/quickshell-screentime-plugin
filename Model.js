@@ -99,7 +99,7 @@ function fmtWords(ms) {
   var h = Math.floor(mins / 60)
   var m = mins % 60
   var part = h + (h === 1 ? " HOUR" : " HOURS")
-  if (m > 0) part += " " + m + " MINUTES"
+  if (m > 0) part += " " + m + (m === 1 ? " MINUTE" : " MINUTES")
   return part
 }
 
@@ -183,6 +183,18 @@ function prevKey(key) {
 }
 
 var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+var MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+// Full date label for a dayKey, e.g. "Aug 15".
+function formatDate(key) {
+  if (!key) return ""
+  var parts = String(key).split("-")
+  if (parts.length !== 3) return ""
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  if (isNaN(d.getTime())) return ""
+  return MONTH_NAMES[d.getMonth()] + " " + d.getDate()
+}
 
 // Short weekday name for any key, e.g. "Mon".  Unlike relativeDayLabel
 // this never returns "Today" or "Yesterday".
@@ -419,6 +431,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     prevKey: prevKey,
     relativeDayLabel: relativeDayLabel,
     weekdayLabel: weekdayLabel,
+    formatDate: formatDate,
     weekKeys: weekKeys,
     busiestWeekDay: busiestWeekDay,
     weekTrend: weekTrend,
