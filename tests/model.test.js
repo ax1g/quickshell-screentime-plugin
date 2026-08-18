@@ -244,7 +244,7 @@ test("insights shows correct labels when viewing a past day", () => {
     "2026-08-14": { total: 80000 }
   }
   const rows = Model.insights(today, days, "2026-08-15", "2026-08-14")
-  assert.equal(rows[0].label, "Top app (Yesterday)")
+  assert.equal(rows[0].label, "Top app (Fri)")
   assert.ok(rows[1].label.startsWith("vs ("))
   assert.ok(rows[1].label.includes("Thu"))
   assert.equal(rows[2].label, "Busiest day (7d)")

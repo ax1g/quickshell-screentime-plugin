@@ -275,7 +275,7 @@ function pruneDays(days, todayKey, keepDays) {
 function insights(day, days, todayKey, activeKey) {
   var key = activeKey || todayKey
   var isToday = key === todayKey
-  var dayLabel = isToday ? "" : " (" + relativeDayLabel(key, todayKey) + ")"
+  var dayLabel = isToday ? "" : " (" + weekdayLabel(key) + ")"
   var total = day && day.total ? day.total : 0
 
   var apps = appList(day)
@@ -290,7 +290,7 @@ function insights(day, days, todayKey, activeKey) {
   var compareLabel = compareTotal > 0
     ? fmtDelta(total - compareTotal)
     : "\u2014"
-  var vsLabel = isToday ? "vs yesterday" : "vs (" + relativeDayLabel(compareKey, todayKey) + ")"
+  var vsLabel = isToday ? "vs yesterday" : "vs (" + weekdayLabel(compareKey) + ")"
   list.push({ label: vsLabel, value: compareLabel })
 
   var busiest = busiestWeekDay(days, todayKey)
