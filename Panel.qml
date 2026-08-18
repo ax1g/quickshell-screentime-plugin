@@ -77,15 +77,15 @@ Panel {
   // Per-row glyph for the patterns section: a filled star for the top app,
   // a trend arrow for vs-yesterday, a hollow star for the busiest day.
   function insightIcon(label, value) {
-    if (label === "Top app") return "\u2605"
-    if (label === "vs yesterday") return root.deltaArrow(value)
-    if (label === "Busiest day (7d)") return "\u2606"
+    if (label.indexOf("Top app") === 0) return "\u2605"
+    if (label.indexOf("vs") === 0) return root.deltaArrow(value)
+    if (label.indexOf("Busiest day") === 0) return "\u2606"
     return ""
   }
 
   // More time than yesterday reads full, less time reads dimmed.
   function insightIconColor(label, value) {
-    if (label === "vs yesterday" && String(value).charAt(0) === "-")
+    if (label.indexOf("vs") === 0 && String(value).charAt(0) === "-")
       return Qt.darker(root.contentForeground, 1.5)
     return root.contentForeground
   }
@@ -261,8 +261,7 @@ Panel {
           // ---- Per-app donut + legend ------------------------------------
           Item {
             width: parent.width
-            visible: root.groupedApps.length > 0
-            implicitHeight: visible ? Math.max(root.ringSize, legendScroll.height) : 0
+            implicitHeight: Math.max(root.ringSize, legendScroll.height)
 
             Item {
               id: donutItem
@@ -355,6 +354,17 @@ Panel {
                 id: legendList
                 width: parent.width - Style.space(8)
                 spacing: Style.space(5)
+
+                // Empty-state message when the selected day has no data.
+                Text {
+                  visible: root.groupedApps.length === 0
+                  text: "No screen time recorded"
+                  color: root.contentForeground
+                  opacity: 0.4
+                  font.family: root.contentFontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  width: parent.width
+                }
 
                 Repeater {
                   model: root.expanded ? root.fullApps : root.groupedApps

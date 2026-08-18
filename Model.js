@@ -166,6 +166,17 @@ function prevKey(key) {
   return dayKey(d)
 }
 
+// Short weekday name for any key, e.g. "Mon".  Unlike relativeDayLabel
+// this never returns "Today" or "Yesterday".
+function weekdayLabel(key) {
+  if (!key) return ""
+  var parts = String(key).split("-")
+  if (parts.length !== 3) return ""
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  if (isNaN(d.getTime())) return ""
+  return WEEKDAY_NAMES[d.getDay()]
+}
+
 // Weekday label for a dayKey relative to today: "Today", "Yesterday", or
 // the short weekday name.
 var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -262,7 +273,7 @@ function insights(today, days, todayKey, activeKey) {
 
   var busiest = busiestWeekDay(days, todayKey)
   if (busiest.total > 0)
-    list.push({ label: "Busiest day (7d)", value: relativeDayLabel(busiest.key, todayKey) + " \u00b7 " + fmt(busiest.total) })
+    list.push({ label: "Busiest day (7d)", value: weekdayLabel(busiest.key) + " \u00b7 " + fmt(busiest.total) })
 
   return list
 }
