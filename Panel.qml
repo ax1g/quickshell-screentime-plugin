@@ -37,7 +37,7 @@ Panel {
   // garbage labels ("NaN-NaN-NaN") instead of an empty chart.
   readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
   readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
-  readonly property var insightRows: serviceReady ? Model.insights(root.activeDay, root.days, root.activeDayKey) : []
+  readonly property var insightRows: serviceReady ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey) : []
   readonly property var weekTrend: serviceReady ? Model.weekTrend(root.days, root.todayKey) : []
   readonly property double weekMax: {
     var max = 0
@@ -184,7 +184,7 @@ Panel {
               text: "󰔟"
               color: root.contentForeground
               font.family: root.contentFontFamily
-              font.pixelSize: Style.font.displayLarge
+              font.pixelSize: Style.fontPx(2.8)
               anchors.left: parent.left
               anchors.top: parent.top
             }
@@ -249,7 +249,7 @@ Panel {
                 text: root.dayTotal > 0 ? Model.fmtWords(root.dayTotal) : "0 MINUTES"
                 color: Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
-                font.pixelSize: Style.font.caption
+                font.pixelSize: Style.font.body
                 font.bold: true
                 font.letterSpacing: 1.2
                 elide: Text.ElideRight
@@ -434,7 +434,7 @@ Panel {
           // ---- Week trend + insights (only on SHOW MORE) -----------------
           Item {
             width: parent.width
-            visible: root.expanded && root.insightRows.length > 0
+            visible: root.expanded
             implicitHeight: visible ? patternsColumn.implicitHeight : 0
 
             Column {

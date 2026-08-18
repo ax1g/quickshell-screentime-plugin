@@ -243,19 +243,22 @@ function pruneDays(days, todayKey, keepDays) {
 
 // Ordered list of insight rows: [{ label, value }]. Empty when nothing has
 // been tracked yet today.
-function insights(today, days, todayKey) {
+function insights(today, days, todayKey, activeKey) {
   var list = []
   var total = today && today.total ? today.total : 0
   if (total <= 0) return list
 
+  var dayLabel = relativeDayLabel(activeKey || todayKey, todayKey)
+
   var apps = appList(today)
   if (apps.length) {
     var top = apps[0]
-    list.push({ label: "Top app", value: top.app + " \u00b7 " + fmt(top.ms) + " (" + top.pct + "%)" })
+    list.push({ label: "Top app (" + dayLabel + ")", value: top.app + " \u00b7 " + fmt(top.ms) + " (" + top.pct + "%)" })
   }
 
-  var yesterday = totalFor(days, prevKey(todayKey))
-  if (yesterday > 0) list.push({ label: "vs yesterday", value: fmtDelta(total - yesterday) })
+  var compareKey = prevKey(activeKey || todayKey)
+  var compareTotal = totalFor(days, compareKey)
+  if (compareTotal > 0) list.push({ label: "vs (" + relativeDayLabel(compareKey, todayKey) + ")", value: fmtDelta(total - compareTotal) })
 
   var busiest = busiestWeekDay(days, todayKey)
   if (busiest.total > 0)

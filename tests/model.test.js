@@ -212,9 +212,9 @@ test("insights lists top app, delta, and busiest day", () => {
     "2026-08-14": { total: 7200000 },
     "2026-08-11": { total: 14400000 }
   }
-  const rows = Model.insights(today, days, "2026-08-15")
+  const rows = Model.insights(today, days, "2026-08-15", "2026-08-15")
   const labels = rows.map(r => r.label)
-  assert.deepEqual(labels, ["Top app", "vs yesterday", "Busiest day (7d)"])
+  assert.deepEqual(labels, ["Top app (Today)", "vs (Yesterday)", "Busiest day (7d)"])
   assert.ok(rows[0].value.includes("browser"))
   assert.ok(rows[1].value.includes("-"))
 })
