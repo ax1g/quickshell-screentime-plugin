@@ -52,7 +52,8 @@ Panel {
   readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
   readonly property int groupedCount: root.groupedApps.length
   // The "Other" slice color: last in the grouped palette.
-  readonly property color otherColor: root.sliceColors[root.groupedCount - 1] || Color.accent
+  readonly property color otherColor: root.groupedCount > 0
+    ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
 
   // Ring geometry: the radius is fixed for the base stroke so it never
   // clips against the Shape bounds.
@@ -236,7 +237,7 @@ Panel {
               spacing: Style.space(2)
 
               Text {
-                text: "Screen Time"
+                text: root.activeDayKey === root.todayKey ? "Screen Time" : root.activeDayLabel.toUpperCase()
                 color: root.contentForeground
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.title
@@ -426,7 +427,8 @@ Panel {
 
             // Thin scrollbar indicator on the right edge.
             Rectangle {
-              property real ratio: legendScroll.height / legendScroll.contentHeight
+              property real ratio: legendScroll.contentHeight > 0
+                ? legendScroll.height / legendScroll.contentHeight : 0
               visible: legendScroll.contentHeight > legendScroll.height
               width: Style.space(3)
               height: Math.max(Style.space(16), legendScroll.height * ratio)

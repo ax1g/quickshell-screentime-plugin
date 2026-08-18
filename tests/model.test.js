@@ -220,7 +220,39 @@ test("insights lists top app, delta, and busiest day", () => {
 })
 
 test("insights returns empty when no activity today", () => {
-  assert.deepEqual(Model.insights(Model.newDay(), {}, "2026-08-15"), [])
+  assert.deepEqual(Model.insights(Model.newDay(), {}, "2026-08-15", "2026-08-15"), [])
+})
+
+test("weekdayLabel returns short weekday for valid keys", () => {
+  assert.equal(Model.weekdayLabel("2026-08-15"), "Sat")
+  assert.equal(Model.weekdayLabel("2026-08-10"), "Mon")
+})
+
+test("weekdayLabel handles empty and malformed keys", () => {
+  assert.equal(Model.weekdayLabel(""), "")
+  assert.equal(Model.weekdayLabel("not-a-date"), "")
+})
+
+test("insights shows correct labels when viewing a past day", () => {
+  const today = { total: 100000, apps: { a: 100000 } }
+  const days = {
+    "2026-08-13": { total: 50000 },
+    "2026-08-14": { total: 80000 }
+  }
+  const rows = Model.insights(today, days, "2026-08-15", "2026-08-14")
+  assert.equal(rows[0].label, "Top app (Yesterday)")
+  assert.ok(rows[1].label.startsWith("vs"))
+  assert.ok(rows[1].label.includes("Thu"))
+})
+
+test("fmtDelta prefixes + and - correctly", () => {
+  assert.equal(Model.fmtDelta(60000), "+1m")
+  assert.equal(Model.fmtDelta(-120000), "-2m")
+})
+
+test("arcSegments returns empty array for empty list", () => {
+  assert.deepEqual(Model.arcSegments([]), [])
+  assert.deepEqual(Model.arcSegments(null), [])
 })
 
 test("hexToHsl and hslToHex round-trip", () => {

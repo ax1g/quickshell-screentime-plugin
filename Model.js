@@ -166,6 +166,8 @@ function prevKey(key) {
   return dayKey(d)
 }
 
+var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
 // Short weekday name for any key, e.g. "Mon".  Unlike relativeDayLabel
 // this never returns "Today" or "Yesterday".
 function weekdayLabel(key) {
@@ -179,7 +181,6 @@ function weekdayLabel(key) {
 
 // Weekday label for a dayKey relative to today: "Today", "Yesterday", or
 // the short weekday name.
-var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 function relativeDayLabel(key, todayKey) {
   if (!key) return ""
@@ -207,6 +208,7 @@ function weekKeys(todayKey) {
 // Busiest day in the trailing 7 days: { key, total }.
 function busiestWeekDay(days, todayKey) {
   var keys = weekKeys(todayKey)
+  if (!keys.length) return { key: "", total: 0 }
   var best = { key: keys[keys.length - 1], total: 0 }
   for (var i = 0; i < keys.length; i++) {
     var total = totalFor(days, keys[i])
@@ -254,14 +256,14 @@ function pruneDays(days, todayKey, keepDays) {
 
 // Ordered list of insight rows: [{ label, value }]. Empty when nothing has
 // been tracked yet today.
-function insights(today, days, todayKey, activeKey) {
+function insights(day, days, todayKey, activeKey) {
   var list = []
-  var total = today && today.total ? today.total : 0
+  var total = day && day.total ? day.total : 0
   if (total <= 0) return list
 
   var dayLabel = relativeDayLabel(activeKey || todayKey, todayKey)
 
-  var apps = appList(today)
+  var apps = appList(day)
   if (apps.length) {
     var top = apps[0]
     list.push({ label: "Top app (" + dayLabel + ")", value: top.app + " \u00b7 " + fmt(top.ms) + " (" + top.pct + "%)" })
@@ -393,6 +395,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     totalFor: totalFor,
     prevKey: prevKey,
     relativeDayLabel: relativeDayLabel,
+    weekdayLabel: weekdayLabel,
     weekKeys: weekKeys,
     busiestWeekDay: busiestWeekDay,
     weekTrend: weekTrend,
