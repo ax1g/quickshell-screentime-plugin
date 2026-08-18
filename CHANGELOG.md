@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-18
+
+### Added
+
+- Interactive week-trend bars: click any day to view that day's apps,
+  donut, hero total, and insights; click again or close the panel to
+  return to today's live data. Active bar highlighted with an accent
+  dot indicator.
+- Scrollable app list: bounded legend with a thin scrollbar; Show More
+  toggles the full app list inline (renamed from Patterns).
+- Clean app names: reverse-DNS compositor IDs shortened to the last
+  segment and title-cased (`com.github.user.Codium` → `Codium`).
+- Donut slices below 3% auto-collapse into the "Other" bucket so the
+  chart stays readable with many small apps.
+- Donut centre label shows the selected day name ("TODAY", "YESTERDAY",
+  "MON", etc.) instead of a hardcoded "TODAY".
+
+### Changed
+
+- Panel close resets selected day only (expanded state preserved) so
+  the panel always opens showing today's live data.
+
 ## [1.1.0] - 2026-08-16
 
 ### Fixed

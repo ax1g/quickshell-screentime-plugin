@@ -17,6 +17,9 @@ down into a donut chart with a 7-day usage trend.
 | **Per-app tracking** | Focus time per app; idle, locked, asleep and desktop time never counted. |
 | **Terminal-aware** | A focused terminal reports what's actually running inside it (`opencode`, not `foot`), re-resolving every few seconds; browser subprocesses are canonicalized into one app. |
 | **Donut breakdown** | Today's apps in a ring with a legend and the day's total in the centre; six biggest + "Other". |
+| **Clickable week bars** | Click any day in the 7-day trend to view that day's apps, donut, and insights; click again or close the panel to return to today. |
+| **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list inline. |
+| **Clean app names** | Reverse-DNS IDs shortened to the last segment and title-cased (`com.github.user.Codium` → `Codium`). |
 | **Usage patterns** | Press `p` for a 7-day trend, top app, vs. yesterday, and your busiest day. |
 | **Icon-only mode** | Right-click to collapse the widget to a single glyph; remembered. |
 | **Keyboard-first** | `Esc` closes the panel, `p` toggles patterns, `j`/`k`/arrows scroll; mouse wheel works too. |
