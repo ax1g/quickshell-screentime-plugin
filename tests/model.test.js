@@ -255,6 +255,31 @@ test("fmtDelta prefixes + and - correctly", () => {
   assert.equal(Model.fmtDelta(-120000), "-2m")
 })
 
+test("fmtWords renders singular for 1 SECOND and 1 HOUR 1 MINUTE", () => {
+  assert.equal(Model.fmtWords(1000), "1 SECOND")
+  assert.equal(Model.fmtWords(3660000), "1 HOUR 1 MINUTE")
+})
+
+test("formatDate returns month and day for valid keys", () => {
+  assert.equal(Model.formatDate("2026-08-15"), "Aug 15")
+  assert.equal(Model.formatDate("2026-01-01"), "Jan 1")
+})
+
+test("formatDate returns empty for empty or malformed keys", () => {
+  assert.equal(Model.formatDate(""), "")
+  assert.equal(Model.formatDate("not-a-date"), "")
+})
+
+test("busiestWeekDay returns zero total when all days are empty", () => {
+  const days = {
+    "2026-08-13": { total: 0 },
+    "2026-08-14": { total: 0 },
+    "2026-08-15": { total: 0 }
+  }
+  const best = Model.busiestWeekDay(days, "2026-08-15")
+  assert.equal(best.total, 0)
+})
+
 test("arcSegments returns empty array for empty list", () => {
   assert.deepEqual(Model.arcSegments([]), [])
   assert.deepEqual(Model.arcSegments(null), [])

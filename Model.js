@@ -103,22 +103,6 @@ function fmtWords(ms) {
   return part
 }
 
-// Structured time parts for the hero subtitle: { h, m, s }.
-// Each value is a string; empty string means that unit is not shown.
-function fmtTimeParts(ms) {
-  ms = Math.max(0, Math.round(Number(ms) || 0))
-  if (ms <= 0) return { h: "0", m: "MINUTES", s: "" }
-  if (ms < 60000) {
-    var sec = Math.max(1, Math.round(ms / 1000))
-    return { h: String(sec), m: sec === 1 ? "SECOND" : "SECONDS", s: "" }
-  }
-  var mins = Math.round(ms / 60000)
-  if (mins < 60) return { h: String(mins), m: mins === 1 ? "MINUTE" : "MINUTES", s: "" }
-  var hr = Math.floor(mins / 60)
-  var rem = mins % 60
-  return { h: String(hr), m: hr === 1 ? "HOUR" : "HOURS", s: rem > 0 ? String(rem) + " MIN" : "" }
-}
-
 // Sorted per-app list for today: [{ app, ms, pct }], most-used first.
 // Apps with under a minute of use are dropped so the panel only lists
 // meaningful entries.
@@ -425,7 +409,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     fmt: fmt,
     fmtDelta: fmtDelta,
     fmtWords: fmtWords,
-    fmtTimeParts: fmtTimeParts,
+
     appList: appList,
     totalFor: totalFor,
     prevKey: prevKey,
