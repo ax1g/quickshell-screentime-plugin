@@ -144,18 +144,10 @@ Item {
   // for periodic refreshes while a terminal stays focused (its foreground
   // process can change: opencode -> bash).
   function applyResolvedApp(name) {
-    if (!root.resolveInFlight) return
-    root.resolveInFlight = false
-    if (root.rawApp !== root.resolveForApp) return
-    if (!name) name = root.rawApp
-    name = Model.canonicalApp(name)
-    if (name === root.activeApp) return
-    var now = Date.now()
-    applyState(State.closeActiveBucket(
-      root, root.activeApp, root.activeStart, now,
-      root.todayKey, root.suspendGapMs, root.lastTick))
-    root.activeApp = name
-    root.activeStart = name ? now : 0
+    var patch = State.applyResolvedApp(
+      root, name, root.resolveForApp, root.todayKey,
+      root.suspendGapMs, root.lastTick)
+    applyState(patch)
   }
 
   // Bounds crash loss: folds the in-flight bucket into today, then restarts

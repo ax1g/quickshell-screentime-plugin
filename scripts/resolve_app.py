@@ -52,8 +52,11 @@ BROWSER_SUBPROCESS_COMMS = {
 _ALIASES_JSON = os.path.join(
     os.path.dirname(__file__), os.pardir, "lib", "browser_aliases.json"
 )
-with open(_ALIASES_JSON) as _f:
-    BROWSER_BINARY_TO_APP = json.load(_f)
+try:
+    with open(_ALIASES_JSON) as _f:
+        BROWSER_BINARY_TO_APP = json.load(_f)
+except (OSError, json.JSONDecodeError):
+    BROWSER_BINARY_TO_APP = {}
 
 
 def proc_stat(pid):
