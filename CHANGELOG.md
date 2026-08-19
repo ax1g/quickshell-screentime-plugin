@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-08-19
+
+### Added
+
+- `State.js` state-machine module: bucket lifecycle, suspend detection, and
+  midnight rollover extracted from `Service.qml` into pure, testable
+  functions.
+- `lib/browser_aliases.json` as single source of truth for browser
+  canonicalization; `Model.js` and `resolve_app.py` read from it.
+- `State.js` unit tests and data-safety test coverage for pruning, midnight
+  rollover, and corrupt-input recovery.
+
+### Changed
+
+- Project reorganized: `Model.js` → `lib/Model.js`,
+  `resolve_app.py` → `scripts/resolve_app.py`.
+
+### Fixed
+
+- Deprecated `Qt.include()` replaced with inline JSON to silence QML
+  warnings.
+- `persist()` calls restored after `State.js` extraction accidentally
+  dropped them.
+- `closeActiveBucket` consolidated through `State.closeActiveBucket` in
+  rollover; remaining `root.closeActiveBucket` references removed.
+- Service wired to `State.applyResolvedApp`; resolver aliases guarded
+  against missing entries.
+- Shadowed variable `d` renamed to `dt` in `commitElapsed`.
+
 ## [1.2.0] - 2026-08-18
 
 ### Added
