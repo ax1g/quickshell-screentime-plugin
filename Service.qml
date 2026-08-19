@@ -356,7 +356,9 @@ Item {
     onTriggered: {
       var now = Date.now()
       if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs))
-        root.closeActiveBucket(now)
+        applyState(State.closeActiveBucket(
+          root, root.activeApp, root.activeStart, now,
+          root.todayKey, root.suspendGapMs, root.lastTick))
       root.lastTick = now
     }
   }
