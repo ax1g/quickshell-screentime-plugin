@@ -2,7 +2,7 @@
 
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
-const Model = require("../Model.js")
+const Model = require("../lib/Model.js")
 
 test("dayKey pads month and day", () => {
   assert.equal(Model.dayKey(new Date(2026, 7, 15)), "2026-08-15")

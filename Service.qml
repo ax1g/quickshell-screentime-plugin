@@ -2,7 +2,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import "Model.js" as Model
+import "lib/Model.js" as Model
+import "lib/State.js" as State
 
 // Long-running screen-time tracker.
 //
@@ -18,6 +19,10 @@ import "Model.js" as Model
 // Writes are event-driven (on focus change) and debounced through the
 // adapter; a 60s commit bounds how much of an in-flight bucket can be lost
 // to a crash. Data survives plugin hot-reloads because it lives on disk.
+//
+// State transitions live in State.js (pure, testable). This file owns the
+// side effects: timers, disk I/O, process spawning, and QML property
+// bindings.
 Item {
   id: root
 
@@ -28,7 +33,7 @@ Item {
   readonly property string dataDir: home + "/.config/omarchy/screen-time"
   readonly property string historyPath: dataDir + "/history.json"
   readonly property string resolverPath: {
-    var u = Qt.resolvedUrl("resolve_app.py").toString()
+    var u = Qt.resolvedUrl("scripts/resolve_app.py").toString()
     return u.startsWith("file://") ? u.slice(7) : u
   }
 
@@ -78,6 +83,20 @@ Item {
   function fmt(ms) { return Model.fmt(ms) }
   function relativeDayLabel(key) { return Model.relativeDayLabel(key, root.todayKey) }
 
+  // ---- State transition helpers ------------------------------------------
+  // Apply a partial state patch from a State.js function to live QML
+  // properties so bindings fire correctly.
+  function applyState(patch) {
+    if (!patch) return
+    if (patch.today !== undefined) root.today = patch.today
+    if (patch.days !== undefined) root.days = patch.days
+    if (patch.todayKey !== undefined) root.todayKey = patch.todayKey
+    if (patch.activeApp !== undefined) root.activeApp = patch.activeApp
+    if (patch.activeStart !== undefined) root.activeStart = patch.activeStart
+    if (patch.lastTick !== undefined) root.lastTick = patch.lastTick
+    if (patch.resolveInFlight !== undefined) root.resolveInFlight = patch.resolveInFlight
+  }
+
   // ---- Tracking ----------------------------------------------------------
 
   function isTerminal(appId) {
@@ -95,13 +114,11 @@ Item {
     return true
   }
 
-  function isSuspendGap(now) {
-    return root.lastTick > 0 && (now - root.lastTick) > root.suspendGapMs
-  }
-
   function switchActive() {
     var now = Date.now()
-    root.closeActiveBucket(now)
+    applyState(State.closeActiveBucket(
+      root, root.activeApp, root.activeStart, now,
+      root.todayKey, root.suspendGapMs, root.lastTick))
     var tl = ToplevelManager.activeToplevel
     var app = tl && tl.appId ? tl.appId : ""
     root.rawApp = app
@@ -112,7 +129,6 @@ Item {
       return
     }
     if (app && root.isTerminal(app)) {
-      // Open the bucket once the pty's foreground app is known.
       root.activeApp = ""
       root.activeStart = 0
       root.resolveForApp = app
@@ -130,84 +146,34 @@ Item {
   function applyResolvedApp(name) {
     if (!root.resolveInFlight) return
     root.resolveInFlight = false
-    if (root.rawApp !== root.resolveForApp) return  // focus moved mid-resolve
+    if (root.rawApp !== root.resolveForApp) return
     if (!name) name = root.rawApp
     name = Model.canonicalApp(name)
     if (name === root.activeApp) return
     var now = Date.now()
-    root.closeActiveBucket(now)
+    applyState(State.closeActiveBucket(
+      root, root.activeApp, root.activeStart, now,
+      root.todayKey, root.suspendGapMs, root.lastTick))
     root.activeApp = name
     root.activeStart = name ? now : 0
-  }
-
-  // Closes the open bucket: accrues elapsed ms to the app that was focused
-  // when it started. Safe to call with no open bucket.
-  function closeActiveBucket(now) {
-    if (!root.ready) return
-    var app = root.activeApp
-    if (!app || !root.activeStart) return
-    if (root.isSuspendGap(now)) {
-      // The machine was asleep; don't credit the wall-clock gap as screen
-      // time. Drop the stale bucket and re-anchor the gap baseline so the
-      // next bucket counts from wake time instead of looking like another
-      // gap until the next heartbeat refreshes lastTick.
-      root.activeApp = ""
-      root.activeStart = 0
-      root.lastTick = now
-      return
-    }
-    var dur = Math.max(0, now - root.activeStart)
-    var startMs = root.activeStart
-    root.activeApp = ""
-    root.activeStart = 0
-    if (dur <= 0) return
-
-    var startDay = Model.dayKey(new Date(startMs))
-    if (startDay === root.todayKey) {
-      var apps = Object.assign({}, root.today.apps)
-      apps[app] = (apps[app] || 0) + dur
-      root.today = { total: root.today.total + dur, apps: apps }
-    } else {
-      // Bucket spans midnight: attribute it to the day it started on.
-      var d = Object.assign({}, root.days)
-      var day = d[startDay] || Model.newDay()
-      var dApps = Object.assign({}, day.apps || {})
-      dApps[app] = (dApps[app] || 0) + dur
-      d[startDay] = { total: (day.total || 0) + dur, apps: dApps }
-      root.days = d
-    }
-    root.persist()
   }
 
   // Bounds crash loss: folds the in-flight bucket into today, then restarts
   // the timer so a crash loses at most the current interval.
   function commitElapsed(now) {
     if (!root.ready || !root.activeApp || !root.activeStart) return
-    if (root.isSuspendGap(now)) {
-      root.activeStart = now
-      return
-    }
-    var dur = Math.max(0, now - root.activeStart)
-    if (dur <= 0) return
-    var apps = Object.assign({}, root.today.apps)
-    apps[root.activeApp] = (apps[root.activeApp] || 0) + dur
-    root.today = { total: root.today.total + dur, apps: apps }
-    root.activeStart = now
-    root.persist()
+    applyState(State.commitElapsed(
+      root, root.activeApp, root.activeStart, now,
+      root.todayKey, root.suspendGapMs, root.lastTick))
   }
 
   function rolloverIfNeeded() {
     var key = Model.dayKey(new Date())
-    if (key === root.todayKey) return
+    var patch = State.rolloverIfNeeded(root, key)
+    if (!patch) return
     var app = root.activeApp
     root.closeActiveBucket(Date.now())
-    root.todayKey = key
-    // A bucket may already have been folded onto the new day before this
-    // rollover ran (focus switch across midnight); carry it forward.
-    var prev = root.days[key]
-    root.today = prev && typeof prev === "object"
-      ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}) }
-      : Model.newDay()
+    applyState(patch)
     // Reopen the still-focused app's bucket so tracking keeps running past
     // midnight without a focus change; the closed bucket went to the day it
     // started on.
@@ -293,6 +259,7 @@ Item {
 
   Process {
     id: ensureDirProc
+    environment: ({ "HOME": root.home })
     command: ["bash", "-c",
       "mkdir -p \"$HOME/.config/omarchy/screen-time\"; f=\"$HOME/.config/omarchy/screen-time/history.json\"; [[ -f \"$f\" ]] || printf '{}\\n' > \"$f\""]
     onExited: historyFile.reload()
@@ -318,6 +285,7 @@ Item {
   property bool backupAttempted: false
   Process {
     id: backupProc
+    environment: ({ "HOME": root.home })
     command: ["bash", "-c",
       "f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
   }
@@ -376,7 +344,8 @@ Item {
     running: root.ready
     onTriggered: {
       var now = Date.now()
-      if (root.isSuspendGap(now)) root.closeActiveBucket(now)
+      if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs))
+        root.closeActiveBucket(now)
       root.lastTick = now
     }
   }

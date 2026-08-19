@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import qs.Ui
-import "Model.js" as Model
+import "lib/Model.js" as Model
 
 // Popup for the screen-time bar widget: today's total, the per-app
 // breakdown, and a short behaviour-insights section. Read-only — the panel

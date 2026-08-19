@@ -11,7 +11,7 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 
 import resolve_app as r  # noqa: E402
 
@@ -42,14 +42,12 @@ class ProcParsingTests(unittest.TestCase):
         self.assertIsNone(r.proc_stat(2**31 - 1))
 
     def test_proc_name_resolves_current_process(self):
-        stat = r.proc_stat(os.getpid())
-        assert stat is not None
-        name = r.proc_name(os.getpid(), {os.getpid(): stat})
+        name = r.proc_name(os.getpid())
         assert name
         self.assertNotIn("/", name)
 
     def test_proc_name_unknown_pid_returns_none(self):
-        self.assertIsNone(r.proc_name(2**31 - 1, {}))
+        self.assertIsNone(r.proc_name(2**31 - 1))
 
 
 if __name__ == "__main__":

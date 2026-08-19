@@ -15,9 +15,9 @@ jobs:
         with:
           node-version: 20
       - name: Syntax check
-        run: node --check Model.js
+        run: node --check lib/Model.js && node --check lib/State.js
       - name: Unit tests
-        run: node --test tests/model.test.js
+        run: node --test tests/model.test.js tests/state.test.js
 
   python:
     name: resolve_app.py checks + tests
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compile check
-        run: python3 -m py_compile resolve_app.py tests/test_resolve_app.py
+        run: python3 -m py_compile scripts/resolve_app.py tests/test_resolve_app.py
       - name: Unit tests
         run: python3 -m unittest discover -s tests
 
