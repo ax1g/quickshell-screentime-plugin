@@ -10,10 +10,10 @@ down into a donut chart with a 7-day usage trend.
 
 <table>
   <tr>
-    <td><img src="docs/assets/image.png" alt="Screen Time bar widget" width="100%"/></td>
+    <td><img src="docs/assets/image.png" alt="Screen Time bar widget" width="600"/></td>
     <td>
-      <img src="docs/assets/image1.png" alt="Donut breakdown" width="100%"/><br/>
-      <img src="docs/assets/image2.png" alt="Week-trend bars" width="100%"/>
+      <img src="docs/assets/image1.png" alt="Donut breakdown" width="300"/><br/>
+      <img src="docs/assets/image2.png" alt="Week-trend bars" width="300"/>
     </td>
   </tr>
 </table>
