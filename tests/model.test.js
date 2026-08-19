@@ -337,3 +337,134 @@ test("browser_aliases.json is the single source of truth for canonicalApp", () =
       `canonicalApp("${key}") should return "${target}" from browser_aliases.json`)
   }
 })
+
+// ---- Data safety: pruneDays -----------------------------------------------
+
+test("pruneDays never removes todayKey", () => {
+  const days = {}
+  for (let i = 0; i < 40; i++) {
+    const d = new Date(2026, 7, 15 - i)
+    days[Model.dayKey(d)] = { total: i * 1000, apps: {} }
+  }
+  const out = Model.pruneDays(days, "2026-08-15", 7)
+  assert.ok(out["2026-08-15"], "today must survive pruning")
+})
+
+test("pruneDays never removes days within the retention window", () => {
+  const days = {
+    "2026-08-09": { total: 100 },
+    "2026-08-10": { total: 200 },
+    "2026-08-11": { total: 300 },
+    "2026-08-12": { total: 400 },
+    "2026-08-13": { total: 500 },
+    "2026-08-14": { total: 600 },
+    "2026-08-15": { total: 700 }
+  }
+  const out = Model.pruneDays(days, "2026-08-15", 7)
+  // All 7 days should survive
+  assert.equal(Object.keys(out).length, 7)
+})
+
+test("pruneDays with keepDays of 1 keeps only today", () => {
+  const days = {
+    "2026-08-14": { total: 100 },
+    "2026-08-15": { total: 200 }
+  }
+  const out = Model.pruneDays(days, "2026-08-15", 1)
+  assert.deepEqual(Object.keys(out), ["2026-08-15"])
+})
+
+test("pruneDays with keepDays of 0 returns original (no-op)", () => {
+  const days = { "2026-08-15": { total: 100 } }
+  const out = Model.pruneDays(days, "2026-08-15", 0)
+  assert.equal(out, days)
+})
+
+test("pruneDays with negative keepDays returns original (no-op)", () => {
+  const days = { "2026-08-15": { total: 100 } }
+  const out = Model.pruneDays(days, "2026-08-15", -5)
+  assert.equal(out, days)
+})
+
+test("pruneDays with null days returns original", () => {
+  assert.equal(Model.pruneDays(null, "2026-08-15", 7), null)
+})
+
+test("pruneDays across year boundary keeps correct window", () => {
+  const days = {
+    "2025-12-30": { total: 100 },
+    "2025-12-31": { total: 200 },
+    "2026-01-01": { total: 300 },
+    "2026-01-02": { total: 400 }
+  }
+  const out = Model.pruneDays(days, "2026-01-02", 3)
+  assert.ok(out["2026-01-02"])
+  assert.ok(out["2026-01-01"])
+  assert.ok(out["2025-12-31"])
+  assert.equal(out["2025-12-30"], undefined)
+})
+
+// ---- Data safety: corrupt / missing input ----------------------------------
+
+test("appList returns empty for null input", () => {
+  assert.deepEqual(Model.appList(null), [])
+  assert.deepEqual(Model.appList(undefined), [])
+  assert.deepEqual(Model.appList({}), [])
+})
+
+test("appList ignores negative and NaN durations", () => {
+  const today = {
+    total: 1000,
+    apps: { a: -5000, b: NaN, c: 120000 }
+  }
+  const list = Model.appList(today)
+  // a: -5000 < 60000 => dropped, b: NaN => dropped, c: 120000 => kept
+  assert.equal(list.length, 1)
+  assert.equal(list[0].app, "c")
+})
+
+test("groupedApps returns empty for null input", () => {
+  assert.deepEqual(Model.groupedApps(null, 6, 3), [])
+  assert.deepEqual(Model.groupedApps([], 6, 3), [])
+})
+
+test("groupedApps with a single app returns it as-is", () => {
+  const apps = [{ app: "only", ms: 120000, pct: 100 }]
+  const out = Model.groupedApps(apps, 6, 3)
+  assert.equal(out.length, 1)
+  assert.equal(out[0].app, "only")
+})
+
+test("insights handles null day and empty days gracefully", () => {
+  const rows = Model.insights(null, {}, "2026-08-15", "2026-08-15")
+  assert.equal(rows.length, 3)
+  assert.ok(rows[0].value.includes("\u2014"))
+  assert.ok(rows[1].value.includes("\u2014"))
+  assert.ok(rows[2].value.includes("\u2014"))
+})
+
+test("insights handles day with apps but no total", () => {
+  const day = { apps: { a: 60000 } }
+  const rows = Model.insights(day, {}, "2026-08-15", "2026-08-15")
+  assert.equal(rows.length, 3)
+  // Total computed from apps: 60000
+  assert.ok(rows[0].value.includes("a"))
+})
+
+test("fmt and fmtWords handle very large values", () => {
+  const day = 86400000 * 365  // one year in ms
+  assert.ok(Model.fmt(day).includes("h"))
+  assert.ok(Model.fmtWords(day).includes("HOURS"))
+})
+
+test("dayFor with null days and empty today returns null", () => {
+  assert.equal(Model.dayFor(null, null, "2026-08-15", "2026-08-15"), null)
+})
+
+test("dayKey produces consistent keys across Date object reuse", () => {
+  const d = new Date(2026, 0, 1)
+  const k1 = Model.dayKey(d)
+  const k2 = Model.dayKey(d)
+  assert.equal(k1, k2)
+  assert.equal(k1, "2026-01-01")
+})
