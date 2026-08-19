@@ -119,6 +119,7 @@ Item {
     applyState(State.closeActiveBucket(
       root, root.activeApp, root.activeStart, now,
       root.todayKey, root.suspendGapMs, root.lastTick))
+    root.persist()
     var tl = ToplevelManager.activeToplevel
     var app = tl && tl.appId ? tl.appId : ""
     root.rawApp = app
@@ -147,7 +148,14 @@ Item {
     var patch = State.applyResolvedApp(
       root, name, root.resolveForApp, root.todayKey,
       root.suspendGapMs, root.lastTick)
+    // Clear resolveInFlight unconditionally: the resolver process has exited.
+    // State.applyResolvedApp includes it in its patch when the result is
+    // acted on; when the result is discarded (no-op) the flag must still be
+    // cleared so the terminal refresh timer can re-resolve after 5s instead
+    // of waiting for the 10s watchdog.
+    root.resolveInFlight = false
     applyState(patch)
+    if (patch) root.persist()
   }
 
   // Bounds crash loss: folds the in-flight bucket into today, then restarts
@@ -347,10 +355,12 @@ Item {
     running: root.ready
     onTriggered: {
       var now = Date.now()
-      if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs))
+      if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs)) {
         applyState(State.closeActiveBucket(
           root, root.activeApp, root.activeStart, now,
           root.todayKey, root.suspendGapMs, root.lastTick))
+        root.persist()
+      }
       root.lastTick = now
     }
   }
@@ -364,6 +374,7 @@ Item {
       var now = Date.now()
       root.rolloverIfNeeded()
       root.commitElapsed(now)
+      root.persist()
       root.lastTick = now
     }
   }
