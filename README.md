@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="preview.png" alt="Screen Time" width="100%"/>
+</p>
+
 # Screen Time
 
 Per-app screen time for the Omarchy bar. A lightweight service tracks how long
@@ -5,13 +9,8 @@ each app keeps focus, the bar shows today's total, and a popup breaks the day
 down into a donut chart with a 7-day usage trend.
 
 <p align="center">
-  <img src="assets/preview.png" width="47%" alt="Screen Time bar widget"/>
-  <img src="assets/image2.png" width="47%" alt="Clickable week-trend bars"/>
-</p>
-
-<p align="center">
-  <img src="assets/image1.png" width="47%" alt="Today's donut breakdown"/>
-  <img src="assets/image3.png" width="47%" alt="Insights with weekday labels"/>
+  <img src="docs/assets/image1.png" width="49%" alt="Today's donut breakdown"/>
+  <img src="docs/assets/image2.png" width="49%" alt="Clickable week-trend bars"/>
 </p>
 
 ## Features
