@@ -28,6 +28,9 @@ Item {
 
   // Injected by omarchy-shell (the generic service loader).
   property var shell: null
+  // State.js receives this explicitly because QML JavaScript modules do not
+  // share the Model import from this file as a global.
+  readonly property var stateModel: Model
 
   readonly property string home: Quickshell.env("HOME")
   readonly property string dataDir: home + "/.config/omarchy/screen-time"
@@ -359,6 +362,11 @@ Item {
         applyState(State.closeActiveBucket(
           root, root.activeApp, root.activeStart, now,
           root.todayKey, root.suspendGapMs, root.lastTick))
+        root.persist()
+        root.switchActive()
+      } else {
+        root.rolloverIfNeeded()
+        root.commitElapsed(now)
         root.persist()
       }
       root.lastTick = now
