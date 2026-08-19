@@ -1,0 +1,18 @@
+{
+  "zen-bin": "zen",
+  "zen_browser": "zen",
+  "zen": "zen",
+  "firefox": "firefox",
+  "librewolf": "librewolf",
+  "waterfox": "waterfox",
+  "tor-browser": "tor-browser",
+  "mullvad-browser": "mullvad-browser",
+  "google-chrome": "google-chrome",
+  "chrome": "google-chrome",
+  "chromium": "chromium",
+  "brave": "brave",
+  "brave-browser": "brave",
+  "vivaldi": "vivaldi",
+  "microsoft-edge": "microsoft-edge",
+  "edge": "microsoft-edge"
+}

@@ -17,7 +17,6 @@ Prints a single process name (basename of argv[0], falling back to comm)
 and nothing on failure.
 """
 
-import glob
 import json
 import os
 import subprocess
@@ -49,25 +48,12 @@ BROWSER_SUBPROCESS_COMMS = {
 }
 
 # Browser binary basenames -> canonical screen-time app name.
-# Keep in sync with lib/Model.js BROWSER_ALIASES (same keys, same targets).
-BROWSER_BINARY_TO_APP = {
-    "zen-bin": "zen",
-    "zen_browser": "zen",
-    "zen": "zen",
-    "firefox": "firefox",
-    "librewolf": "librewolf",
-    "waterfox": "waterfox",
-    "tor-browser": "tor-browser",
-    "mullvad-browser": "mullvad-browser",
-    "google-chrome": "google-chrome",
-    "chrome": "google-chrome",
-    "chromium": "chromium",
-    "brave": "brave",
-    "brave-browser": "brave",
-    "vivaldi": "vivaldi",
-    "microsoft-edge": "microsoft-edge",
-    "edge": "microsoft-edge",
-}
+# Single source of truth: lib/browser_aliases.json (shared with Model.js).
+_ALIASES_JSON = os.path.join(
+    os.path.dirname(__file__), os.pardir, "lib", "browser_aliases.json"
+)
+with open(_ALIASES_JSON) as _f:
+    BROWSER_BINARY_TO_APP = json.load(_f)
 
 
 def proc_stat(pid):
@@ -112,74 +98,21 @@ def proc_name(pid):
     return name
 
 
-def _readlink(path):
-    """Read a symlink, returning None on any error."""
-    try:
-        return os.readlink(path)
-    except (OSError, ValueError):
-        return None
-
-
 def _resolve_terminal_foreground(terminal_pid):
-    """Walk /proc on demand to find the foreground process in a terminal.
+    """Resolve the foreground process in a terminal window.
 
-    Instead of reading every process upfront, this reads each /proc entry
-    only when needed during the tree walk.  Returns the foreground process
-    group leader's name, or None.
+    Reads the terminal's own /proc/[pid]/stat to get the ``tpgid`` field,
+    which is the PID of the foreground process group.  This is O(1) instead
+    of walking all of /proc.  If the foreground process is a browser
+    subprocess (Web Content, forkserver, …), walks its ancestor chain to
+    find the browser binary.  Returns the canonical app name, or None.
     """
-    # Collect the terminal's descendants by walking /proc and checking ppid.
-    # We only read stat for processes whose ppid chain leads to terminal_pid.
-    candidates = []  # (pid, stat) for descendants of terminal_pid
-    ppid_map = {}    # pid -> ppid (for quick parent lookups)
-
-    for entry in glob.glob("/proc/[0-9]*"):
-        try:
-            pid = int(entry.split("/")[-1])
-        except (ValueError, IndexError):
-            continue
-        stat = proc_stat(pid)
-        if stat is None:
-            continue
-        ppid_map[pid] = stat["ppid"]
-        # Fast check: is this a direct child or grandchild of terminal_pid?
-        # We do a shallow check here; the full ancestry walk happens below.
-        if stat["ppid"] == terminal_pid or stat.get("pgrp") == terminal_pid:
-            candidates.append((pid, stat))
-
-    # Walk upward from each candidate to verify full ancestry.
-    def is_descendant(pid, root):
-        seen = set()
-        while pid and pid != 1 and pid not in seen:
-            if pid == root:
-                return True
-            seen.add(pid)
-            pid = ppid_map.get(pid, 0)
-        return False
-
-    # Find the PTY owned by a descendant of the terminal.
-    pty = None
-    for pid, _stat in candidates:
-        if not is_descendant(pid, terminal_pid):
-            continue
-        target = _readlink(f"/proc/{pid}/fd/0")
-        if target and target.startswith("/dev/pts/"):
-            pty = target
-            break
-
-    if pty is None:
+    stat = proc_stat(terminal_pid)
+    if stat is None:
         return None
 
-    # Find the foreground process group leader on that PTY.
-    tpgid = None
-    for pid, stat in candidates:
-        if not is_descendant(pid, terminal_pid):
-            continue
-        target = _readlink(f"/proc/{pid}/fd/0")
-        if target == pty:
-            tpgid = stat["tpgid"]
-            break
-
-    if not tpgid:
+    tpgid = stat["tpgid"]
+    if not tpgid or tpgid == terminal_pid:
         return None
 
     name = proc_name(tpgid)
@@ -188,10 +121,11 @@ def _resolve_terminal_foreground(terminal_pid):
 
     # Walk up from a browser worker (Web Content, forkserver, …) to the
     # browser binary so time attributes to the browser, not an internal
-    # process.
+    # process.  Only reads /proc for ancestors, not all processes.
     pid = tpgid
     while name in BROWSER_SUBPROCESS_COMMS:
-        ppid = ppid_map.get(pid, 0)
+        parent_stat = proc_stat(pid)
+        ppid = parent_stat["ppid"] if parent_stat else 0
         if ppid <= 1:
             break
         pid = ppid

@@ -7,6 +7,7 @@ Process-touching tests use the current process (always alive, always in
 /proc), so nothing here needs a running Hyprland session.
 """
 
+import json
 import os
 import sys
 import unittest
@@ -17,6 +18,14 @@ import resolve_app as r  # noqa: E402
 
 
 class CanonicalizationTests(unittest.TestCase):
+    def test_browser_aliases_json_is_loaded(self):
+        json_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "lib", "browser_aliases.json")
+        with open(json_path) as f:
+            expected = json.load(f)
+        self.assertEqual(r.BROWSER_BINARY_TO_APP, expected)
+
     def test_browser_binaries_fold_to_canonical_names(self):
         for binary in ("zen-bin", "zen_browser", "brave-browser", "chrome"):
             self.assertIn(binary, r.BROWSER_BINARY_TO_APP)

@@ -327,3 +327,13 @@ test("arcSegments gives a single app the full circle", () => {
   assert.equal(segs.length, 1)
   assert.equal(segs[0].sweepAngle, 360)
 })
+
+test("browser_aliases.json is the single source of truth for canonicalApp", () => {
+  const aliases = require("../lib/browser_aliases.json")
+  assert.equal(typeof aliases, "object")
+  assert.ok(Object.keys(aliases).length > 0)
+  for (const [key, target] of Object.entries(aliases)) {
+    assert.equal(Model.canonicalApp(key), target,
+      `canonicalApp("${key}") should return "${target}" from browser_aliases.json`)
+  }
+})
