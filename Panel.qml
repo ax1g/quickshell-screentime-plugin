@@ -660,9 +660,9 @@ Panel {
                     PauseAnimation { duration: sp.index * 80 }
                     NumberAnimation { target: sp; property: "opacity"; from: 0; to: 0.85; duration: 180 }
                     ParallelAnimation {
-                      NumberAnimation { target: sp; property: "y"; to: sp.startY - sp.drift; duration: 650; easing.type: Easing.OutQuad }
-                      NumberAnimation { target: sp; property: "opacity"; to: 0; duration: 650; easing.type: Easing.InQuad }
-                      NumberAnimation { target: sp; property: "scale"; to: 0.6; duration: 650 }
+                    NumberAnimation { target: sp; property: "y"; from: sp.startY; to: sp.startY - sp.drift; duration: 650; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: sp; property: "opacity"; from: 0.85; to: 0; duration: 650; easing.type: Easing.InQuad }
+                    NumberAnimation { target: sp; property: "scale"; from: 1; to: 0.6; duration: 650 }
                     }
                   }
                 }
