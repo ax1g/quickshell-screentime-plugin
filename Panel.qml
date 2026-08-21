@@ -489,10 +489,10 @@ Panel {
                     width: (parent.width - parent.spacing * 6) / 7
                     spacing: Style.space(3)
 
-                    Item {
-                      id: trendSlot
-                      width: parent.width
-                      height: Style.space(42)
+Item {
+                        id: trendSlot
+                        width: parent.width
+                        height: Style.space(58)
 
                       MouseArea {
                         id: trendSlotMouse
