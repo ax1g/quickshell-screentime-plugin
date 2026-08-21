@@ -9,6 +9,8 @@ test("dayKey pads month and day", () => {
   assert.equal(Model.dayKey(new Date(2026, 0, 3)), "2026-01-03")
 })
 
+// fmt is the compact form used everywhere space is tight: bar label,
+// donut centre, legend rows, week and month bars.
 test("fmt renders compact durations", () => {
   assert.equal(Model.fmt(0), "0m")
   assert.equal(Model.fmt(45000), "45s")
@@ -19,6 +21,8 @@ test("fmt renders compact durations", () => {
   assert.equal(Model.fmt(-5000), "0m")
 })
 
+// fmtWords is the worded subtitle under the panel title ("Screen Time" /
+// "2 HOURS 10 MINUTES"); assertions must match that rendering exactly.
 test("fmtWords renders worded durations", () => {
   assert.equal(Model.fmtWords(0), "0 MINUTES")
   assert.equal(Model.fmtWords(45000), "45 SECONDS")
