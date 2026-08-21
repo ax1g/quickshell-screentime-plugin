@@ -47,6 +47,14 @@ Panel {
   }
   property bool expanded: false
 
+  // Donut cross-highlight: which ring slice is hovered (-1 = none), plus
+  // the label pair shown in the donut center while hovering.
+  property int hoverSlice: -1
+  property string hoverApp: ""
+  property double hoverMs: 0
+  readonly property bool sliceHovered: root.hoverSlice >= 0
+    && root.hoverSlice < root.segments.length && root.hoverApp !== ""
+
   // Donut always shows the grouped view; the legend expands inline.
   readonly property var segments: Model.arcSegments(root.groupedApps)
   readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
@@ -137,6 +145,43 @@ Panel {
       root.selectedKey = ""
     else
       root.selectedKey = key
+    root.clearHover()
+  }
+
+  function setSliceHover(slice, appName, ms) {
+    root.hoverSlice = slice
+    root.hoverApp = appName
+    root.hoverMs = ms
+  }
+
+  function clearHover() {
+    root.hoverSlice = -1
+    root.hoverApp = ""
+    root.hoverMs = 0
+  }
+
+  // Angle hit-test for the ring; x/y are in donutItem coordinates. Angles
+  // are degrees clockwise from 12 o'clock (arcSegments' convention); atan2
+  // with y-down screen coordinates matches once normalized to [-90, 270).
+  function sliceAt(x, y) {
+    var segs = root.segments
+    if (!segs || segs.length === 0) return -1
+    var dx = x - donutItem.width / 2
+    var dy = y - donutItem.height / 2
+    var r = Math.sqrt(dx * dx + dy * dy)
+    var inner = root.ringRadius - root.ringBaseWidth / 2 - Style.space(3)
+    var outer = root.ringRadius + root.ringBaseWidth / 2 + Style.space(3)
+    if (r < inner || r > outer) return -1
+    var deg = Math.atan2(dy, dx) * 180 / Math.PI
+    if (deg < -90) deg += 360
+    for (var i = 0; i < segs.length; i++) {
+      var start = segs[i].startAngle
+      var end = start + segs[i].sweepAngle
+      if (end <= 360 ? (deg >= start && deg <= end)
+                     : (deg >= start || deg <= end - 360))
+        return i
+    }
+    return -1
   }
 
   KeyboardPanel {
@@ -283,6 +328,7 @@ Panel {
                   target: root
                   function onSegmentsChanged() { donutCanvas.requestPaint() }
                   function onSliceColorsChanged() { donutCanvas.requestPaint() }
+                  function onHoverSliceChanged() { donutCanvas.requestPaint() }
                 }
 
                 onPaint: {
@@ -310,7 +356,10 @@ Panel {
                   for (var i = 0; i < segs.length; i++) {
                     var seg = segs[i]
                     ctx.lineWidth = root.ringBaseWidth
-                    ctx.strokeStyle = root.sliceColor(i, 1.0)
+                    // Cross-highlight: the hovered slice stays full, the
+                    // rest dim so the eye locks onto one app.
+                    ctx.strokeStyle = root.sliceColor(
+                      i, root.hoverSlice < 0 || i === root.hoverSlice ? 1.0 : 0.25)
                     ctx.beginPath()
                     ctx.arc(cx, cy, rad, seg.startAngle * toRad, (seg.startAngle + seg.sweepAngle) * toRad, false)
                     ctx.stroke()
@@ -318,14 +367,34 @@ Panel {
                 }
               }
 
-              // Center readout: active day label + total.
+              // Slice hover: pointer feedback plus the app's own readout
+              // in place of the day summary.
+              MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                cursorShape: root.hoverSlice >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onPositionChanged: function(mouse) {
+                  var i = root.sliceAt(mouse.x, mouse.y)
+                  if (i >= 0) {
+                    var seg = root.segments[i]
+                    root.setSliceHover(i, Model.displayName(seg.app), seg.ms || 0)
+                  } else {
+                    root.clearHover()
+                  }
+                }
+                onContainsMouseChanged: if (!containsMouse) root.clearHover()
+              }
+
+              // Center readout: active day label + total, or the hovered
+              // slice's app while cross-highlighting.
               Column {
                 anchors.centerIn: parent
                 width: parent.width * 0.6
                 spacing: Style.space(1)
 
                 Text {
-                  text: root.activeDayLabel
+                  text: root.sliceHovered ? root.hoverApp : root.activeDayLabel
                   color: root.contentForeground
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.bodySmall
@@ -336,7 +405,7 @@ Panel {
                 }
 
                 Text {
-                  text: Model.fmt(root.dayTotal)
+                  text: Model.fmt(root.sliceHovered ? root.hoverMs : root.dayTotal)
                   color: Qt.darker(root.contentForeground, 1.4)
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.caption
@@ -611,7 +680,10 @@ Item {
   Connections {
     target: root.controller
     function onOpenChanged() {
-      if (!root.controller.open) root.selectedKey = ""
+      if (!root.controller.open) {
+        root.selectedKey = ""
+        root.clearHover()
+      }
     }
   }
 }
