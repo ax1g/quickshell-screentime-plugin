@@ -19,6 +19,7 @@ and nothing on failure.
 
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -121,6 +122,60 @@ def _children(pid):
 # Terminals spawn their shell directly (depth 1); wrappers are rare.
 _MAX_TTY_SEARCH_DEPTH = 4
 
+# steamapps directories that hold appmanifest_<appid>.acf files. The first
+# two are the same library via symlink on most installs; both are listed
+# because neither is guaranteed to exist.
+_STEAM_ROOTS = [
+    os.path.expanduser("~/.steam/steam/steamapps"),
+    os.path.expanduser("~/.local/share/Steam/steamapps"),
+    os.path.expanduser("~/.steam/root/steamapps"),
+    os.path.expanduser(
+        "~/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps"
+    ),
+]
+
+_STEAM_CLASS_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
+
+
+def _steam_class_appid(class_name):
+    """AppID from a Steam window class ("steam_app_730" -> "730").
+
+    Steam games report their AppID as the compositor window class. Returns
+    None for anything else, including non-string input.
+    """
+    if not isinstance(class_name, str):
+        return None
+    m = _STEAM_CLASS_RE.match(class_name)
+    return m.group(1) if m else None
+
+
+def _acf_name(path):
+    """Game title from an appmanifest .acf file, or None.
+
+    ACF is Valve's KeyValues format; manifests carry the title as a flat
+    "name" entry ("name"\t\t"Stardew Valley"), so a targeted regex beats
+    shipping a full parser.
+    """
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            data = fh.read()
+    except OSError:
+        return None
+    m = re.search(r'"name"\s*"([^"]*)"', data)
+    return m.group(1) if m else None
+
+
+def steam_title_for_class(class_name):
+    """Resolve a steam_app_* window class to its game title, or None."""
+    appid = _steam_class_appid(class_name)
+    if appid is None:
+        return None
+    for root_dir in _STEAM_ROOTS:
+        title = _acf_name(os.path.join(root_dir, f"appmanifest_{appid}.acf"))
+        if title:
+            return title
+    return None
+
 
 def _find_tty_session(terminal_pid):
     """Bounded DFS below the terminal for a descendant owning a pty.
@@ -191,6 +246,7 @@ def _resolve_terminal_foreground(terminal_pid):
 
 
 def main():
+    window_class = ""
     if len(sys.argv) == 2:
         try:
             terminal_pid = int(sys.argv[1])
@@ -204,9 +260,22 @@ def main():
                 text=True,
                 timeout=2,
             ).stdout
-            terminal_pid = int(json.loads(out).get("pid") or 0)
+            info = json.loads(out)
+            terminal_pid = int(info.get("pid") or 0)
+            window_class = info.get("class") or ""
         except (ValueError, json.JSONDecodeError, subprocess.SubprocessError):
             terminal_pid = 0
+
+    # Steam games: the class carries the AppID, so /proc walking is both
+    # unnecessary and wrong (it would report the game binary). Resolve the
+    # title from local manifests; if the manifest is missing, exit without
+    # output so tracking keeps the stable steam_app_* key instead of
+    # flip-flopping to a binary name.
+    if _steam_class_appid(window_class) is not None:
+        title = steam_title_for_class(window_class)
+        if title:
+            print(title)
+        sys.exit(0)
 
     if not terminal_pid:
         sys.exit(0)

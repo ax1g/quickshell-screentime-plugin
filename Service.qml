@@ -117,6 +117,12 @@ Item {
     return appId && root.terminalAppIds.indexOf(appId.toLowerCase()) !== -1
   }
 
+  // Steam games report their AppID as the window class; the resolver turns
+  // that into the game title from local manifests before it is tracked.
+  function isSteamApp(appId) {
+    return appId && appId.toLowerCase().indexOf("steam_app_") === 0
+  }
+
   // Windows that are never user-facing screen time — the idle screensaver,
   // xdg desktop portal windows that steal focus. These open no bucket, so
   // they count neither as an app nor into today's total.
@@ -143,7 +149,7 @@ Item {
       root.activeStart = 0
       return
     }
-    if (app && root.isTerminal(app)) {
+    if (app && (root.isTerminal(app) || root.isSteamApp(app))) {
       root.activeApp = ""
       root.activeStart = 0
       root.beginResolve()
