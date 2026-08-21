@@ -256,6 +256,12 @@ test("fmtDelta prefixes + and - correctly", () => {
   assert.equal(Model.fmtDelta(-120000), "- 2m")
 })
 
+test("weekTotal sums trend entries and tolerates junk", () => {
+  assert.equal(Model.weekTotal([{ ms: 60000 }, { ms: 30000 }, {}]), 90000)
+  assert.equal(Model.weekTotal(null), 0)
+  assert.equal(Model.weekTotal([]), 0)
+})
+
 test("fmtWords renders singular for 1 SECOND and 1 HOUR 1 MINUTE", () => {
   assert.equal(Model.fmtWords(1000), "1 SECOND")
   assert.equal(Model.fmtWords(3660000), "1 HOUR 1 MINUTE")

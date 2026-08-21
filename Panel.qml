@@ -45,6 +45,7 @@ Panel {
     for (var i = 0; i < list.length; i++) max = Math.max(max, Number(list[i].ms) || 0)
     return max
   }
+  readonly property double weekTotalMs: serviceReady ? Model.weekTotal(root.weekTrend) : 0
   property bool expanded: false
 
   // Donut cross-highlight: which ring slice is hovered (-1 = none), plus
@@ -612,6 +613,17 @@ Item {
                     }
                   }
                 }
+              }
+
+              Text {
+                width: parent.width
+                text: "Week's Total \u00b7 " + Model.fmt(root.weekTotalMs)
+                color: root.contentForeground
+                opacity: 0.6
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
               }
 
               PanelSeparator {
