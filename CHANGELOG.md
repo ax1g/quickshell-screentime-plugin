@@ -8,47 +8,37 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Yearly overview drawer behind the hero hourglass: `< year >` navigation back
-  to the first recorded year, one bar per month scaled against the busiest
-  month with exact hours on hover, a BACK button, and a full-card overlay
-  that keeps the panel's show-less height.
-- Persistent monthly aggregates: days rolled out of the 95-day retention
-  window are folded into per-month totals, so the yearly overview covers the
-  whole history instead of forgetting it. Retention itself grew from 31 to
-  95 days so all 13 paginated trend weeks keep their daily detail.
-- ISO week numbers in the week graph header (`Aug 2026 · W34`), paginated
-  across 13 Mon-Sun weeks.
-- Week total toggle: click the header total to flip between duration and its
-  share of the week's 168 hours; the tooltip phrases either as an insight.
+- Yearly overview behind the hero hourglass: navigate back through every
+  recorded year with `< year >`, see one bar per month scaled against the
+  busiest month, hover any bar for its exact total, and return with BACK.
+- Persistent monthly aggregates: when daily detail ages out of retention,
+  its total folds into the month, so the yearly overview covers your whole
+  history instead of forgetting it.
+- 13-week paginated Mon-Sun trend with an ISO week header
+  (`Aug 2026 · W34`) for travelling back three months at a glance.
+- Clickable week total: flip between the summed duration and its share of
+  the week's 168 hours.
 - Donut cross-highlight: hovering a legend row highlights its ring slice,
   and hovering a slice highlights its row.
-- Hero hourglass easter egg: it flips over on every full hour, and gold
-  sparkles burst around the cursor on hover, scattered and sized anew each
-  time.
+- Steam game titles: windows reported as `steam_app_<id>` resolve to the
+  game's name from local Steam manifests before being tracked.
+- Hourglass easter egg: it turns over on every full hour, and gold
+  sparkles scatter around the cursor on hover.
 
 ### Changed
 
+- Daily detail is retained for 95 days instead of 31, matching the
+  13-week trend window; older days remain part of their monthly totals.
 - Week bars follow the theme: today's bar in the accent colour, other days
   at low opacity, empty and future days as faint tracks.
 - App list uses a fixed-height scroll area with vertically centred rows.
-- Insights labels joined to their values with a middle dot; delta spacing
-  tightened.
+- Insights labels join to their values with a middle dot.
 
 ### Fixed
 
-- Steam games now resolve to their real titles in production: the old
-  JavaScript-side lookup used Node-only APIs that throw inside QML, so
-  `steam_app_*` labels were broken. Resolution moved into the Python
-  resolver, which reads local appmanifests; unresolved ids keep a stable
-  tracking key.
-- Insights section no longer overlaps the week graph (a misplaced brace made
-  it stack on top of the chart).
-- The yearly overview no longer flashes across the panel while the panel is
-  opening.
-- Hovering the yearly overview no longer reaches the donut chart underneath;
-  its background is fully opaque.
-- Calendar month rows no longer emit `Unable to assign [undefined] to bool`
-  warnings.
+- Steam-aware names actually work now: the previous lookup ran Node-only
+  APIs inside QML's engine, so `steam_app_*` entries broke their labels
+  instead of showing game titles.
 
 ## [1.2.2] - 2026-08-19
 

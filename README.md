@@ -48,7 +48,10 @@ omarchy plugin add https://github.com/ax1g/quickshell-screentime-plugin.git
 omarchy plugin enable agx.screen-time
 ```
 
-Requires Omarchy, Hyprland, and a Nerd Font for the glyphs.
+Requires Omarchy and Hyprland. A Nerd Font provides the glyphs, and
+`python3` (preinstalled on Omarchy) powers terminal and Steam name
+resolution — without it the plugin still tracks, but terminals show under
+their own name (`foot`, `kitty`) instead of what runs inside them.
 
 ## Uninstall
 
