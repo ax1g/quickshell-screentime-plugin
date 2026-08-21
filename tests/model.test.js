@@ -498,6 +498,53 @@ test("weekStartMonday returns empty for bad input", () => {
   assert.equal(Model.weekStartMonday(null), "")
 })
 
+// ---- isoWeekNumber --------------------------------------------------------
+
+test("isoWeekNumber returns ISO week for a Monday", () => {
+  assert.equal(Model.isoWeekNumber("2026-08-17"), 34)
+})
+
+test("isoWeekNumber is consistent across the week", () => {
+  assert.equal(Model.isoWeekNumber("2026-08-21"), 34)
+})
+
+test("isoWeekNumber handles year start", () => {
+  assert.equal(Model.isoWeekNumber("2026-01-01"), 1)
+  assert.equal(Model.isoWeekNumber("2025-12-29"), 1)
+})
+
+test("isoWeekNumber handles 53-week years", () => {
+  assert.equal(Model.isoWeekNumber("2026-12-28"), 53)
+  assert.equal(Model.isoWeekNumber("2027-01-03"), 53)
+})
+
+test("isoWeekNumber handles leap-year week boundary", () => {
+  assert.equal(Model.isoWeekNumber("2024-12-30"), 1)
+})
+
+test("isoWeekNumber returns 0 for bad input", () => {
+  assert.equal(Model.isoWeekNumber(""), 0)
+  assert.equal(Model.isoWeekNumber("garbage"), 0)
+})
+
+// ---- msUntilNextHour -------------------------------------------------------
+
+test("msUntilNextHour returns full hour at exact boundary", () => {
+  assert.equal(Model.msUntilNextHour(new Date(2026, 7, 21, 10, 0, 0, 0).getTime()), 3600000)
+})
+
+test("msUntilNextHour counts down to the next hour", () => {
+  assert.equal(Model.msUntilNextHour(new Date(2026, 7, 21, 10, 59, 30, 500).getTime()), 29500)
+})
+
+test("msUntilNextHour includes milliseconds", () => {
+  assert.equal(Model.msUntilNextHour(new Date(2026, 7, 21, 10, 0, 0, 250).getTime()), 3599750)
+})
+
+test("msUntilNextHour falls back to one minute for bad input", () => {
+  assert.equal(Model.msUntilNextHour(NaN), 60000)
+})
+
 // ---- monSunWeeks ---------------------------------------------------------
 
 const sampleDays = {
