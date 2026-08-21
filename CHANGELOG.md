@@ -4,6 +4,45 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-21
+
+![Panel before and after: v1.2.2 on the left, v1.3 on the right](docs/assets/v1.3-vs-v1.2.2.png)
+*v1.2.2 (left) vs v1.3 (right)*
+
+### Added
+
+- Yearly overview behind the hero hourglass: navigate back through every
+  recorded year with `< year >`, see one bar per month scaled against the
+  busiest month, hover any bar for its exact total, and return with BACK.
+- Persistent monthly aggregates: when daily detail ages out of retention,
+  its total folds into the month, so the yearly overview covers your whole
+  history instead of forgetting it.
+- 13-week paginated Mon-Sun trend with an ISO week header
+  (`Aug 2026 · W34`) for travelling back three months at a glance.
+- Clickable week total: flip between the summed duration and its share of
+  the week's 168 hours.
+- Donut cross-highlight: hovering a legend row highlights its ring slice,
+  and hovering a slice highlights its row.
+- Steam game titles: windows reported as `steam_app_<id>` resolve to the
+  game's name from local Steam manifests before being tracked.
+- Hourglass easter egg: it turns over on every full hour, and gold
+  sparkles scatter around the cursor on hover.
+
+### Changed
+
+- Daily detail is retained for 95 days instead of 31, matching the
+  13-week trend window; older days remain part of their monthly totals.
+- Week bars follow the theme: today's bar in the accent colour, other days
+  at low opacity, empty and future days as faint tracks.
+- App list uses a fixed-height scroll area with vertically centred rows.
+- Insights labels join to their values with a middle dot.
+
+### Fixed
+
+- Steam-aware names actually work now: the previous lookup ran Node-only
+  APIs inside QML's engine, so `steam_app_*` entries broke their labels
+  instead of showing game titles.
+
 ## [1.2.2] - 2026-08-19
 
 ### Fixed

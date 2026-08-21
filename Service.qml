@@ -50,7 +50,9 @@ Item {
 
   // Retention window in days. History older than this is pruned on load and
   // before every write, so the append-only JSON can't grow without bound.
-  readonly property int keepDays: 31
+  // Covers the 13-week paginated trend (~91 days) plus slack for week
+  // alignment; anything older is rolled into monthly aggregates.
+  readonly property int keepDays: 95
 
   // The gap check resolves suspends down to roughly this threshold: a 5s
   // heartbeat keeps lastTick fresh, so a tick arriving more than
@@ -66,6 +68,9 @@ Item {
   property var today: Model.newDay()
   // Full history mirror (dayKey -> day); what the adapter persists.
   property var days: ({})
+  // Monthly aggregates (YYYY-MM -> ms). Days dropped by the retention window
+  // are rolled up here so calendar year/month totals survive pruning.
+  property var months: ({})
 
   property string activeApp: ""
   property double activeStart: 0
@@ -74,6 +79,12 @@ Item {
   property string rawApp: ""
   property string resolveForApp: ""
   property bool resolveInFlight: false
+  // Resolve freshness tokens: every resolve request bumps resolveGeneration;
+  // resolveSpawnGen snapshots it only when a process actually launches.
+  // State.applyResolvedApp discards results whose tokens differ, so an
+  // in-flight answer for foot(A) can never be attributed to foot(B).
+  property int resolveGeneration: 0
+  property int resolveSpawnGen: 0
   property bool ready: false
   property bool startupPhase: true
 
@@ -106,6 +117,12 @@ Item {
     return appId && root.terminalAppIds.indexOf(appId.toLowerCase()) !== -1
   }
 
+  // Steam games report their AppID as the window class; the resolver turns
+  // that into the game title from local manifests before it is tracked.
+  function isSteamApp(appId) {
+    return appId && appId.toLowerCase().indexOf("steam_app_") === 0
+  }
+
   // Windows that are never user-facing screen time — the idle screensaver,
   // xdg desktop portal windows that steal focus. These open no bucket, so
   // they count neither as an app nor into today's total.
@@ -132,15 +149,27 @@ Item {
       root.activeStart = 0
       return
     }
-    if (app && root.isTerminal(app)) {
+    if (app && (root.isTerminal(app) || root.isSteamApp(app))) {
       root.activeApp = ""
       root.activeStart = 0
-      root.resolveForApp = app
-      root.resolveInFlight = true
-      if (!resolverProc.running) resolverProc.running = true
+      root.beginResolve()
     } else {
       root.activeApp = Model.canonicalApp(app)
       root.activeStart = app ? now : 0
+    }
+  }
+
+  // Requests a fresh foreground resolution for the focused terminal. The
+  // generation is bumped on every request but snapshotted only when a
+  // process actually launches; a request made while one is in flight
+  // invalidates the running process's result instead of queueing a second.
+  function beginResolve() {
+    root.resolveForApp = root.rawApp
+    root.resolveInFlight = true
+    root.resolveGeneration++
+    if (!resolverProc.running) {
+      root.resolveSpawnGen = root.resolveGeneration
+      resolverProc.running = true
     }
   }
 
@@ -206,9 +235,19 @@ Item {
     if (root.startupPhase) return
     var merged = Object.assign({}, root.days)
     merged[root.todayKey] = root.today
-    merged = Model.pruneDays(merged, root.todayKey, root.keepDays)
-    root.days = merged
-    historyAdapter.days = merged
+    var kept = Model.pruneDays(merged, root.todayKey, root.keepDays)
+    if (kept !== merged) {
+      // Days dropped by retention roll up into monthly aggregates so the
+      // calendar view keeps year-scale totals after raw days expire.
+      var pruned = {}
+      for (var k in merged) {
+        if (Object.prototype.hasOwnProperty.call(merged, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = merged[k]
+      }
+      root.months = Model.rollupPrunedDays(root.months, pruned)
+      historyAdapter.months = root.months
+    }
+    root.days = kept
+    historyAdapter.days = kept
   }
 
   function scheduleSave() {
@@ -217,9 +256,27 @@ Item {
   }
 
   function onHistoryLoaded() {
-    var d = historyAdapter.days && typeof historyAdapter.days === "object" ? historyAdapter.days : {}
-    d = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
-    root.days = d
+    // sanitizeHistory rejects arrays and other non-objects that would slip
+    // through a bare typeof check; identity comparison tells us whether
+    // anything was discarded so the user gets one clear warning.
+    var clean = Model.sanitizeHistory(historyAdapter.days, historyAdapter.months)
+    if (clean.days !== historyAdapter.days || clean.months !== historyAdapter.months)
+      console.warn("agx.screen-time: history.json has malformed sections; ignoring them")
+    var d = clean.days
+    var m = clean.months
+    var kept = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
+    if (kept !== d) {
+      // Same rollup as persist(): load-time retention drops also feed the
+      // monthly aggregates instead of being lost.
+      var pruned = {}
+      for (var k in d) {
+        if (Object.prototype.hasOwnProperty.call(d, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = d[k]
+      }
+      m = Model.rollupPrunedDays(m, pruned)
+      historyAdapter.months = m
+    }
+    root.months = m
+    root.days = kept
     if (!root.ready) {
       root.todayKey = Model.dayKey(new Date())
       var prev = d[root.todayKey]
@@ -268,6 +325,7 @@ Item {
     JsonAdapter {
       id: historyAdapter
       property var days: ({})
+      property var months: ({})
     }
   }
 
@@ -311,11 +369,7 @@ Item {
     interval: 5000
     repeat: true
     running: root.ready && root.isTerminal(root.rawApp) && !root.resolveInFlight
-    onTriggered: {
-      root.resolveForApp = root.rawApp
-      root.resolveInFlight = true
-      if (!resolverProc.running) resolverProc.running = true
-    }
+    onTriggered: root.beginResolve()
   }
 
   // If a resolver run never exits (hung hyprctl, wedged /proc read), kill it
@@ -335,14 +389,30 @@ Item {
   }
 
   // Resolves the app running in the focused terminal (see resolve_app.py).
+  // An empty stdout falls back to rawApp silently by design, so stderr is
+  // logged: without it a broken resolver degrades tracking invisibly.
+  //
+  // The sh -c wrapper guards against a missing python3: Quickshell's
+  // Process exposes no spawn-failure signal, so a bare python3 command
+  // that cannot start would leave resolves stalling until the watchdog.
+  // sh always exists, exits 0 without output instead, and the empty
+  // result falls back to tracking the raw terminal class.
   Process {
     id: resolverProc
-    command: ["python3", root.resolverPath]
+    command: ["sh", "-c",
+      "command -v python3 >/dev/null 2>&1 && exec python3 \"$1\" || exit 0",
+      "sh", root.resolverPath]
     stdout: StdioCollector {
       id: resolverOut
       waitForEnd: true
     }
+    stderr: StdioCollector {
+      id: resolverErr
+      waitForEnd: true
+    }
     onExited: {
+      var err = resolverErr.text.trim()
+      if (err) console.warn("agx.screen-time: resolver stderr:", err)
       root.applyResolvedApp(resolverOut.text.trim())
     }
   }
@@ -405,3 +475,4 @@ Item {
     ensureDirProc.running = true
   }
 }
+
