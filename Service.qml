@@ -256,8 +256,14 @@ Item {
   }
 
   function onHistoryLoaded() {
-    var d = historyAdapter.days && typeof historyAdapter.days === "object" ? historyAdapter.days : {}
-    var m = historyAdapter.months && typeof historyAdapter.months === "object" ? historyAdapter.months : {}
+    // sanitizeHistory rejects arrays and other non-objects that would slip
+    // through a bare typeof check; identity comparison tells us whether
+    // anything was discarded so the user gets one clear warning.
+    var clean = Model.sanitizeHistory(historyAdapter.days, historyAdapter.months)
+    if (clean.days !== historyAdapter.days || clean.months !== historyAdapter.months)
+      console.warn("agx.screen-time: history.json has malformed sections; ignoring them")
+    var d = clean.days
+    var m = clean.months
     var kept = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
     if (kept !== d) {
       // Same rollup as persist(): load-time retention drops also feed the
