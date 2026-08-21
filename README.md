@@ -24,14 +24,17 @@ down into a donut chart with a 7-day usage trend.
 | --- | --- |
 | **Time in the bar** | Today's total, live, right next to your tray. |
 | **Per-app tracking** | Focus time per app; idle, locked, asleep and desktop time never counted. |
-| **Terminal-aware** | A focused terminal reports what's actually running inside it (`opencode`, not `foot`), re-resolving every few seconds; browser subprocesses are canonicalized into one app. |
-| **Donut breakdown** | Today's apps in a ring with a legend and the day's total in the centre; six biggest + "Other". |
-| **Clickable week bars** | Click any day in the 7-day trend to view that day's apps, donut, and insights; click again or close the panel to return to today. |
+| **Terminal-aware** | A focused terminal reports what's actually running inside it (`opencode`, not `foot`), re-resolved every few seconds. |
+| **Steam-aware** | `steam_app_123456` becomes the real game title, read from local Steam metadata. |
+| **Donut breakdown** | Today's apps as a ring: six biggest + "Other", day total in the centre. |
+| **Slice hover** | Hover the ring to dim the other slices and preview that app's name and share in the centre. |
+| **Clickable week bars** | Click a day in the 7-day trend to view its apps and insights; click again to return to today. |
+| **Week total** | The 7-day sum sits centred under the trend strip. |
 | **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list inline. |
-| **Clean app names** | Reverse-DNS IDs shortened to the last segment and title-cased (`com.github.user.Codium` → `Codium`). |
-| **Usage patterns** | Press `p` for a 7-day trend, top app, vs. yesterday, and your busiest day. |
-| **Icon-only mode** | Right-click to collapse the widget to a single glyph; remembered. |
-| **Keyboard-first** | `Esc` closes the panel, `p` toggles patterns, `j`/`k`/arrows scroll; mouse wheel works too. |
+| **Clean app names** | Reverse-DNS IDs shortened and lowercased (`com.github.user.Codium` → `codium`). |
+| **Usage patterns** | Press `p` for top app, vs. yesterday, and busiest day. |
+| **Icon-only mode** | Right-click collapses the widget to a single glyph; remembered. |
+| **Keyboard-first** | `Esc` closes, `p` toggles patterns, `j`/`k`/arrows scroll; mouse wheel works too. |
 | **Keybind-friendly** | Summon the panel from a script or keybind via the `agx.screen-time` IPC target. |
 | **Private by design** | Local JSON, pruned after 31 days; colours generated from your theme's accent. |
 
