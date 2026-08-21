@@ -6,6 +6,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.3.0] - 2026-08-21
 
+![Panel before and after: v1.2.2 on the left, v1.3 on the right](docs/assets/v1.3-vs-v1.2.2.png)
+*v1.2.2 (left) vs v1.3 (right)*
+
 ### Added
 
 - Yearly overview behind the hero hourglass: navigate back through every
