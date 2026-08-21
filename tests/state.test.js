@@ -270,6 +270,41 @@ test("applyResolvedApp returns null when focus moved mid-resolve", () => {
   assert.equal(result, null)
 })
 
+test("applyResolvedApp returns null when result is from an older resolve generation", () => {
+  // foot(A) -> foot(B) mid-resolve: rawApp/resolveForApp are both "foot",
+  // so only the generation token proves the in-flight result is stale.
+  const state = {
+    resolveInFlight: true,
+    rawApp: "foot",
+    resolveForApp: "foot",
+    resolveSpawnGen: 1,
+    resolveGeneration: 2,
+    activeApp: "",
+    activeStart: 0
+  }
+  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  assert.equal(result, null)
+})
+
+test("applyResolvedApp applies when resolve generation matches spawn", () => {
+  const state = {
+    resolveInFlight: true,
+    rawApp: "foot",
+    resolveForApp: "foot",
+    resolveSpawnGen: 3,
+    resolveGeneration: 3,
+    activeApp: "",
+    activeStart: 0,
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: 0
+  }
+  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  assert.ok(result)
+  assert.equal(result.activeApp, "opencode")
+})
+
 test("applyResolvedApp sets new app and opens bucket", () => {
   const state = {
     resolveInFlight: true,

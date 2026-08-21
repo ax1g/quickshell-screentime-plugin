@@ -74,6 +74,12 @@ Item {
   property string rawApp: ""
   property string resolveForApp: ""
   property bool resolveInFlight: false
+  // Resolve freshness tokens: every resolve request bumps resolveGeneration;
+  // resolveSpawnGen snapshots it only when a process actually launches.
+  // State.applyResolvedApp discards results whose tokens differ, so an
+  // in-flight answer for foot(A) can never be attributed to foot(B).
+  property int resolveGeneration: 0
+  property int resolveSpawnGen: 0
   property bool ready: false
   property bool startupPhase: true
 
@@ -135,12 +141,24 @@ Item {
     if (app && root.isTerminal(app)) {
       root.activeApp = ""
       root.activeStart = 0
-      root.resolveForApp = app
-      root.resolveInFlight = true
-      if (!resolverProc.running) resolverProc.running = true
+      root.beginResolve()
     } else {
       root.activeApp = Model.canonicalApp(app)
       root.activeStart = app ? now : 0
+    }
+  }
+
+  // Requests a fresh foreground resolution for the focused terminal. The
+  // generation is bumped on every request but snapshotted only when a
+  // process actually launches; a request made while one is in flight
+  // invalidates the running process's result instead of queueing a second.
+  function beginResolve() {
+    root.resolveForApp = root.rawApp
+    root.resolveInFlight = true
+    root.resolveGeneration++
+    if (!resolverProc.running) {
+      root.resolveSpawnGen = root.resolveGeneration
+      resolverProc.running = true
     }
   }
 
@@ -311,11 +329,7 @@ Item {
     interval: 5000
     repeat: true
     running: root.ready && root.isTerminal(root.rawApp) && !root.resolveInFlight
-    onTriggered: {
-      root.resolveForApp = root.rawApp
-      root.resolveInFlight = true
-      if (!resolverProc.running) resolverProc.running = true
-    }
+    onTriggered: root.beginResolve()
   }
 
   // If a resolver run never exits (hung hyprctl, wedged /proc read), kill it
