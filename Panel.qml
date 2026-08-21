@@ -358,7 +358,9 @@ Panel {
               clip: true
               contentWidth: width
               contentHeight: legendList.implicitHeight
-              height: Math.min(legendList.implicitHeight, root.legendMaxHeight)
+              // Fixed height so the panel size stays identical across days
+              // regardless of app count — no abrupt resize when switching.
+              height: root.legendMaxHeight
               interactive: contentHeight > height
               flickableDirection: Flickable.VerticalFlick
               boundsBehavior: Flickable.StopAtBounds
@@ -366,6 +368,9 @@ Panel {
               Column {
                 id: legendList
                 width: parent.width - Style.space(8)
+                // Vertically center short lists within the fixed-height
+                // viewport; clamp to 0 so long lists still scroll from top.
+                y: Math.max(0, (legendScroll.height - implicitHeight) / 2)
                 spacing: Style.space(5)
 
                 // Empty-state message when the selected day has no data.
