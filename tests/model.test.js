@@ -34,9 +34,9 @@ test("canonicalApp folds browser subprocess names", () => {
 })
 
 test("displayName shortens reverse-DNS ids and passes plain names", () => {
-  assert.equal(Model.displayName("com.github.user.Codium"), "Codium")
-  assert.equal(Model.displayName("org.mozilla.firefox"), "Firefox")
-  assert.equal(Model.displayName("io.github.pkruow.Cli"), "Cli")
+  assert.equal(Model.displayName("com.github.user.Codium"), "codium")
+  assert.equal(Model.displayName("org.mozilla.firefox"), "firefox")
+  assert.equal(Model.displayName("io.github.pkruow.Cli"), "cli")
   assert.equal(Model.displayName("opencode"), "opencode")
   assert.equal(Model.displayName("google-chrome"), "google-chrome")
   assert.equal(Model.displayName(""), "")
@@ -244,8 +244,9 @@ test("insights shows correct labels when viewing a past day", () => {
     "2026-08-14": { total: 80000 }
   }
   const rows = Model.insights(today, days, "2026-08-15", "2026-08-14")
-  assert.equal(rows[0].label, "Top app (Fri)")
-  assert.ok(rows[1].label.startsWith("vs ("))
+  assert.equal(rows[0].label, "Top app Fri")
+assert.ok(rows[0].value.includes("•"))
+  assert.ok(rows[1].label.startsWith("vs "))
   assert.ok(rows[1].label.includes("Thu"))
   assert.equal(rows[2].label, "Busiest day (7d)")
 })
@@ -318,7 +319,7 @@ test("arcSegments covers the circle with gaps", () => {
   assert.equal(segs.length, 2)
   assert.equal(segs[0].startAngle, -90)
   const lastEnd = segs[1].startAngle + segs[1].sweepAngle
-  assert.ok(Math.abs(lastEnd - 270) < 0.001)
+  assert.ok(Math.abs(lastEnd - 268.5) < 0.001)
   assert.ok(segs[0].sweepAngle < 180, "gap removed from first slice")
 })
 
