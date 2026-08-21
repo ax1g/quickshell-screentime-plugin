@@ -401,6 +401,15 @@ Item {
       if (err) console.warn("agx.screen-time: resolver stderr:", err)
       root.applyResolvedApp(resolverOut.text.trim())
     }
+
+    // A missing python3 (or unreadable script) means the process never
+    // starts and onExited never fires. Fall back to the raw terminal class
+    // so terminal time degrades to coarse tracking instead of vanishing.
+    onError: function(error) {
+      console.warn("agx.screen-time: resolver could not run (" + error +
+        "); tracking raw app names")
+      root.applyResolvedApp("")
+    }
   }
 
   // Keeps the suspend-gap baseline fresh every few seconds so the gap check
