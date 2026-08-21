@@ -12,9 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to the first recorded year, one bar per month scaled against the busiest
   month with exact hours on hover, a BACK button, and a full-card overlay
   that keeps the panel's show-less height.
-- Persistent monthly aggregates: days rolled out of the 31-day retention
+- Persistent monthly aggregates: days rolled out of the 95-day retention
   window are folded into per-month totals, so the yearly overview covers the
-  whole history instead of forgetting it.
+  whole history instead of forgetting it. Retention itself grew from 31 to
+  95 days so all 13 paginated trend weeks keep their daily detail.
 - ISO week numbers in the week graph header (`Aug 2026 · W34`), paginated
   across 13 Mon-Sun weeks.
 - Week total toggle: click the header total to flip between duration and its

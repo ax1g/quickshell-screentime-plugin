@@ -50,7 +50,9 @@ Item {
 
   // Retention window in days. History older than this is pruned on load and
   // before every write, so the append-only JSON can't grow without bound.
-  readonly property int keepDays: 31
+  // Covers the 13-week paginated trend (~91 days) plus slack for week
+  // alignment; anything older is rolled into monthly aggregates.
+  readonly property int keepDays: 95
 
   // The gap check resolves suspends down to roughly this threshold: a 5s
   // heartbeat keeps lastTick fresh, so a tick arriving more than

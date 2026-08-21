@@ -39,7 +39,7 @@ down into a donut chart with a 7-day usage trend.
 | **Icon-only mode** | Right-click collapses the widget to a single glyph; remembered. |
 | **Keyboard-first** | `Esc` closes, `p` toggles patterns, `j`/`k`/arrows scroll; mouse wheel works too. |
 | **Keybind-friendly** | Summon the panel from a script or keybind via the `agx.screen-time` IPC target. |
-| **Private by design** | Local JSON, pruned after 31 days; colours generated from your theme's accent. |
+| **Private by design** | Local JSON, daily detail pruned after ~3 months (monthly totals kept); colours generated from your theme's accent. |
 
 ## Install
 
@@ -81,9 +81,10 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
 - Focus is credited to the day it started on, so a session spanning midnight
   still lands on the right day.
-- Daily detail older than 31 days is pruned, but its total is folded into a
-  per-month aggregate first — so the yearly overview remembers your history
-  even though raw days are forgotten. Delete the file to reset.
+- Daily detail older than ~3 months (95 days, matching the 13-week trend) is
+  pruned, but its total is folded into a per-month aggregate first — so the
+  yearly overview remembers your history even though raw days are forgotten.
+  Delete the file to reset.
 
 ## Development
 
