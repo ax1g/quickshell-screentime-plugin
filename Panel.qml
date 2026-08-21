@@ -605,6 +605,7 @@ Panel {
               font.family: root.contentFontFamily
               font.pixelSize: Style.fontPx(2.8)
               anchors.left: parent.left
+              anchors.leftMargin: Style.space(10)
               anchors.top: parent.top
               anchors.topMargin: -Style.space(4)
 
