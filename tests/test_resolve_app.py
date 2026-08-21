@@ -10,6 +10,7 @@ Process-touching tests use the current process (always alive, always in
 import json
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
@@ -160,6 +161,49 @@ class TerminalResolutionTests(unittest.TestCase):
         w.add(700, "term", 1)
         w.add(710, "weird", 700, ttynr=12, tpgid=-1)
         self.assertIsNone(r._resolve_terminal_foreground(700))
+
+
+class SteamTitleTests(unittest.TestCase):
+    """Steam window classes resolve to game titles from local appmanifests."""
+
+    def _write_manifest(self, directory, appid, name):
+        os.makedirs(directory, exist_ok=True)
+        path = os.path.join(directory, f"appmanifest_{appid}.acf")
+        with open(path, "w") as f:
+            f.write(
+                '"AppState"\n{\n\t"appid"\t\t"%s"\n'
+                '\t"name"\t\t"%s"\n}\n' % (appid, name)
+            )
+        return path
+
+    def test_steam_title_for_class_extracts_appid(self):
+        self.assertEqual(r._steam_class_appid("steam_app_730"), "730")
+        self.assertEqual(r._steam_class_appid("Steam_App_440900"), "440900")
+
+    def test_steam_title_for_class_rejects_non_steam(self):
+        self.assertIsNone(r._steam_class_appid("foot"))
+        self.assertIsNone(r._steam_class_appid("steam_app_"))
+        self.assertIsNone(r._steam_class_appid(None))
+
+    def test_acf_name_parses_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_manifest(tmp, "730", "Counter-Strike 2")
+            self.assertEqual(r._acf_name(path), "Counter-Strike 2")
+
+    def test_acf_name_missing_file_is_none(self):
+        self.assertIsNone(
+            r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
+
+    def test_steam_title_searches_roots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_manifest(tmp, "570", "Dota 2")
+            original = r._STEAM_ROOTS
+            r._STEAM_ROOTS = [tmp]
+            try:
+                self.assertEqual(r.steam_title_for_class("steam_app_570"), "Dota 2")
+                self.assertEqual(r.steam_title_for_class("steam_app_999"), None)
+            finally:
+                r._STEAM_ROOTS = original
 
 
 if __name__ == "__main__":

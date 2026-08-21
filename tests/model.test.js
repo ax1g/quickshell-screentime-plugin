@@ -43,6 +43,14 @@ test("displayName shortens reverse-DNS ids and passes plain names", () => {
   assert.equal(Model.displayName(null), "")
 })
 
+test("displayName passes unresolved Steam ids through untouched", () => {
+  // Game titles are resolved by scripts/resolve_app.py before storage;
+  // the display layer must never touch the filesystem for a label.
+  // (require()-based resolution cannot run in QML's JS engine anyway.)
+  assert.equal(Model.displayName("steam_app_730"), "steam_app_730")
+  assert.equal(Model.resolveSteamAppName, undefined)
+})
+
 test("appList drops sub-minute apps and sorts descending", () => {
   const today = {
     total: 300000,
