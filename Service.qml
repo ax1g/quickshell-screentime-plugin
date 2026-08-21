@@ -66,6 +66,9 @@ Item {
   property var today: Model.newDay()
   // Full history mirror (dayKey -> day); what the adapter persists.
   property var days: ({})
+  // Monthly aggregates (YYYY-MM -> ms). Days dropped by the retention window
+  // are rolled up here so calendar year/month totals survive pruning.
+  property var months: ({})
 
   property string activeApp: ""
   property double activeStart: 0
@@ -224,9 +227,19 @@ Item {
     if (root.startupPhase) return
     var merged = Object.assign({}, root.days)
     merged[root.todayKey] = root.today
-    merged = Model.pruneDays(merged, root.todayKey, root.keepDays)
-    root.days = merged
-    historyAdapter.days = merged
+    var kept = Model.pruneDays(merged, root.todayKey, root.keepDays)
+    if (kept !== merged) {
+      // Days dropped by retention roll up into monthly aggregates so the
+      // calendar view keeps year-scale totals after raw days expire.
+      var pruned = {}
+      for (var k in merged) {
+        if (Object.prototype.hasOwnProperty.call(merged, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = merged[k]
+      }
+      root.months = Model.rollupPrunedDays(root.months, pruned)
+      historyAdapter.months = root.months
+    }
+    root.days = kept
+    historyAdapter.days = kept
   }
 
   function scheduleSave() {
@@ -236,8 +249,20 @@ Item {
 
   function onHistoryLoaded() {
     var d = historyAdapter.days && typeof historyAdapter.days === "object" ? historyAdapter.days : {}
-    d = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
-    root.days = d
+    var m = historyAdapter.months && typeof historyAdapter.months === "object" ? historyAdapter.months : {}
+    var kept = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
+    if (kept !== d) {
+      // Same rollup as persist(): load-time retention drops also feed the
+      // monthly aggregates instead of being lost.
+      var pruned = {}
+      for (var k in d) {
+        if (Object.prototype.hasOwnProperty.call(d, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = d[k]
+      }
+      m = Model.rollupPrunedDays(m, pruned)
+      historyAdapter.months = m
+    }
+    root.months = m
+    root.days = kept
     if (!root.ready) {
       root.todayKey = Model.dayKey(new Date())
       var prev = d[root.todayKey]
@@ -286,6 +311,7 @@ Item {
     JsonAdapter {
       id: historyAdapter
       property var days: ({})
+      property var months: ({})
     }
   }
 
