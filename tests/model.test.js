@@ -34,9 +34,9 @@ test("canonicalApp folds browser subprocess names", () => {
 })
 
 test("displayName shortens reverse-DNS ids and passes plain names", () => {
-  assert.equal(Model.displayName("com.github.user.Codium"), "codium")
-  assert.equal(Model.displayName("org.mozilla.firefox"), "firefox")
-  assert.equal(Model.displayName("io.github.pkruow.Cli"), "cli")
+  assert.equal(Model.displayName("com.github.user.Codium"), "Codium")
+  assert.equal(Model.displayName("org.mozilla.firefox"), "Firefox")
+  assert.equal(Model.displayName("io.github.pkruow.Cli"), "Cli")
   assert.equal(Model.displayName("opencode"), "opencode")
   assert.equal(Model.displayName("google-chrome"), "google-chrome")
   assert.equal(Model.displayName(""), "")
@@ -244,22 +244,15 @@ test("insights shows correct labels when viewing a past day", () => {
     "2026-08-14": { total: 80000 }
   }
   const rows = Model.insights(today, days, "2026-08-15", "2026-08-14")
-  assert.equal(rows[0].label, "Top app Fri")
-  assert.ok(rows[0].value.includes("\u00b7"))
-  assert.ok(rows[1].label.startsWith("vs "))
+  assert.equal(rows[0].label, "Top app (Fri)")
+  assert.ok(rows[1].label.startsWith("vs ("))
   assert.ok(rows[1].label.includes("Thu"))
   assert.equal(rows[2].label, "Busiest day (7d)")
 })
 
 test("fmtDelta prefixes + and - correctly", () => {
-  assert.equal(Model.fmtDelta(60000), "+ 1m")
-  assert.equal(Model.fmtDelta(-120000), "- 2m")
-})
-
-test("weekTotal sums trend entries and tolerates junk", () => {
-  assert.equal(Model.weekTotal([{ ms: 60000 }, { ms: 30000 }, {}]), 90000)
-  assert.equal(Model.weekTotal(null), 0)
-  assert.equal(Model.weekTotal([]), 0)
+  assert.equal(Model.fmtDelta(60000), "+1m")
+  assert.equal(Model.fmtDelta(-120000), "-2m")
 })
 
 test("fmtWords renders singular for 1 SECOND and 1 HOUR 1 MINUTE", () => {
@@ -325,7 +318,7 @@ test("arcSegments covers the circle with gaps", () => {
   assert.equal(segs.length, 2)
   assert.equal(segs[0].startAngle, -90)
   const lastEnd = segs[1].startAngle + segs[1].sweepAngle
-  assert.ok(Math.abs(lastEnd - 268.5) < 0.001)
+  assert.ok(Math.abs(lastEnd - 270) < 0.001)
   assert.ok(segs[0].sweepAngle < 180, "gap removed from first slice")
 })
 
@@ -474,4 +467,217 @@ test("dayKey produces consistent keys across Date object reuse", () => {
   const k2 = Model.dayKey(d)
   assert.equal(k1, k2)
   assert.equal(k1, "2026-01-01")
+})
+
+// ---- weekStartMonday -----------------------------------------------------
+
+test("weekStartMonday returns Monday for mid-week date", () => {
+  // 2026-08-19 is Wednesday; Monday is 2026-08-17
+  assert.equal(Model.weekStartMonday("2026-08-19"), "2026-08-17")
+})
+
+test("weekStartMonday returns same day when already Monday", () => {
+  assert.equal(Model.weekStartMonday("2026-08-17"), "2026-08-17")
+})
+
+test("weekStartMonday wraps to previous week on Sunday", () => {
+  // 2026-08-16 is Sunday; Monday is 2026-08-10
+  assert.equal(Model.weekStartMonday("2026-08-16"), "2026-08-10")
+})
+
+test("weekStartMonday returns empty for bad input", () => {
+  assert.equal(Model.weekStartMonday(""), "")
+  assert.equal(Model.weekStartMonday(null), "")
+})
+
+// ---- monSunWeeks ---------------------------------------------------------
+
+const sampleDays = {
+  "2026-08-17": { total: 3600000 },
+  "2026-08-18": { total: 7200000 },
+  "2026-08-19": { total: 1800000 }
+}
+
+test("monSunWeeks returns correct week count", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 2)
+  assert.equal(weeks.length, 2)
+})
+
+test("monSunWeeks first week has 7 day entries", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 1)
+  assert.equal(weeks[0].days.length, 7)
+})
+
+test("monSunWeeks weeks start on Monday", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 1)
+  // 2026-08-17 is Monday
+  assert.equal(weeks[0].days[0].key, "2026-08-17")
+  assert.equal(weeks[0].days[0].label, "Mon")
+})
+
+test("monSunWeeks weeks end on Sunday", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 1)
+  assert.equal(weeks[0].days[6].key, "2026-08-23")
+  assert.equal(weeks[0].days[6].label, "Sun")
+})
+
+test("monSunWeeks marks today correctly", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 1)
+  const today = weeks[0].days.find(d => d.isToday)
+  assert.ok(today)
+  assert.equal(today.key, "2026-08-19")
+})
+
+test("monSunWeeks marks future days in current week", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 1)
+  // Thu Aug 20 - Sun Aug 23 are future
+  for (let i = 3; i < 7; i++) {
+    assert.ok(weeks[0].days[i].isFuture, `Day index ${i} should be future`)
+  }
+})
+
+test("monSunWeeks returns empty for bad input", () => {
+  assert.deepEqual(Model.monSunWeeks({}, "", 3), [])
+  assert.deepEqual(Model.monSunWeeks({}, "2026-08-19", 0), [])
+})
+
+test("monSunWeeks week labels show dominant month", () => {
+  // Week starting Aug 31 - Sep 6: Mon Aug 31, Tue Sep 1...
+  // 4 days in Sep, 3 in Aug → month should be "Sep"
+  const weeks = Model.monSunWeeks(sampleDays, "2026-09-02", 1)
+  assert.equal(weeks[0].month, "Sep")
+})
+
+test("monSunWeeks populates ms from days data", () => {
+  const weeks = Model.monSunWeeks(sampleDays, "2026-08-19", 1)
+  const mon = weeks[0].days.find(d => d.key === "2026-08-17")
+  assert.equal(mon.ms, 3600000)
+})
+
+// ---- scrollableTrendMax --------------------------------------------------
+
+test("scrollableTrendMax returns max ms across all weeks", () => {
+  const weeks = [
+    { month: "Aug", days: [
+      { ms: 100 }, { ms: 500 }, { ms: 200 }, { ms: 0 },
+      { ms: 0 }, { ms: 0 }, { ms: 0 }
+    ]},
+    { month: "Aug", days: [
+      { ms: 300 }, { ms: 50 }, { ms: 0 }, { ms: 0 },
+      { ms: 0 }, { ms: 0 }, { ms: 0 }
+    ]}
+  ]
+  assert.equal(Model.scrollableTrendMax(weeks), 500)
+})
+
+test("scrollableTrendMax returns 0 for empty weeks", () => {
+  assert.equal(Model.scrollableTrendMax([]), 0)
+})
+
+// ---- monthlyTotals -------------------------------------------------------
+
+test("monthlyTotals aggregates raw days for recent months", () => {
+  const days = {
+    "2026-08-15": { total: 3600000 },
+    "2026-08-16": { total: 1800000 },
+    "2026-08-17": { total: 0 }
+  }
+  const totals = Model.monthlyTotals(days, {}, 2026)
+  const aug = totals.find(t => t.month === 7)
+  assert.equal(aug.ms, 5400000)
+})
+
+test("monthlyTotals uses months aggregates for historical data", () => {
+  const months = { "2026-03": 10000000 }
+  const totals = Model.monthlyTotals({}, months, 2026)
+  const mar = totals.find(t => t.month === 2)
+  assert.equal(mar.ms, 10000000)
+  assert.ok(mar.hours.includes("h"))
+})
+
+test("monthlyTotals merges days and months without double counting", () => {
+  // months has March data, days has April data — no overlap
+  const days = { "2026-04-10": { total: 5000000 } }
+  const months = { "2026-03": 3000000 }
+  const totals = Model.monthlyTotals(days, months, 2026)
+  const mar = totals.find(t => t.month === 2)
+  const apr = totals.find(t => t.month === 3)
+  assert.equal(mar.ms, 3000000)
+  assert.equal(apr.ms, 5000000)
+})
+
+test("monthlyTotals returns 0h for months with no data", () => {
+  const totals = Model.monthlyTotals({}, {}, 2026)
+  const jan = totals.find(t => t.month === 0)
+  assert.equal(jan.ms, 0)
+  assert.equal(jan.hours, "0h")
+})
+
+test("monthlyTotals returns 12 entries", () => {
+  const totals = Model.monthlyTotals({}, {}, 2026)
+  assert.equal(totals.length, 12)
+})
+
+// ---- yearTotal ------------------------------------------------------------
+
+test("yearTotal sums raw days for the year", () => {
+  const days = {
+    "2026-01-01": { total: 1000000 },
+    "2026-01-02": { total: 2000000 },
+    "2025-12-31": { total: 9999999 }
+  }
+  assert.equal(Model.yearTotal(days, {}, 2026), 3000000)
+})
+
+test("yearTotal includes months aggregates", () => {
+  const months = { "2026-01": 5000000, "2026-06": 8000000 }
+  assert.equal(Model.yearTotal({}, months, 2026), 13000000)
+})
+
+test("yearTotal sums days and months together", () => {
+  const days = { "2026-08-19": { total: 1000000 } }
+  const months = { "2026-03": 2000000 }
+  assert.equal(Model.yearTotal(days, months, 2026), 3000000)
+})
+
+test("yearTotal ignores different years", () => {
+  const days = { "2025-08-19": { total: 9999999 } }
+  const months = { "2025-01": 8888888 }
+  assert.equal(Model.yearTotal(days, months, 2026), 0)
+})
+
+// ---- rollupPrunedDays ----------------------------------------------------
+
+test("rollupPrunedDays merges day totals into months", () => {
+  const pruned = {
+    "2026-06-01": { total: 3600000 },
+    "2026-06-15": { total: 7200000 }
+  }
+  const result = Model.rollupPrunedDays({}, pruned)
+  assert.equal(result["2026-06"], 10800000)
+})
+
+test("rollupPrunedDays accumulates onto existing months", () => {
+  const months = { "2026-06": 5000000 }
+  const pruned = { "2026-06-20": { total: 3000000 } }
+  const result = Model.rollupPrunedDays(months, pruned)
+  assert.equal(result["2026-06"], 8000000)
+})
+
+test("rollupPrunedDays returns original months when nothing to prune", () => {
+  const months = { "2026-05": 1000000 }
+  const result = Model.rollupPrunedDays(months, {})
+  assert.deepEqual(result, { "2026-05": 1000000 })
+})
+
+test("rollupPrunedDays skips days with zero total", () => {
+  const pruned = { "2026-07-01": { total: 0 } }
+  const result = Model.rollupPrunedDays({}, pruned)
+  assert.deepEqual(result, {})
+})
+
+test("rollupPrunedDays handles null months input", () => {
+  const pruned = { "2026-04-05": { total: 1000000 } }
+  const result = Model.rollupPrunedDays(null, pruned)
+  assert.equal(result["2026-04"], 1000000)
 })

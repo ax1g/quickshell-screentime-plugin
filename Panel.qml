@@ -21,6 +21,7 @@ Panel {
   readonly property bool serviceReady: service && service.ready === true
   readonly property var today: service ? service.today : null
   readonly property var days: service ? service.days : {}
+  readonly property var months: service ? service.months : {}
   readonly property string todayKey: serviceReady ? service.todayKey : ""
 
   // Day selection: clicking a week-trend bar sets selectedKey; empty = live
@@ -38,23 +39,28 @@ Panel {
   readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
   readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
   readonly property var insightRows: serviceReady ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey) : []
-  readonly property var weekTrend: serviceReady ? Model.weekTrend(root.days, root.todayKey) : []
-  readonly property double weekMax: {
+  readonly property var scrollableWeeks: serviceReady ? Model.monSunWeeks(root.days, root.todayKey, 13) : []
+  readonly property double scrollableMax: Model.scrollableTrendMax(root.scrollableWeeks)
+  readonly property var visibleWeek: root.scrollableWeeks.length > root.weekOffset
+    ? root.scrollableWeeks[root.weekOffset] : null
+  readonly property double visibleWeekMax: {
+    if (!root.visibleWeek) return 0
     var max = 0
-    var list = root.weekTrend
-    for (var i = 0; i < list.length; i++) max = Math.max(max, Number(list[i].ms) || 0)
+    var days = root.visibleWeek.days
+    for (var i = 0; i < days.length; i++) {
+      var ms = Number(days[i].ms) || 0
+      if (ms > max) max = ms
+    }
     return max
   }
-  readonly property double weekTotalMs: serviceReady ? Model.weekTotal(root.weekTrend) : 0
   property bool expanded: false
+  property bool calendarOpen: false
+  property int weekOffset: 0
 
-  // Donut cross-highlight: which ring slice is hovered (-1 = none), plus
-  // the label pair shown in the donut center while hovering.
-  property int hoverSlice: -1
-  property string hoverApp: ""
-  property double hoverMs: 0
-  readonly property bool sliceHovered: root.hoverSlice >= 0
-    && root.hoverSlice < root.segments.length && root.hoverApp !== ""
+  // Calendar view: monthly totals for the current year.
+  readonly property int currentYear: serviceReady ? Number(root.todayKey.split("-")[0]) || 2026 : 2026
+  readonly property var calendarMonths: serviceReady ? Model.monthlyTotals(root.days, root.months, root.currentYear) : []
+  readonly property string calendarYearTotal: serviceReady ? Model.fmt(Model.yearTotal(root.days, root.months, root.currentYear)) : "0h"
 
   // Donut always shows the grouped view; the legend expands inline.
   readonly property var segments: Model.arcSegments(root.groupedApps)
@@ -146,43 +152,6 @@ Panel {
       root.selectedKey = ""
     else
       root.selectedKey = key
-    root.clearHover()
-  }
-
-  function setSliceHover(slice, appName, ms) {
-    root.hoverSlice = slice
-    root.hoverApp = appName
-    root.hoverMs = ms
-  }
-
-  function clearHover() {
-    root.hoverSlice = -1
-    root.hoverApp = ""
-    root.hoverMs = 0
-  }
-
-  // Angle hit-test for the ring; x/y are in donutItem coordinates. Angles
-  // are degrees clockwise from 12 o'clock (arcSegments' convention); atan2
-  // with y-down screen coordinates matches once normalized to [-90, 270).
-  function sliceAt(x, y) {
-    var segs = root.segments
-    if (!segs || segs.length === 0) return -1
-    var dx = x - donutItem.width / 2
-    var dy = y - donutItem.height / 2
-    var r = Math.sqrt(dx * dx + dy * dy)
-    var inner = root.ringRadius - root.ringBaseWidth / 2 - Style.space(3)
-    var outer = root.ringRadius + root.ringBaseWidth / 2 + Style.space(3)
-    if (r < inner || r > outer) return -1
-    var deg = Math.atan2(dy, dx) * 180 / Math.PI
-    if (deg < -90) deg += 360
-    for (var i = 0; i < segs.length; i++) {
-      var start = segs[i].startAngle
-      var end = start + segs[i].sweepAngle
-      if (end <= 360 ? (deg >= start && deg <= end)
-                     : (deg >= start || deg <= end - 360))
-        return i
-    }
-    return -1
   }
 
   KeyboardPanel {
@@ -198,6 +167,7 @@ Panel {
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      clip: true
       onMoveRequested: function(dx, dy) {
         if (dy !== 0) root.scrollBy(-dy * Style.space(24))
       }
@@ -207,6 +177,103 @@ Panel {
         if (t === "p" || t === "P") root.toggleExpanded()
       }
 
+      // ---- Calendar side drawer (slides over the main content) -----------
+      readonly property real drawerWidth: panel.width * 0.45
+
+      Item {
+        id: calendarDrawer
+        width: keyCatcher.drawerWidth
+        height: keyCatcher.height
+        x: root.calendarOpen ? 0 : -keyCatcher.drawerWidth
+        z: 10
+        visible: x > -keyCatcher.drawerWidth
+
+        Behavior on x {
+          NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        }
+
+        Rectangle {
+          anchors.fill: parent
+          color: bar ? bar.background : Color.background
+          opacity: 0.95
+        }
+
+        Flickable {
+          id: calendarScroll
+          anchors.fill: parent
+          anchors.margins: Style.space(6)
+          contentWidth: width
+          contentHeight: calendarColumn.implicitHeight
+          clip: true
+          boundsBehavior: Flickable.StopAtBounds
+          interactive: contentHeight > height
+
+          Column {
+            id: calendarColumn
+            width: calendarScroll.width
+            spacing: Style.space(4)
+
+            Row {
+              width: parent.width
+              spacing: Style.space(4)
+
+              Text {
+                text: String(root.currentYear)
+                color: root.contentForeground
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.bodySmall
+                font.bold: true
+              }
+
+              Text {
+                text: root.calendarYearTotal
+                color: Qt.darker(root.contentForeground, 1.4)
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            Repeater {
+              model: root.calendarMonths
+
+              Row {
+                required property var modelData
+                required property int index
+
+                width: calendarColumn.width
+                spacing: Style.space(4)
+
+                readonly property bool isCurrentMonth: index === new Date().getMonth()
+
+                Text {
+                  text: modelData.label
+                  color: root.contentForeground
+                  opacity: root.isCurrentMonth ? 1.0 : 0.5
+                  font.family: root.contentFontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: root.isCurrentMonth
+                  width: Style.space(28)
+                }
+
+                Text {
+                  text: modelData.hours
+                  color: root.contentForeground
+                  opacity: modelData.ms > 0 ? (root.isCurrentMonth ? 1.0 : 0.5) : 0.2
+                  font.family: root.contentFontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: root.isCurrentMonth
+                  horizontalAlignment: Text.AlignRight
+                  width: parent.width - Style.space(28)
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // ---- Main content (full width, drawer slides over it) --------------
       Flickable {
         id: panelScroll
         anchors.fill: parent
@@ -229,17 +296,28 @@ Panel {
             Text {
               id: heroIcon
               text: "󰔟"
-              color: root.contentForeground
+              color: heroIconMouse.containsMouse
+                ? root.contentForeground
+                : (root.calendarOpen ? root.contentForeground : root.contentForeground)
               font.family: root.contentFontFamily
               font.pixelSize: Style.fontPx(2.8)
               anchors.left: parent.left
               anchors.top: parent.top
               anchors.topMargin: -Style.space(4)
+
+              MouseArea {
+                id: heroIconMouse
+                anchors.fill: parent
+                anchors.margins: -Style.space(6)
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.calendarOpen = !root.calendarOpen
+              }
             }
 
             Row {
               id: showMoreCorner
-              spacing: Style.space(2)
+              spacing: Style.space(4)
               anchors.right: parent.right
               anchors.top: parent.top
 
@@ -329,7 +407,6 @@ Panel {
                   target: root
                   function onSegmentsChanged() { donutCanvas.requestPaint() }
                   function onSliceColorsChanged() { donutCanvas.requestPaint() }
-                  function onHoverSliceChanged() { donutCanvas.requestPaint() }
                 }
 
                 onPaint: {
@@ -357,10 +434,7 @@ Panel {
                   for (var i = 0; i < segs.length; i++) {
                     var seg = segs[i]
                     ctx.lineWidth = root.ringBaseWidth
-                    // Cross-highlight: the hovered slice stays full, the
-                    // rest dim so the eye locks onto one app.
-                    ctx.strokeStyle = root.sliceColor(
-                      i, root.hoverSlice < 0 || i === root.hoverSlice ? 1.0 : 0.25)
+                    ctx.strokeStyle = root.sliceColor(i, 1.0)
                     ctx.beginPath()
                     ctx.arc(cx, cy, rad, seg.startAngle * toRad, (seg.startAngle + seg.sweepAngle) * toRad, false)
                     ctx.stroke()
@@ -368,34 +442,14 @@ Panel {
                 }
               }
 
-              // Slice hover: pointer feedback plus the app's own readout
-              // in place of the day summary.
-              MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-                cursorShape: root.hoverSlice >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onPositionChanged: function(mouse) {
-                  var i = root.sliceAt(mouse.x, mouse.y)
-                  if (i >= 0) {
-                    var seg = root.segments[i]
-                    root.setSliceHover(i, Model.displayName(seg.app), seg.ms || 0)
-                  } else {
-                    root.clearHover()
-                  }
-                }
-                onContainsMouseChanged: if (!containsMouse) root.clearHover()
-              }
-
-              // Center readout: active day label + total, or the hovered
-              // slice's app while cross-highlighting.
+              // Center readout: active day label + total.
               Column {
                 anchors.centerIn: parent
                 width: parent.width * 0.6
                 spacing: Style.space(1)
 
                 Text {
-                  text: root.sliceHovered ? root.hoverApp : root.activeDayLabel
+                  text: root.activeDayLabel
                   color: root.contentForeground
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.bodySmall
@@ -406,7 +460,7 @@ Panel {
                 }
 
                 Text {
-                  text: Model.fmt(root.sliceHovered ? root.hoverMs : root.dayTotal)
+                  text: Model.fmt(root.dayTotal)
                   color: Qt.darker(root.contentForeground, 1.4)
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.caption
@@ -428,9 +482,7 @@ Panel {
               clip: true
               contentWidth: width
               contentHeight: legendList.implicitHeight
-              // Fixed height so the panel size stays identical across days
-              // regardless of app count — no abrupt resize when switching.
-              height: root.legendMaxHeight
+              height: Math.min(legendList.implicitHeight, root.legendMaxHeight)
               interactive: contentHeight > height
               flickableDirection: Flickable.VerticalFlick
               boundsBehavior: Flickable.StopAtBounds
@@ -438,9 +490,6 @@ Panel {
               Column {
                 id: legendList
                 width: parent.width - Style.space(8)
-                // Vertically center short lists within the fixed-height
-                // viewport; clamp to 0 so long lists still scroll from top.
-                y: Math.max(0, (legendScroll.height - implicitHeight) / 2)
                 spacing: Style.space(5)
 
                 // Empty-state message when the selected day has no data.
@@ -547,83 +596,144 @@ Panel {
                 foreground: root.contentForeground
               }
 
-              // 7-day trend strip: bars scale to the busiest day; the
-              // active day (selected or today) is full accent, the rest dim.
-              Row {
+              // Paginated Mon-Sun week bar graph with < Month Year > navigation.
+              // Shows one week at a time; weekOffset 0 = current week.
+              Item {
                 width: parent.width
-                spacing: Style.space(6)
+                implicitHeight: weekNavColumn.implicitHeight
 
-                Repeater {
-                  model: root.weekTrend
+                Column {
+                  id: weekNavColumn
+                  width: parent.width
+                  spacing: Style.space(4)
 
-                  Column {
-                    required property var modelData
+                  // < Month Year > header row.
+                  Row {
+                    spacing: Style.space(6)
+                    anchors.left: parent.left
 
-                    readonly property bool isActive: modelData.key === root.activeDayKey
-
-                    width: (parent.width - parent.spacing * 6) / 7
-                    spacing: Style.space(3)
-
-Item {
-                        id: trendSlot
-                        width: parent.width
-                        height: Style.space(58)
-
+                    Text {
+                      text: "\uf053"
+                      color: weekPrevMouse.containsMouse ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
+                      font.family: root.contentFontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      visible: root.weekOffset < 12
                       MouseArea {
-                        id: trendSlotMouse
+                        id: weekPrevMouse
                         anchors.fill: parent
+                        anchors.margins: -Style.space(4)
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.selectDay(modelData.key)
-                      }
-
-                      Rectangle {
-                        width: parent.width * 0.42
-                        radius: Style.space(2)
-                        color: isActive ? root.sliceColor(0, 1.0) : root.sliceColor(0, 0.28)
-                        opacity: trendSlotMouse.containsMouse && !isActive ? 0.5 : 1.0
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        height: {
-                          if (modelData.ms <= 0 || root.weekMax <= 0) return 3
-                          return Math.max(3, trendSlot.height * Number(modelData.ms) / root.weekMax)
-                        }
+                        onClicked: root.weekOffset = Math.min(12, root.weekOffset + 1)
                       }
                     }
 
                     Text {
-                      text: modelData.label
+                      text: {
+                        if (!root.visibleWeek) return ""
+                        var d = root.visibleWeek.days[0]
+                        if (!d) return ""
+                        var parts = d.key.split("-")
+                        var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                        var mi = Number(parts[1]) - 1
+                        return (monthNames[mi] || "") + " " + parts[0]
+                      }
                       color: root.contentForeground
-                      opacity: isActive ? 1.0 : 0.5
                       font.family: root.contentFontFamily
                       font.pixelSize: Style.font.caption
-                      font.bold: isActive
-                      width: parent.width
-                      horizontalAlignment: Text.AlignHCenter
+                      font.bold: true
+                      anchors.verticalCenter: parent.verticalCenter
                     }
 
-                    // Dot indicator under the active day.
-                    Rectangle {
-                      width: Style.space(3)
-                      height: width
-                      radius: width / 2
-                      color: root.sliceColor(0, 1.0)
-                      visible: isActive
-                      anchors.horizontalCenter: parent.horizontalCenter
+                    Text {
+                      text: "\uf054"
+                      color: weekNextMouse.containsMouse ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
+                      font.family: root.contentFontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      visible: root.weekOffset > 0
+                      MouseArea {
+                        id: weekNextMouse
+                        anchors.fill: parent
+                        anchors.margins: -Style.space(4)
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.weekOffset = Math.max(0, root.weekOffset - 1)
+                      }
+                    }
+                  }
+
+                  // 7 day bars for the visible week.
+                  Row {
+                    width: parent.width
+                    spacing: 0
+
+                      Repeater {
+                        model: root.visibleWeek ? root.visibleWeek.days : []
+
+                        Item {
+                          required property var modelData
+                          required property int index
+
+                          width: (parent.width - parent.spacing * 6) / 7
+                          height: Style.space(80)
+
+                          property bool isActive: modelData.key === root.activeDayKey
+                          property bool isFuture: modelData.isFuture
+                          property bool isEmpty: !isFuture && modelData.ms <= 0
+                          property bool hasData: !isFuture && !isEmpty && root.visibleWeekMax > 0
+                          property real barPx: hasData
+                            ? Math.max(3, Style.space(64) * Number(modelData.ms) / root.visibleWeekMax)
+                            : 3
+
+                          Rectangle {
+                            width: parent.width * 0.5
+                            radius: Style.space(2)
+                            color: (parent.isFuture || parent.isEmpty)
+                              ? Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
+                              : (parent.isActive ? root.sliceColor(0, 1.0) : root.sliceColor(0, 0.28))
+                            opacity: parent.hasData && barMouse.containsMouse && !parent.isActive ? 0.5 : 1.0
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: Style.space(14)
+                            height: parent.barPx
+
+                            MouseArea {
+                              id: barMouse
+                              anchors.fill: parent
+                              hoverEnabled: true
+                              enabled: !parent.parent.isFuture && !parent.parent.isEmpty
+                              cursorShape: Qt.PointingHandCursor
+                              onClicked: root.selectDay(modelData.key)
+                            }
+                          }
+
+                          Text {
+                            text: modelData.label
+                            color: root.contentForeground
+                            opacity: (parent.isActive || (!parent.isFuture && modelData.ms > 0)) ? 1.0 : 0.3
+                            font.family: root.contentFontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: parent.isActive
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            anchors.bottom: parent.bottom
+                          }
+
+                          Rectangle {
+                            width: Style.space(3)
+                            height: width
+                            radius: width / 2
+                            color: root.sliceColor(0, 1.0)
+                            visible: parent.isActive
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: -Style.space(5)
+                          }
+                        }
+                      }
                     }
                   }
                 }
-              }
-
-              Text {
-                width: parent.width
-                text: "Week's Total \u00b7 " + Model.fmt(root.weekTotalMs)
-                color: root.contentForeground
-                opacity: 0.6
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.caption
-                elide: Text.ElideRight
-                horizontalAlignment: Text.AlignHCenter
               }
 
               PanelSeparator {
@@ -686,7 +796,6 @@ Item {
         }
       }
     }
-  }
 
   // Reset to today's live data when the panel is dismissed.
   Connections {
@@ -694,7 +803,8 @@ Item {
     function onOpenChanged() {
       if (!root.controller.open) {
         root.selectedKey = ""
-        root.clearHover()
+        root.calendarOpen = false
+        root.weekOffset = 0
       }
     }
   }
