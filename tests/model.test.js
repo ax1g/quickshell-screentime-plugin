@@ -51,6 +51,21 @@ test("displayName passes unresolved Steam ids through untouched", () => {
   assert.equal(Model.resolveSteamAppName, undefined)
 })
 
+test("sanitizeHistory keeps valid sections and rejects malformed ones", () => {
+  const days = { "2026-08-21": { total: 5, apps: { zen: 5 } } }
+  const months = { "2026-07": 9823400 }
+
+  const clean = Model.sanitizeHistory(days, months)
+  assert.equal(clean.days, days)
+  assert.equal(clean.months, months)
+
+  // Arrays pass typeof "object" but are not valid history containers.
+  assert.deepEqual(Model.sanitizeHistory([1, 2], days).days, {})
+  assert.deepEqual(Model.sanitizeHistory(days, ["x"]).months, {})
+  assert.deepEqual(Model.sanitizeHistory(null, undefined).days, {})
+  assert.deepEqual(Model.sanitizeHistory("{}", 42).months, {})
+})
+
 test("appList drops sub-minute apps and sorts descending", () => {
   const today = {
     total: 300000,
