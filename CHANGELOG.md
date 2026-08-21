@@ -36,6 +36,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Steam games now resolve to their real titles in production: the old
+  JavaScript-side lookup used Node-only APIs that throw inside QML, so
+  `steam_app_*` labels were broken. Resolution moved into the Python
+  resolver, which reads local appmanifests; unresolved ids keep a stable
+  tracking key.
 - Insights section no longer overlaps the week graph (a misplaced brace made
   it stack on top of the chart).
 - The yearly overview no longer flashes across the panel while the panel is
