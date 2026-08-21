@@ -391,9 +391,17 @@ Item {
   // Resolves the app running in the focused terminal (see resolve_app.py).
   // An empty stdout falls back to rawApp silently by design, so stderr is
   // logged: without it a broken resolver degrades tracking invisibly.
+  //
+  // The sh -c wrapper guards against a missing python3: Quickshell's
+  // Process exposes no spawn-failure signal, so a bare python3 command
+  // that cannot start would leave resolves stalling until the watchdog.
+  // sh always exists, exits 0 without output instead, and the empty
+  // result falls back to tracking the raw terminal class.
   Process {
     id: resolverProc
-    command: ["python3", root.resolverPath]
+    command: ["sh", "-c",
+      "command -v python3 >/dev/null 2>&1 && exec python3 \"$1\" || exit 0",
+      "sh", root.resolverPath]
     stdout: StdioCollector {
       id: resolverOut
       waitForEnd: true
@@ -406,15 +414,6 @@ Item {
       var err = resolverErr.text.trim()
       if (err) console.warn("agx.screen-time: resolver stderr:", err)
       root.applyResolvedApp(resolverOut.text.trim())
-    }
-
-    // A missing python3 (or unreadable script) means the process never
-    // starts and onExited never fires. Fall back to the raw terminal class
-    // so terminal time degrades to coarse tracking instead of vanishing.
-    onError: function(error) {
-      console.warn("agx.screen-time: resolver could not run (" + error +
-        "); tracking raw app names")
-      root.applyResolvedApp("")
     }
   }
 
@@ -476,3 +475,4 @@ Item {
     ensureDirProc.running = true
   }
 }
+
