@@ -349,6 +349,8 @@ Item {
   }
 
   // Resolves the app running in the focused terminal (see resolve_app.py).
+  // An empty stdout falls back to rawApp silently by design, so stderr is
+  // logged: without it a broken resolver degrades tracking invisibly.
   Process {
     id: resolverProc
     command: ["python3", root.resolverPath]
@@ -356,7 +358,13 @@ Item {
       id: resolverOut
       waitForEnd: true
     }
+    stderr: StdioCollector {
+      id: resolverErr
+      waitForEnd: true
+    }
     onExited: {
+      var err = resolverErr.text.trim()
+      if (err) console.warn("agx.screen-time: resolver stderr:", err)
       root.applyResolvedApp(resolverOut.text.trim())
     }
   }
