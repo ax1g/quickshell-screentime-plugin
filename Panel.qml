@@ -615,12 +615,13 @@ Panel {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.openCalendar(!root.calendarOpen)
-                onContainsMouseChanged: if (containsMouse) sparkles.launch()
+                onContainsMouseChanged: if (containsMouse) sparkles.launch(heroIconMouse.mouseX, heroIconMouse.mouseY)
               }
             }
 
-            // Hover sparkles: a handful of tiny stars drifting up from the
-            // hourglass and fading out. Replays on every hover-enter.
+            // Hover sparkles: tiny stars burst around the cursor over the
+            // hourglass, drift upward and fade out. Positions and sizes are
+            // re-randomised on every hover-enter.
             Item {
               id: sparkles
               anchors.centerIn: heroIcon
@@ -630,8 +631,11 @@ Panel {
 
               property bool go: false
 
-              function launch() {
+              function launch(mx, my) {
+                var p = mapFromItem(heroIconMouse, mx, my)
                 go = false
+                for (var i = 0; i < sparkleRepeater.count; i++)
+                  sparkleRepeater.itemAt(i).respawn(p.x, p.y)
                 go = true
               }
 
@@ -648,19 +652,25 @@ Panel {
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.caption
                   opacity: 0
-                  x: sparkles.width * (0.12 + 0.76 * Math.random())
-                  y: sparkles.height * 0.55
                   scale: 1
 
-                  readonly property real startY: sparkles.height * 0.55
-                  readonly property real drift: Style.space(8) + Style.space(8) * Math.random()
+                  property real drift: Style.space(8)
+
+                  function respawn(cx, cy) {
+                    var spreadX = sparkles.width * 0.22
+                    var spreadY = sparkles.height * 0.3
+                    x = Math.max(2, Math.min(sparkles.width - 2, cx + (Math.random() * 2 - 1) * spreadX))
+                    y = Math.max(sparkles.height * 0.2, Math.min(sparkles.height * 0.85, cy + (Math.random() * 2 - 1) * spreadY))
+                    font.pixelSize = Style.font.caption * (0.65 + Math.random() * 0.85)
+                    drift = Style.space(6) + Style.space(10) * Math.random()
+                  }
 
                   SequentialAnimation {
                     running: sparkles.go
                     PauseAnimation { duration: sp.index * 80 }
                     NumberAnimation { target: sp; property: "opacity"; from: 0; to: 0.85; duration: 180 }
                     ParallelAnimation {
-                    NumberAnimation { target: sp; property: "y"; from: sp.startY; to: sp.startY - sp.drift; duration: 650; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: sp; property: "y"; from: sp.y; to: sp.y - sp.drift; duration: 650; easing.type: Easing.OutQuad }
                     NumberAnimation { target: sp; property: "opacity"; from: 0.85; to: 0; duration: 650; easing.type: Easing.InQuad }
                     NumberAnimation { target: sp; property: "scale"; from: 1; to: 0.6; duration: 650 }
                     }
