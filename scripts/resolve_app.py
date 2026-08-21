@@ -101,21 +101,72 @@ def proc_name(pid):
     return name
 
 
+def _children(pid):
+    """Direct child pids of a process, via /proc task children files."""
+    try:
+        tasks = os.listdir(f"/proc/{pid}/task")
+    except OSError:
+        return []
+    out = []
+    for tid in tasks:
+        try:
+            with open(f"/proc/{pid}/task/{tid}/children") as fh:
+                out.extend(int(p) for p in fh.read().split())
+        except (OSError, ValueError):
+            continue
+    return out
+
+
+# Levels below the terminal to search for the pty-owning session.
+# Terminals spawn their shell directly (depth 1); wrappers are rare.
+_MAX_TTY_SEARCH_DEPTH = 4
+
+
+def _find_tty_session(terminal_pid):
+    """Bounded DFS below the terminal for a descendant owning a pty.
+
+    Terminals like foot spawn their shell with forkpty, so the pty is
+    the child's controlling terminal, not the terminal's own.  Returns
+    that descendant's proc_stat (its ``tpgid`` is the foreground group),
+    or None when no descendant owns a tty.
+    """
+    frontier = [(pid, 1) for pid in _children(terminal_pid)]
+    seen = set()
+    while frontier:
+        pid, depth = frontier.pop(0)
+        if pid in seen or depth > _MAX_TTY_SEARCH_DEPTH:
+            continue
+        seen.add(pid)
+        stat = proc_stat(pid)
+        if stat is None:
+            continue
+        if stat["ttynr"] and stat["tpgid"] > 0:
+            return stat
+        for child in _children(pid):
+            frontier.append((child, depth + 1))
+    return None
+
+
 def _resolve_terminal_foreground(terminal_pid):
     """Resolve the foreground process in a terminal window.
 
-    Reads the terminal's own /proc/[pid]/stat to get the ``tpgid`` field,
-    which is the PID of the foreground process group.  This is O(1) instead
-    of walking all of /proc.  If the foreground process is a browser
-    subprocess (Web Content, forkserver, …), walks its ancestor chain to
-    find the browser binary.  Returns the canonical app name, or None.
+    Reads the terminal's own /proc/[pid]/stat ``tpgid`` field when the
+    terminal holds the pty as its controlling terminal.  Otherwise (e.g.
+    foot reports ttynr=0 / tpgid=-1) searches its descendants for the
+    pty-owning session and uses that session's ``tpgid``.  If the
+    foreground process is a browser subprocess (Web Content, forkserver,
+    …), walks its ancestor chain to find the browser binary.  Returns
+    the canonical app name, or None.
     """
     stat = proc_stat(terminal_pid)
     if stat is None:
         return None
 
     tpgid = stat["tpgid"]
-    if not tpgid or tpgid == terminal_pid:
+    if tpgid <= 0 or tpgid == terminal_pid:
+        tty_stat = _find_tty_session(terminal_pid)
+        tpgid = tty_stat["tpgid"] if tty_stat else 0
+    if tpgid <= 0:
         return None
 
     name = proc_name(tpgid)
