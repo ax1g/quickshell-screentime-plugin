@@ -252,8 +252,8 @@ test("insights shows correct labels when viewing a past day", () => {
 })
 
 test("fmtDelta prefixes + and - correctly", () => {
-  assert.equal(Model.fmtDelta(60000), "+1m")
-  assert.equal(Model.fmtDelta(-120000), "-2m")
+  assert.equal(Model.fmtDelta(60000), "+ 1m")
+  assert.equal(Model.fmtDelta(-120000), "- 2m")
 })
 
 test("fmtWords renders singular for 1 SECOND and 1 HOUR 1 MINUTE", () => {
