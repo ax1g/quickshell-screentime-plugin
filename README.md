@@ -29,7 +29,10 @@ down into a donut chart with a 7-day usage trend.
 | **Donut breakdown** | Today's apps as a ring: six biggest + "Other", day total in the centre. |
 | **Slice hover** | Hover the ring to dim the other slices and preview that app's name and share in the centre. |
 | **Clickable week bars** | Click a day in the 7-day trend to view its apps and insights; click again to return to today. |
-| **Week total** | The 7-day sum sits centred under the trend strip. |
+| **13-week trend** | Paginated Mon-Sun bars with `< Aug 2026 · W34 >` navigation; today's bar in your theme accent. |
+| **Week total** | Sits in the graph header; click it to flip between time and its share of the week's 168 hours. |
+| **Yearly overview** | The hourglass opens a full-card view: one bar per month across all recorded years, exact totals on hover. |
+| **Hourglass easter egg** | It flips over on the hour; hover for gold sparkles. |
 | **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list inline. |
 | **Clean app names** | Reverse-DNS IDs shortened and lowercased (`com.github.user.Codium` → `codium`). |
 | **Usage patterns** | Press `p` for top app, vs. yesterday, and busiest day. |
@@ -68,6 +71,9 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 {
   "days": {
     "2026-08-16": { "total": 490875, "apps": { "zen": 313349, "opencode": 148706 } }
+  },
+  "months": {
+    "2026-07": 9823400
   }
 }
 ```
@@ -75,7 +81,9 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
 - Focus is credited to the day it started on, so a session spanning midnight
   still lands on the right day.
-- History older than 31 days is pruned automatically. Delete the file to reset.
+- Daily detail older than 31 days is pruned, but its total is folded into a
+  per-month aggregate first — so the yearly overview remembers your history
+  even though raw days are forgotten. Delete the file to reset.
 
 ## Development
 
@@ -84,7 +92,8 @@ your checkout is all you need to iterate:
 
 ```bash
 ln -s "$PWD" ~/.config/omarchy/plugins/agx.screen-time
-node --check Model.js && node --test tests/model.test.js
+node --check lib/Model.js && node --check lib/State.js
+node --test tests/model.test.js tests/state.test.js
 python3 -m unittest discover -s tests
 ```
 

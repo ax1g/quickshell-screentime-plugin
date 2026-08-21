@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "agx.screen-time",
   "name": "Screen Time",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "author": "agx",
-  "description": "Know where your time goes. Live per-app screen time in your bar with a donut breakdown, 7-day trends, and usage insights — terminal-aware, keyboard-first, fully local.",
+  "description": "Know where your time goes. Live per-app screen time in your bar with a donut breakdown, a 13-week trend, a yearly overview, and usage insights — terminal-aware, keyboard-first, fully local.",
   "kinds": [
     "service",
     "bar-widget"

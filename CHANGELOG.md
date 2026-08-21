@@ -4,6 +4,45 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-21
+
+### Added
+
+- Yearly overview drawer behind the hero hourglass: `< year >` navigation back
+  to the first recorded year, one bar per month scaled against the busiest
+  month with exact hours on hover, a BACK button, and a full-card overlay
+  that keeps the panel's show-less height.
+- Persistent monthly aggregates: days rolled out of the 31-day retention
+  window are folded into per-month totals, so the yearly overview covers the
+  whole history instead of forgetting it.
+- ISO week numbers in the week graph header (`Aug 2026 · W34`), paginated
+  across 13 Mon-Sun weeks.
+- Week total toggle: click the header total to flip between duration and its
+  share of the week's 168 hours; the tooltip phrases either as an insight.
+- Donut cross-highlight: hovering a legend row highlights its ring slice,
+  and hovering a slice highlights its row.
+- Hero hourglass easter egg: it flips over on every full hour, and gold
+  sparkles drift up on hover.
+
+### Changed
+
+- Week bars follow the theme: today's bar in the accent colour, other days
+  at low opacity, empty and future days as faint tracks.
+- App list uses a fixed-height scroll area with vertically centred rows.
+- Insights labels joined to their values with a middle dot; delta spacing
+  tightened.
+
+### Fixed
+
+- Insights section no longer overlaps the week graph (a misplaced brace made
+  it stack on top of the chart).
+- The yearly overview no longer flashes across the panel while the panel is
+  opening.
+- Hovering the yearly overview no longer reaches the donut chart underneath;
+  its background is fully opaque.
+- Calendar month rows no longer emit `Unable to assign [undefined] to bool`
+  warnings.
+
 ## [1.2.2] - 2026-08-19
 
 ### Fixed
