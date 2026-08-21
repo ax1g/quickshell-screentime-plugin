@@ -32,7 +32,7 @@ down into a donut chart with a 7-day usage trend.
 | **13-week trend** | Paginated Mon-Sun bars with `< Aug 2026 · W34 >` navigation; today's bar in your theme accent. |
 | **Week total** | Sits in the graph header; click it to flip between time and its share of the week's 168 hours. |
 | **Yearly overview** | The hourglass opens a full-card view: one bar per month across all recorded years, exact totals on hover. |
-| **Hourglass easter egg** | It flips over on the hour; hover for gold sparkles. |
+| **Hourglass easter egg** | It flips over on the hour; hover for gold sparkles around your cursor. |
 | **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list inline. |
 | **Clean app names** | Reverse-DNS IDs shortened and lowercased (`com.github.user.Codium` → `codium`). |
 | **Usage patterns** | Press `p` for top app, vs. yesterday, and busiest day. |

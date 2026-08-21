@@ -23,7 +23,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Donut cross-highlight: hovering a legend row highlights its ring slice,
   and hovering a slice highlights its row.
 - Hero hourglass easter egg: it flips over on every full hour, and gold
-  sparkles drift up on hover.
+  sparkles burst around the cursor on hover, scattered and sized anew each
+  time.
 
 ### Changed
 
