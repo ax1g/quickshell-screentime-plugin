@@ -47,6 +47,23 @@ test("displayName shortens reverse-DNS ids and passes plain names", () => {
   assert.equal(Model.displayName(null), "")
 })
 
+test("displayName extracts hostnames from Chrome web app classes", () => {
+  assert.equal(Model.displayName("chrome-chatgpt.com__-Default"), "chatgpt.com")
+  assert.equal(
+    Model.displayName("chrome-music.apple.com__lv_home-Default"),
+    "music.apple.com"
+  )
+  assert.equal(
+    Model.displayName("chrome-calendar.google.com__-Profile_1"),
+    "calendar.google.com"
+  )
+})
+
+test("displayName keeps dotted non-reverse-DNS names intact", () => {
+  assert.equal(Model.displayName("Minecraft* 26.2"), "minecraft* 26.2")
+  assert.equal(Model.displayName("editor-1.2"), "editor-1.2")
+})
+
 test("displayName passes unresolved Steam ids through untouched", () => {
   // Game titles are resolved by scripts/resolve_app.py before storage;
   // the display layer must never touch the filesystem for a label.
