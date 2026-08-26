@@ -37,6 +37,37 @@ test("canonicalApp folds browser subprocess names", () => {
   assert.equal(Model.canonicalApp(""), "")
 })
 
+test("canonicalApp folds Chromium web apps across profiles", () => {
+  const defaultProfile = Model.canonicalApp("chrome-chatgpt.com__-Default")
+  const numberedProfile = Model.canonicalApp("chrome-chatgpt.com__-Profile_2")
+
+  assert.equal(defaultProfile, "chrome-chatgpt.com")
+  assert.equal(numberedProfile, defaultProfile)
+  assert.equal(
+    Model.canonicalApp("chrome-music.apple.com__lv_home-Default"),
+    "chrome-music.apple.com"
+  )
+})
+
+test("canonicalApp normalizes Chromium-family web app keys", () => {
+  assert.equal(
+    Model.canonicalApp("chromium-calendar.google.com__-Profile_1"),
+    "chromium-calendar.google.com"
+  )
+  assert.equal(
+    Model.canonicalApp("brave-calendar.google.com__-Default"),
+    "brave-calendar.google.com"
+  )
+  assert.equal(
+    Model.canonicalApp("msedge-calendar.google.com__-Default"),
+    "msedge-calendar.google.com"
+  )
+  assert.equal(
+    Model.canonicalApp("vivaldi-calendar.google.com__-Default"),
+    "vivaldi-calendar.google.com"
+  )
+})
+
 test("displayName shortens reverse-DNS ids and passes plain names", () => {
   assert.equal(Model.displayName("com.github.user.Codium"), "codium")
   assert.equal(Model.displayName("org.mozilla.firefox"), "firefox")
@@ -45,6 +76,31 @@ test("displayName shortens reverse-DNS ids and passes plain names", () => {
   assert.equal(Model.displayName("google-chrome"), "google-chrome")
   assert.equal(Model.displayName(""), "")
   assert.equal(Model.displayName(null), "")
+})
+
+test("displayName extracts hostnames from Chromium-family web app keys", () => {
+  assert.equal(Model.displayName("chrome-chatgpt.com__-Default"), "chatgpt.com")
+  assert.equal(
+    Model.displayName("chrome-music.apple.com__lv_home-Default"),
+    "music.apple.com"
+  )
+  assert.equal(
+    Model.displayName("chrome-calendar.google.com__-Profile_1"),
+    "calendar.google.com"
+  )
+  assert.equal(Model.displayName("chromium-chatgpt.com__-Default"), "chatgpt.com")
+  assert.equal(Model.displayName("brave-chatgpt.com__-Default"), "chatgpt.com")
+  assert.equal(Model.displayName("msedge-chatgpt.com__-Default"), "chatgpt.com")
+  assert.equal(
+    Model.displayName("vivaldi-chatgpt.com__-Default"),
+    "chatgpt.com"
+  )
+  assert.equal(Model.displayName("chrome-chatgpt.com"), "chatgpt.com")
+})
+
+test("displayName keeps dotted non-reverse-DNS names intact", () => {
+  assert.equal(Model.displayName("Minecraft* 26.2"), "minecraft* 26.2")
+  assert.equal(Model.displayName("editor-1.2"), "editor-1.2")
 })
 
 test("displayName passes unresolved Steam ids through untouched", () => {

@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Chromium-family web apps no longer render as malformed names
+  (`chrome-music.apple.com__…-Default` → `music.apple.com`), and usage of the
+  same web app across browser profiles now folds into one row; dotted
+  non-reverse-DNS names like `Minecraft* 26.2` pass through intact.
+
 ## [1.3.0] - 2026-08-21
 
 ![Panel before and after: v1.2.2 on the left, v1.3 on the right](docs/assets/v1.2.2-vs-v1.3.png)
