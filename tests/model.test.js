@@ -63,8 +63,8 @@ test("canonicalApp normalizes Chromium-family web app keys", () => {
     "msedge-calendar.google.com"
   )
   assert.equal(
-    Model.canonicalApp("vivaldi-stable-calendar.google.com__-Default"),
-    "vivaldi-stable-calendar.google.com"
+    Model.canonicalApp("vivaldi-calendar.google.com__-Default"),
+    "vivaldi-calendar.google.com"
   )
 })
 
@@ -92,7 +92,7 @@ test("displayName extracts hostnames from Chromium-family web app keys", () => {
   assert.equal(Model.displayName("brave-chatgpt.com__-Default"), "chatgpt.com")
   assert.equal(Model.displayName("msedge-chatgpt.com__-Default"), "chatgpt.com")
   assert.equal(
-    Model.displayName("vivaldi-stable-chatgpt.com__-Default"),
+    Model.displayName("vivaldi-chatgpt.com__-Default"),
     "chatgpt.com"
   )
   assert.equal(Model.displayName("chrome-chatgpt.com"), "chatgpt.com")
