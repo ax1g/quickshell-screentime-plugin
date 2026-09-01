@@ -519,6 +519,13 @@ test("pruneDays across year boundary keeps correct window", () => {
 
 // ---- Data safety: corrupt / missing input ----------------------------------
 
+test("firstDataYear reaches back through the month aggregates and year archive", () => {
+  assert.equal(Model.firstDataYear({ "2026-01-01": {} }, {}, { 2024: { x: 1 } }), 2024)
+  assert.equal(Model.firstDataYear({}, { "2025-06": 1 }, { 2024: { x: 1 } }), 2024)
+  assert.equal(Model.firstDataYear({ 2026: { y: 1 } }, {}, {}), 2026)
+  assert.equal(Model.firstDataYear({}, {}, {}), new Date().getFullYear())
+})
+
 test("appList returns empty for null input", () => {
   assert.deepEqual(Model.appList(null), [])
   assert.deepEqual(Model.appList(undefined), [])
