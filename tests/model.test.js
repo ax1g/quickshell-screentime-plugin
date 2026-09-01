@@ -947,6 +947,19 @@ test("streakStats handles empty and single-day inputs", () => {
   assert.equal(s.lastActive, "2026-03-09")
 })
 
+test("yearFacts day cards scale from day-granular data, not month lumps", () => {
+  // A month lump (from before the archive existed) has no per-day detail, so
+  // it must count into the year share but never inflate "per active day" or
+  // the weekday rhythm, which are computed over real days only.
+  const months = { "2026-02": 10 * HOUR_MS }
+  const cards = Model.yearFacts({}, months, archiveFixture(), 2026, "2026-12-24")
+  const find = label => cards.find(c => c.label === label)
+  assert.match(find("SCREEN SHARE").value, /54h on screens/)
+  assert.equal(find("DAY COUNT").value, "Active on 9 of 357 tracked days")
+  assert.match(find("AVERAGE SCREEN DAY").value, /4h 53m per active day/)
+  assert.match(find("WEEKDAY RHYTHM").value, /Mon leads · 91% weekdays/)
+})
+
 test("yearFacts builds the wrapped summary for a full archived year", () => {
   const cards = Model.yearFacts({}, {}, archiveFixture(), 2026, "2026-12-24")
   const find = label => cards.find(c => c.label === label)
