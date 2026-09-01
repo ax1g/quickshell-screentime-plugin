@@ -802,9 +802,7 @@ Panel {
             Text {
               id: heroIcon
               text: "󰔟"
-              color: heroIconMouse.containsMouse
-                ? root.contentForeground
-                : (root.calendarOpen ? root.contentForeground : root.contentForeground)
+              color: root.contentForeground
               font.family: root.contentFontFamily
               font.pixelSize: Style.fontPx(2.8)
               anchors.left: parent.left
