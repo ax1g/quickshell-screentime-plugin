@@ -4,42 +4,33 @@
 
 # Screen Time
 
-Per-app screen time for the Omarchy bar. A lightweight service tracks how long
-each app keeps focus, the bar shows today's total, and a popup breaks the day
-down into a donut chart with a 7-day usage trend.
-
-<table>
-  <tr>
-    <td><img src="docs/assets/image.png" alt="Screen Time bar widget" width="600"/></td>
-    <td>
-      <img src="docs/assets/image1.png" alt="Donut breakdown" width="300"/><br/>
-      <img src="docs/assets/image2.png" alt="Week-trend bars" width="300"/>
-    </td>
-  </tr>
-</table>
+Know where your time goes. A lightweight service tracks focused time per app,
+shows today's total in the bar, and breaks your history into a donut chart, a
+13-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
+local.
 
 ## Features
 
 | Feature | What it does |
 | --- | --- |
-| **Time in the bar** | Today's total, live, right next to your tray. |
+| **Live in the bar** | Today's total, updated as you work. |
 | **Per-app tracking** | Focus time per app; idle, locked, asleep and desktop time never counted. |
-| **Terminal-aware** | A focused terminal reports what's actually running inside it (`opencode`, not `foot`), re-resolved every few seconds. |
-| **Steam-aware** | `steam_app_123456` becomes the real game title, read from local Steam metadata. |
-| **Donut breakdown** | Today's apps as a ring: six biggest + "Other", day total in the centre. |
-| **Slice hover** | Hover the ring to dim the other slices and preview that app's name and share in the centre. |
-| **Clickable week bars** | Click a day in the 7-day trend to view its apps and insights; click again to return to today. |
-| **13-week trend** | Paginated Mon-Sun bars with `< Aug 2026 · W34 >` navigation; today's bar in your theme accent. |
-| **Week total** | Sits in the graph header; click it to flip between time and its share of the week's 168 hours. |
-| **Yearly overview** | The hourglass opens a full-card view: one bar per month across all recorded years, exact totals on hover. |
-| **Hourglass easter egg** | It flips over on the hour; hover for gold sparkles around your cursor. |
-| **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list inline. |
-| **Clean app names** | Reverse-DNS IDs shortened and lowercased (`com.github.user.Codium` → `codium`). |
-| **Usage patterns** | Press `p` for top app, vs. yesterday, and busiest day. |
+| **Terminal-aware** | A focused terminal shows what runs inside it (`opencode`, not `foot`), re-resolved live. |
+| **Steam-aware** | `steam_app_123456` becomes the game title, read from local Steam metadata. |
+| **Donut chart** | Six biggest apps + "Other", day total in the centre. |
+| **Cross-highlight** | Hover a slice or legend row to spotlight that app. |
+| **Clean names** | Reverse-DNS IDs shortened; Chromium web apps fold by hostname across profiles. |
+| **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list. |
+| **Clickable week bars** | Click any day to inspect it; click again to return to today. |
+| **13-week trend** | Paginated Mon–Sun pages with ISO-week header; today in your theme accent. |
+| **Week total** | Header total flips between time and share of the week's 168 hours. |
+| **Yearly overview** | Per-month bars across every recorded year, with year trivia cards. |
+| **Usage patterns** | Top app, vs yesterday, busiest day in 7. |
 | **Icon-only mode** | Right-click collapses the widget to a single glyph; remembered. |
-| **Keyboard-first** | `Esc` closes, `p` toggles patterns, `j`/`k`/arrows scroll; mouse wheel works too. |
-| **Keybind-friendly** | Summon the panel from a script or keybind via the `agx.screen-time` IPC target. |
-| **Private by design** | Local JSON, daily detail pruned after ~3 months (monthly totals kept); colours generated from your theme's accent. |
+| **Keyboard-first** | `Esc` closes, `p` toggles patterns, `j`/`k` and arrows scroll; wheel works too. |
+| **Keybind-friendly** | Summon and control the panel from a keybind via the `agx.screen-time` IPC target. |
+| **Hourglass easter egg** | Flips over on the hour; gold sparkles on hover. |
+| **Private by design** | One local JSON file; old days roll into monthly totals; colours follow your theme accent. |
 
 ## Install
 
