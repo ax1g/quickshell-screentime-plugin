@@ -836,67 +836,149 @@ test("yearTotal ignores different years", () => {
   assert.equal(Model.yearTotal(days, months, 2026), 0)
 })
 
-// ---- calendarTrivia -------------------------------------------------------
+// ---- year archive + wrapped facts -----------------------------------------
 
-function triviaDays() {
-  return {
-    "2026-01-02": { total: 2 * HOUR_MS, apps: { web: 2 * HOUR_MS } },
-    "2026-01-03": { total: HOUR_MS, apps: { web: HOUR_MS } },
-    "2026-01-04": { total: HOUR_MS, apps: {} },
-    "2026-02-01": { total: 3 * HOUR_MS, apps: { editor: 3 * HOUR_MS } },
-    "2026-03-02": { total: 8 * HOUR_MS, apps: { "com.omarchy.agent": 8 * HOUR_MS } },
-    "2026-03-03": { total: 8 * HOUR_MS, apps: { "com.omarchy.agent": 8 * HOUR_MS } },
-    "2026-03-04": { total: 5 * HOUR_MS, apps: {} },
-    "2026-12-24": { total: 10 * HOUR_MS, apps: { web: 10 * HOUR_MS } }
-  }
+function archiveFixture() {
+  const h = HOUR_MS
+  return { 2026: {
+    "2026-01-02": 2 * h,
+    "2026-01-03": h,
+    "2026-02-01": 3 * h,
+    "2026-02-02": 3 * h,
+    "2026-02-03": 3 * h,
+    "2026-03-02": 8 * h,
+    "2026-03-03": 8 * h,
+    "2026-03-04": 5 * h,
+    "2026-03-09": 11 * h
+  } }
 }
 
-test("calendarTrivia returns empty when the year has no data", () => {
-  assert.deepEqual(Model.calendarTrivia({}, {}, 2026, "2026-12-24"), [])
+test("yearFacts returns empty when the year has no data", () => {
+  assert.deepEqual(Model.yearFacts({}, {}, {}, 2026, "2026-12-24"), [])
 })
 
-test("calendarTrivia cards carry glyph, label, value, sub, color", () => {
-  const cards = Model.calendarTrivia(triviaDays(), {}, 2026, "2026-12-24")
-  assert.ok(cards.length > 0)
-  for (const c of cards) {
-    assert.equal(typeof c.glyph, "string")
-    assert.ok(c.glyph.length > 0)
-    assert.equal(typeof c.label, "string")
-    assert.ok(c.label.length > 0)
-    assert.equal(typeof c.value, "string")
-    assert.ok(c.value.length > 0)
-    assert.equal(typeof c.sub, "string")
-    assert.ok(c.sub.length > 0)
-    assert.equal(typeof c.color, "string")
+test("sanitizeHistory validates the years archive", () => {
+  assert.deepEqual(
+    Model.sanitizeHistory({}, {}, { 2026: { "2026-01-02": HOUR_MS } }).years,
+    { 2026: { "2026-01-02": HOUR_MS } })
+  assert.deepEqual(
+    Model.sanitizeHistory({}, {}, { 2026: { "2026-01-02": "x", "2026-01-03": 0 } }).years,
+    { 2026: { "2026-01-03": 0 } })
+  assert.deepEqual(Model.sanitizeHistory({}, {}, { 2026: "nope" }).years, {})
+})
+
+test("rollupArchive keeps only per-day totals, never app maps", () => {
+  const pruned = {
+    "2026-08-01": { total: HOUR_MS, apps: { web: HOUR_MS } },
+    "2026-08-02": { total: 0, apps: { done: 1 } },
+    "2025-12-31": { total: 2 * HOUR_MS, apps: {} }
   }
+  const base = { 2026: { "2026-08-03": 1000 } }
+  const out = Model.rollupArchive(base, pruned)
+  assert.deepEqual(out, {
+    2026: { "2026-08-03": 1000, "2026-08-01": HOUR_MS },
+    2025: { "2025-12-31": 2 * HOUR_MS }
+  })
+  assert.deepEqual(base, { 2026: { "2026-08-03": 1000 } })
 })
 
-test("calendarTrivia derives its numbers from the real totals", () => {
-  const cards = Model.calendarTrivia(triviaDays(), {}, 2026, "2026-12-24")
+test("pruneArchive keeps the current and previous calendar year", () => {
+  const years = { 2024: { a: 1 }, 2025: { b: 2 }, 2026: { c: 3 } }
+  assert.deepEqual(Model.pruneArchive(years, 2026), { 2025: { b: 2 }, 2026: { c: 3 } })
+  assert.deepEqual(Model.pruneArchive({}, 2026), {})
+})
+
+test("yearDayTotals unions archive and live days, capped at todayKey", () => {
+  const years = { 2026: { "2026-01-02": 2 * HOUR_MS, "2026-12-25": HOUR_MS } }
+  const days = {
+    "2026-01-03": { total: HOUR_MS, apps: {} },
+    "2026-01-05": { total: 0, apps: {} }
+  }
+  assert.deepEqual(Model.yearDayTotals(years, days, 2026, "2026-12-24"), [
+    { date: "2026-01-02", ms: 2 * HOUR_MS },
+    { date: "2026-01-03", ms: HOUR_MS }
+  ])
+})
+
+test("yearDayTotals walks whole years without fabricating days", () => {
+  assert.deepEqual(Model.yearDayTotals({ 2028: {} }, {}, 2028, "2028-12-31"), [])
+  assert.deepEqual(Model.yearDayTotals({ 2026: { "2026-02-29": HOUR_MS } }, {}, 2026, "2026-12-31"), [])
+})
+
+test("activeDayCount only counts days at or above the minute floor", () => {
+  const days = [
+    { date: "2026-01-01", ms: 59 * 1000 },
+    { date: "2026-01-02", ms: 60 * 1000 },
+    { date: "2026-01-03", ms: HOUR_MS }
+  ]
+  assert.equal(Model.activeDayCount(days, Model.MIN_ACTIVE_DAY_MS), 2)
+  assert.equal(Model.activeDayCount([], Model.MIN_ACTIVE_DAY_MS), 0)
+})
+
+test("streakStats finds longest and current runs across month bounds", () => {
+  const h = HOUR_MS
+  const s = Model.streakStats([
+    { date: "2026-01-31", ms: h },
+    { date: "2026-02-01", ms: h },
+    { date: "2026-02-02", ms: h },
+    { date: "2026-02-10", ms: h },
+    { date: "2026-02-11", ms: h }
+  ])
+  assert.equal(s.longest, 3)
+  assert.equal(s.longestEnd, "2026-02-02")
+  assert.equal(s.current, 2)
+  assert.equal(s.lastActive, "2026-02-11")
+})
+
+test("streakStats handles empty and single-day inputs", () => {
+  assert.deepEqual(Model.streakStats([]), {
+    longest: 0, longestEnd: "", lastActive: "", current: 0
+  })
+  const s = Model.streakStats([{ date: "2026-03-09", ms: HOUR_MS }])
+  assert.equal(s.longest, 1)
+  assert.equal(s.current, 1)
+  assert.equal(s.lastActive, "2026-03-09")
+})
+
+test("yearFacts builds the wrapped summary for a full archived year", () => {
+  const cards = Model.yearFacts({}, {}, archiveFixture(), 2026, "2026-12-24")
   const find = label => cards.find(c => c.label === label)
-  assert.match(find("SCREEN SHARE").value, /38h on screens \u00b7 0\.4% of 2026/)
-  assert.match(find("CHAIR TENURE").value, /2 full 24h days worth of screen time/)
-  assert.match(find("MARATHON CREDENTIALS").value, /38h = the extended LOTR trilogy \u00d73 end to end/)
-  assert.match(find("POWER MONTH").value, /Mar \u00b7 21h \u2014 your heaviest month/)
-  assert.match(find("MONTH OF RESET").value, /Feb \u00b7 3h \u2014 your most screen-free month/)
-  assert.match(find("MOONLIGHT JOB").value, /1 full 40-hour work week of focus/)
-  assert.match(find("FULL-TIME FOCUS").value, /8\.9% of your awake week on screens \(10h \/ 112h\)/)
-  assert.match(find("PIXEL PERSONALITY").value, /0\.4% of this year spent with glowing rectangles/)
+  assert.match(find("SCREEN SHARE").value, /44h on screens · 0\.5% of 2026/)
+  assert.match(find("DAY COUNT").value, /Active on 9 of 357 tracked days/)
+  assert.match(find("LONGEST STREAK").value, /3 days in a row/)
+  assert.match(find("LONGEST STREAK").sub, /Feb/)
+  assert.match(find("TOP MONTHS").value, /1\. Mar · 2\. Feb · 3\. Jan/)
+  assert.match(find("AVERAGE SCREEN DAY").value, /4h 53m per active day/)
+  assert.match(find("WEEKDAY RHYTHM").value, /Mon leads · 91% weekdays/)
+  assert.match(find("PEAK DAY").value, /Mar 9 · 11h, the year's high/)
+  assert.match(find("RECHARGE MONTH").value, /Jan · 3h, the screen's break/)
   assert.equal(cards.length, 8)
+  for (const c of cards)
+    assert.ok(c.glyph && c.label && c.value && c.sub && c.color)
 })
 
-test("calendarTrivia is month and year scale, never names apps", () => {
-  const cards = Model.calendarTrivia(triviaDays(), {}, 2026, "2026-12-24")
-  const text = cards.map(c => (c.label + c.value).toLowerCase()).join(" ")
-  assert.ok(!/top app|\bzen\b|firefox|opencode|editor/i.test(text))
+test("yearFacts degrades to month-scale cards when no day archive exists", () => {
+  const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
+  const cards = Model.yearFacts({}, months, {}, 2026, "2026-12-24")
+  const labels = cards.map(c => c.label)
+  assert.ok(labels.includes("SCREEN SHARE"))
+  assert.ok(labels.includes("TOP MONTHS"))
+  assert.ok(labels.includes("RECHARGE MONTH"))
+  assert.ok(!labels.includes("DAY COUNT"))
+  assert.ok(!labels.includes("LONGEST STREAK"))
+  assert.ok(!labels.includes("AVERAGE SCREEN DAY"))
+  assert.ok(!labels.includes("WEEKDAY RHYTHM"))
+  assert.ok(!labels.includes("PEAK DAY"))
 })
 
-test("waking-week card only appears for the ongoing year", () => {
-  const days = { "2025-03-01": { total: 100 * HOUR_MS, apps: {} } }
-  const cards = Model.calendarTrivia(days, {}, 2025, "2026-12-24")
-  assert.ok(cards.some(c => c.label === "SCREEN SHARE"))
-  assert.ok(!cards.some(c => c.label === "FULL-TIME FOCUS"))
-  assert.ok(!cards.some(c => c.label === "MONTH OF RESET"))
+test("yearFacts stays month and year scale, never names apps", () => {
+  const days = {
+    "2026-08-30": { total: 4 * HOUR_MS, apps: { zen: 4 * HOUR_MS } },
+    "2026-08-31": { total: 2 * HOUR_MS, apps: { code: 2 * HOUR_MS } }
+  }
+  const cards = Model.yearFacts(days, {}, {}, 2026, "2026-08-31")
+  const text = cards.map(c => (c.label + c.value + c.sub).toLowerCase()).join(" ")
+  assert.ok(!/zen|code|opencode|firefox|editor/i.test(text))
 })
 
 // ---- rollupPrunedDays ----------------------------------------------------
