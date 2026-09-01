@@ -438,6 +438,19 @@ test("browser_aliases.json is the single source of truth for canonicalApp", () =
   }
 })
 
+test("QML inline browser aliases match browser_aliases.json", () => {
+  // QML cannot read the JSON file synchronously (Quickshell's XHR blocks
+  // local files), so Model.js mirrors the data as a literal. Fail loudly
+  // if the mirror drifts from the canonical file — a silent divergence
+  // would fold browsers differently under QML vs Node.
+  const fs = require("fs")
+  const file = JSON.parse(
+    fs.readFileSync(require.resolve("../lib/browser_aliases.json"), "utf8"))
+  const qml = Model.qmlBrowserAliases()
+  assert.deepEqual(qml, file)
+  assert.ok(Object.keys(qml).length > 0)
+})
+
 // ---- Data safety: pruneDays -----------------------------------------------
 
 test("pruneDays never removes todayKey", () => {
