@@ -23,6 +23,7 @@ Panel {
   readonly property var today: service ? service.today : null
   readonly property var days: service ? service.days : {}
   readonly property var months: service ? service.months : {}
+  readonly property var years: service ? service.years : {}
   readonly property string todayKey: serviceReady ? service.todayKey : ""
 
   // Day selection: clicking a week-trend bar sets selectedKey; empty = live
@@ -83,9 +84,9 @@ Panel {
   readonly property int todayYear: serviceReady ? Number(root.todayKey.split("-")[0]) || 2026 : 2026
   property int currentYearOffset: 0
   readonly property int currentYear: root.todayYear - root.currentYearOffset
-  readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months) : root.todayYear
-  readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear) / 3600000) + "h" : "0h"
-  readonly property var calendarTrivia: serviceReady ? Model.calendarTrivia(root.days, root.months, root.currentYear, root.todayKey) : []
+  readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
+  readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear, root.years) / 3600000) + "h" : "0h"
+  readonly property var calendarTrivia: serviceReady ? Model.yearFacts(root.days, root.months, root.years, root.currentYear, root.todayKey) : []
   readonly property var monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   readonly property var monthNamesLong: ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
@@ -621,7 +622,7 @@ Panel {
               bottomPadding: Style.space(2)
 
               readonly property var months: root.serviceReady
-                ? Model.monthlyTotals(root.days, root.months, root.currentYear) : []
+                ? Model.monthlyTotals(root.days, root.months, root.currentYear, root.years) : []
               readonly property real maxMs: {
                 var max = 0
                 for (var i = 0; i < months.length; i++) {
