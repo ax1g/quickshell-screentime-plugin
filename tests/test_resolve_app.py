@@ -154,6 +154,26 @@ class TerminalResolutionTests(unittest.TestCase):
         w.add(630, "zen-bin", 610)
         self.assertEqual(r._resolve_terminal_foreground(600), "zen")
 
+    def test_ancestor_walk_bounded_for_pathological_worker_chain(self):
+        # A worker chain deeper than the hop cap (e.g. reparented/recycled
+        # browser workers) must terminate instead of walking forever, and
+        # must not misattribute the time to a worker name.
+        w = self.world
+        w.add(800, "foot", 1)
+        w.add(810, "bash", 800, ttynr=13, tpgid=820)
+        parent = 820
+        # Build a chain of N+2 browser-worker comms (all in
+        # BROWSER_SUBPROCESS_COMMS) so the cap is reached before a browser
+        # binary appears.
+        for i in range(1, r._MAX_ANCESTOR_HOPS + 2):
+            pid = 800 + i
+            w.add(pid, "Web Content", parent)
+            parent = pid
+        name = r._resolve_terminal_foreground(800)
+        # Terminates without hanging; whatever the resolved name, it must
+        # not be a browser worker.
+        self.assertNotIn(name, r.BROWSER_SUBPROCESS_COMMS)
+
     def test_negative_tpgid_on_tty_holder_falls_back_to_search(self):
         # A tty-owning session whose own tpgid is invalid must not be
         # selected; the search continues (or fails cleanly).

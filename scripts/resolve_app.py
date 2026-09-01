@@ -123,6 +123,12 @@ def _children(pid):
 # Terminals spawn their shell directly (depth 1); wrappers are rare.
 _MAX_TTY_SEARCH_DEPTH = 4
 
+# Maximum ancestor hops when walking from a browser worker up to the
+# browser binary. A pathological ppid chain (e.g. reparented/recycled
+# workers) must terminate rather than loop forever. Real chains are only
+# a couple of hops.
+_MAX_ANCESTOR_HOPS = 10
+
 # steamapps directories that hold appmanifest_<appid>.acf files. The first
 # two are the same library via symlink on most installs; both are listed
 # because neither is guaranteed to exist.
@@ -231,14 +237,18 @@ def _resolve_terminal_foreground(terminal_pid):
 
     # Walk up from a browser worker (Web Content, forkserver, …) to the
     # browser binary so time attributes to the browser, not an internal
-    # process.  Only reads /proc for ancestors, not all processes.
+    # process.  Only reads /proc for ancestors, not all processes.  Bounded
+    # so a pathological ppid cycle (e.g. a reparented process) can't loop
+    # forever; browser chains are a handful of hops at most.
     pid = tpgid
-    while name in BROWSER_SUBPROCESS_COMMS:
+    hops = 0
+    while name in BROWSER_SUBPROCESS_COMMS and hops < _MAX_ANCESTOR_HOPS:
         parent_stat = proc_stat(pid)
         ppid = parent_stat["ppid"] if parent_stat else 0
         if ppid <= 1:
             break
         pid = ppid
+        hops += 1
         name = proc_name(pid)
         if not name:
             break
