@@ -85,7 +85,7 @@ Panel {
   readonly property int currentYear: root.todayYear - root.currentYearOffset
   readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months) : root.todayYear
   readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear) / 3600000) + "h" : "0h"
-  readonly property var calendarTrivia: serviceReady ? Model.calendarTrivia(root.days, root.months, root.currentYear) : []
+  readonly property var calendarTrivia: serviceReady ? Model.calendarTrivia(root.days, root.months, root.currentYear, root.todayKey) : []
   readonly property var monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   readonly property var monthNamesLong: ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
@@ -111,6 +111,84 @@ Panel {
       rightPadding: Style.space(8)
       topPadding: Style.space(4)
       bottomPadding: Style.space(4)
+    }
+  }
+
+  // Yearly trivia card: icon, title, stat, and a punchline. Heights derive
+  // from its own content so cards never stretch to match a neighbour.
+  component InsightCard: Rectangle {
+    id: insightCard
+    required property var modelData
+
+    readonly property string glyph: String(modelData.glyph || "")
+    readonly property string label: String(modelData.label || "")
+    readonly property string stat: String(modelData.value || "")
+    readonly property string oneLiner: String(modelData.sub || "")
+    readonly property string accent: String(modelData.color || Color.accent)
+
+    width: parent.width
+    implicitHeight: cardColumn.implicitHeight + Style.space(20)
+    height: implicitHeight
+    radius: Style.space(6)
+    color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
+    border.color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.08)
+    border.width: 1
+
+    Column {
+      id: cardColumn
+      anchors.left: parent.left
+      anchors.leftMargin: Style.space(10)
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(10)
+      anchors.top: parent.top
+      anchors.topMargin: Style.space(10)
+      spacing: Style.space(2)
+
+      Row {
+        width: parent.width
+        spacing: Style.space(4)
+
+        Text {
+          text: insightCard.glyph
+          color: insightCard.accent
+          font.family: root.contentFontFamily
+          font.pixelSize: Style.font.icon
+          font.bold: true
+          anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Text {
+          text: insightCard.label
+          color: root.contentForeground
+          opacity: 0.6
+          font.family: root.contentFontFamily
+          font.pixelSize: Style.font.caption
+          font.bold: true
+          wrapMode: Text.Wrap
+          width: parent.width - Style.space(18)
+          anchors.verticalCenter: parent.verticalCenter
+        }
+      }
+
+      Text {
+        text: insightCard.stat
+        color: root.contentForeground
+        font.family: root.contentFontFamily
+        font.pixelSize: Style.font.bodySmall
+        font.bold: true
+        width: parent.width
+        wrapMode: Text.Wrap
+      }
+
+      Text {
+        text: insightCard.oneLiner
+        color: root.contentForeground
+        opacity: 0.5
+        font.family: root.contentFontFamily
+        font.pixelSize: Style.font.caption
+        width: parent.width
+        wrapMode: Text.Wrap
+      }
     }
   }
 
@@ -654,92 +732,89 @@ Panel {
                 bottomPadding: Style.space(6)
               }
 
-              Grid {
+              Item {
                 id: yearlyInsightsGrid
                 width: parent.width
-                columns: 2
-                columnSpacing: Style.space(8)
-                rowSpacing: Style.space(8)
+                height: cardsRow.height
                 visible: root.calendarTrivia.length > 0
 
-                Repeater {
-                  model: root.calendarTrivia
+                property var leftCards: []
+                property var rightCards: []
 
-                  Rectangle {
-                    required property var modelData
+                Component {
+                  id: cardsDelegate
+                  InsightCard {}
+                }
 
-                    readonly property string glyph: String(modelData.glyph || "")
-                    readonly property string label: String(modelData.label || "")
-                    readonly property string value: String(modelData.value || "")
-                    readonly property string sub: String(modelData.sub || "")
-                    readonly property string accent: String(modelData.color || Color.accent)
+                // Masonry split: cards keep their own height, so the two
+                // columns drift independently instead of flexing to match.
+                function splitCards() {
+                  var cards = root.calendarTrivia
+                  var left = []
+                  var right = []
+                  var leftScore = 0
+                  var rightScore = 0
+                  for (var i = 0; i < cards.length; i++) {
+                    var score = cardScore(cards[i])
+                    if (leftScore <= rightScore) {
+                      left.push(cards[i])
+                      leftScore += score
+                    } else {
+                      right.push(cards[i])
+                      rightScore += score
+                    }
+                  }
+                  leftCards = left
+                  rightCards = right
+                }
 
-                    width: (yearlyInsightsGrid.width - Style.space(8)) / 2
-                    height: recordsColumn.implicitHeight + Style.space(20)
-                    radius: Style.space(6)
-                    color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
-                    border.color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.08)
-                    border.width: 1
+                function cardScore(card) {
+                  return estimateLines(String(card.value || ""))
+                    + estimateLines(String(card.sub || ""))
+                }
 
-                    Column {
-                      id: recordsColumn
-                      anchors.left: parent.left
-                      anchors.leftMargin: Style.space(10)
-                      anchors.right: parent.right
-                      anchors.rightMargin: Style.space(10)
-                      anchors.top: parent.top
-                      anchors.topMargin: Style.space(10)
-                      spacing: Style.space(2)
+                function estimateLines(text) {
+                  var cardW = width > 0 ? (width - Style.space(8)) / 2 : 320
+                  var innerW = Math.max(1, cardW - Style.space(20))
+                  var charsPerLine = Math.max(4, Math.floor(innerW / (Style.font.bodySmall * 0.55)))
+                  return Math.max(1, Math.ceil(text.length / charsPerLine))
+                }
 
-                      Row {
-                        width: parent.width
-                        spacing: Style.space(4)
+                onWidthChanged: splitCards()
 
-                        Text {
-                          text: glyph
-                          color: accent
-                          font.family: root.contentFontFamily
-                          font.pixelSize: Style.font.icon
-                          font.bold: true
-                          anchors.verticalCenter: parent.verticalCenter
-                        }
+                Connections {
+                  target: root
+                  function onCalendarTriviaChanged() { yearlyInsightsGrid.splitCards() }
+                }
 
-                        Text {
-                          text: label
-                          color: root.contentForeground
-                          opacity: 0.6
-                          font.family: root.contentFontFamily
-                          font.pixelSize: Style.font.caption
-                          font.bold: true
-                          elide: Text.ElideRight
-                          width: parent.width - Style.space(18)
-                          anchors.verticalCenter: parent.verticalCenter
-                        }
-                      }
+                Component.onCompleted: splitCards()
 
-                      Text {
-                        text: value
-                        color: root.contentForeground
-                        font.family: root.contentFontFamily
-                        font.pixelSize: Style.font.bodySmall
-                        font.bold: true
-                        width: parent.width
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                      }
+                Row {
+                  id: cardsRow
+                  spacing: Style.space(8)
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.top: parent.top
 
-                      Text {
-                        text: sub
-                        color: root.contentForeground
-                        opacity: 0.5
-                        font.family: root.contentFontFamily
-                        font.pixelSize: Style.font.caption
-                        width: parent.width
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                      }
+                  Column {
+                    id: leftColumn
+                    width: (parent.width - Style.space(8)) / 2
+                    spacing: Style.space(8)
+
+                    Repeater {
+                      model: yearlyInsightsGrid.leftCards
+                      delegate: cardsDelegate
+                    }
+                  }
+
+                  Column {
+                    id: rightColumn
+                    width: (parent.width - Style.space(8)) / 2
+                    spacing: Style.space(8)
+
+                    Repeater {
+                      model: yearlyInsightsGrid.rightCards
+                      delegate: cardsDelegate
                     }
                   }
                 }
