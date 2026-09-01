@@ -81,12 +81,12 @@ Panel {
 
   // Calendar view: yearly overview with navigation. currentYearOffset counts
   // how many years back from today we are viewing; 0 = current year.
-  readonly property int todayYear: serviceReady ? Number(root.todayKey.split("-")[0]) || 2026 : 2026
+  readonly property int todayYear: serviceReady ? (Number(root.todayKey.split("-")[0]) || new Date().getFullYear()) : new Date().getFullYear()
   property int currentYearOffset: 0
   readonly property int currentYear: root.todayYear - root.currentYearOffset
   readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
   readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear, root.years) / 3600000) + "h" : "0h"
-  readonly property var calendarTrivia: serviceReady ? Model.yearFacts(root.days, root.months, root.years, root.currentYear, root.todayKey) : []
+  readonly property var yearFacts: serviceReady ? Model.yearFacts(root.days, root.months, root.years, root.currentYear, root.todayKey) : []
   readonly property var monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   readonly property var monthNamesLong: ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
@@ -115,8 +115,8 @@ Panel {
     }
   }
 
-  // Yearly trivia card: icon, title, stat, and a punchline. Heights derive
-  // from its own content so cards never stretch to match a neighbour.
+  // Yearly fact card: glyph, label, value, and a supporting line. Heights
+  // derive from its own content so cards never stretch to match a neighbour.
   component InsightCard: Rectangle {
     id: insightCard
     required property var modelData
@@ -238,8 +238,8 @@ Panel {
     return ""
   }
 
-  // Glyph colour per insight, drawn from the yearly trivia palette so the
-  // three rows read as accents of the same family.
+  // Glyph colour per insight, drawn from the yearly palette so the three rows
+  // read as accents of the same family.
   function insightIconColor(label, value) {
     if (label.indexOf("Top app") === 0) return "#ffe66d"
     if (label.indexOf("vs") === 0) {
@@ -444,7 +444,9 @@ Panel {
           anchors.right: parent.right
           anchors.top: parent.top
           height: implicitHeight
-          implicitHeight: Math.max(yearHeroIcon.implicitHeight, yearHeroLabels.implicitHeight, backCorner.implicitHeight)
+          // Children anchor to the top, so the extra implicitHeight becomes
+          // breathing room below the hero before the scroll view begins.
+          implicitHeight: Math.max(yearHeroIcon.implicitHeight, yearHeroLabels.implicitHeight, backCorner.implicitHeight) + Style.space(3)
 
           // Left: large yearly icon (mirrors the main hero's hourglass).
           // Clicking it returns to the main panel.
@@ -753,7 +755,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                 id: yearlyInsightsGrid
                 width: parent.width
                 height: cardsRow.height
-                visible: root.calendarTrivia.length > 0
+                visible: root.yearFacts.length > 0
 
                 property var leftCards: []
                 property var rightCards: []
@@ -766,7 +768,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                 // Masonry split: cards keep their own height, so the two
                 // columns drift independently instead of flexing to match.
                 function splitCards() {
-                  var cards = root.calendarTrivia
+                  var cards = root.yearFacts
                   var left = []
                   var right = []
                   var leftScore = 0
@@ -801,7 +803,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
 
                 Connections {
                   target: root
-                  function onCalendarTriviaChanged() { yearlyInsightsGrid.splitCards() }
+                  function onYearFactsChanged() { yearlyInsightsGrid.splitCards() }
                 }
 
                 Component.onCompleted: splitCards()
