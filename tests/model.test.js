@@ -852,11 +852,11 @@ function triviaDays() {
 }
 
 test("calendarTrivia returns empty when the year has no data", () => {
-  assert.deepEqual(Model.calendarTrivia({}, {}, 2026), [])
+  assert.deepEqual(Model.calendarTrivia({}, {}, 2026, "2026-12-24"), [])
 })
 
 test("calendarTrivia cards carry glyph, label, value, sub, color", () => {
-  const cards = Model.calendarTrivia(triviaDays(), {}, 2026)
+  const cards = Model.calendarTrivia(triviaDays(), {}, 2026, "2026-12-24")
   assert.ok(cards.length > 0)
   for (const c of cards) {
     assert.equal(typeof c.glyph, "string")
@@ -871,22 +871,32 @@ test("calendarTrivia cards carry glyph, label, value, sub, color", () => {
   }
 })
 
-test("calendarTrivia reports real numbers, not silly equivalences", () => {
-  const cards = Model.calendarTrivia(triviaDays(), {}, 2026)
-  const labels = cards.map(c => c.label)
-  for (const l of ["Peak month", "Quietest month", "Year total", "Month coverage"]) {
-    assert.ok(labels.includes(l), `missing card ${l}`)
-  }
-  for (const l of labels) {
-    assert.ok(!/\$/.test(l), `no cash gimmick: ${l}`)
-  }
-  assert.ok(!labels.some(l => /coffee|espresso|missions|movie|diploma|master|world cup|waking/i.test(l)))
+test("calendarTrivia derives its numbers from the real totals", () => {
+  const cards = Model.calendarTrivia(triviaDays(), {}, 2026, "2026-12-24")
+  const find = label => cards.find(c => c.label === label)
+  assert.match(find("SCREEN SHARE").value, /38h on screens \u00b7 0\.4% of 2026/)
+  assert.match(find("CHAIR TENURE").value, /2 full 24h days worth of screen time/)
+  assert.match(find("MARATHON CREDENTIALS").value, /38h = the extended LOTR trilogy \u00d73 end to end/)
+  assert.match(find("POWER MONTH").value, /Mar \u00b7 21h \u2014 your heaviest month/)
+  assert.match(find("MONTH OF RESET").value, /Feb \u00b7 3h \u2014 your most screen-free month/)
+  assert.match(find("MOONLIGHT JOB").value, /1 full 40-hour work week of focus/)
+  assert.match(find("FULL-TIME FOCUS").value, /8\.9% of your awake week on screens \(10h \/ 112h\)/)
+  assert.match(find("PIXEL PERSONALITY").value, /0\.4% of this year spent with glowing rectangles/)
+  assert.equal(cards.length, 8)
 })
 
-test("calendarTrivia stays month-scale, never app or window-local claims", () => {
-  const cards = Model.calendarTrivia(triviaDays(), {}, 2026)
-  const labels = cards.map(c => c.label)
-  assert.ok(!labels.some(l => /app|streak|weekend|biggest day|active/i.test(l)))
+test("calendarTrivia is month and year scale, never names apps", () => {
+  const cards = Model.calendarTrivia(triviaDays(), {}, 2026, "2026-12-24")
+  const text = cards.map(c => (c.label + c.value).toLowerCase()).join(" ")
+  assert.ok(!/top app|\bzen\b|firefox|opencode|editor/i.test(text))
+})
+
+test("waking-week card only appears for the ongoing year", () => {
+  const days = { "2025-03-01": { total: 100 * HOUR_MS, apps: {} } }
+  const cards = Model.calendarTrivia(days, {}, 2025, "2026-12-24")
+  assert.ok(cards.some(c => c.label === "SCREEN SHARE"))
+  assert.ok(!cards.some(c => c.label === "FULL-TIME FOCUS"))
+  assert.ok(!cards.some(c => c.label === "MONTH OF RESET"))
 })
 
 // ---- rollupPrunedDays ----------------------------------------------------
