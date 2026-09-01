@@ -297,9 +297,19 @@ test("insights lists top app, delta, and busiest day", () => {
   }
   const rows = Model.insights(today, days, "2026-08-15", "2026-08-15")
   const labels = rows.map(r => r.label)
-  assert.deepEqual(labels, ["Top app", "vs yesterday", "Busiest day (7d)"])
+  assert.deepEqual(labels, ["Top app", "vs Yesterday", "Busiest day (7d)"])
   assert.ok(rows[0].value.includes("browser"))
   assert.ok(rows[1].value.includes("-"))
+})
+
+test("insights renders the top app with its refined display name", () => {
+  const today = {
+    total: 3600000,
+    apps: { "com.omarchy.agent": 3600000 }
+  }
+  const rows = Model.insights(today, {}, "2026-08-15", "2026-08-15")
+  assert.ok(rows[0].value.includes("agent"))
+  assert.ok(!rows[0].value.includes("com.omarchy"))
 })
 
 test("insights returns 3 rows with dashes when no activity", () => {
@@ -712,6 +722,35 @@ test("scrollableTrendMax returns 0 for empty weeks", () => {
   assert.equal(Model.scrollableTrendMax([]), 0)
 })
 
+// ---- weekAxisTicks -------------------------------------------------------
+
+const HOUR_MS = 3600000
+
+test("weekAxisTicks anchors empty and sparse weeks to the 4h reference", () => {
+  assert.deepEqual(Model.weekAxisTicks(0), [0, 2 * HOUR_MS, 4 * HOUR_MS])
+  assert.deepEqual(Model.weekAxisTicks(2 * HOUR_MS), [0, 2 * HOUR_MS, 4 * HOUR_MS])
+  assert.deepEqual(Model.weekAxisTicks(4 * HOUR_MS), [0, 2 * HOUR_MS, 4 * HOUR_MS])
+})
+
+test("weekAxisTicks scales with the week's real maximum", () => {
+  assert.deepEqual(Model.weekAxisTicks(5 * HOUR_MS), [0, 2.5 * HOUR_MS, 5 * HOUR_MS])
+  assert.deepEqual(Model.weekAxisTicks(9 * HOUR_MS), [0, 4.5 * HOUR_MS, 9 * HOUR_MS])
+})
+
+test("weekAxisTicks returns empty for junk input", () => {
+  assert.deepEqual(Model.weekAxisTicks(null), [])
+  assert.deepEqual(Model.weekAxisTicks(-1), [])
+  assert.deepEqual(Model.weekAxisTicks(NaN), [])
+})
+
+test("fmtWholeHours renders ticks as round hour figures", () => {
+  assert.equal(Model.fmtWholeHours(0), "0h")
+  assert.equal(Model.fmtWholeHours(2 * HOUR_MS), "2h")
+  assert.equal(Model.fmtWholeHours(2.5 * HOUR_MS), "3h")
+  assert.equal(Model.fmtWholeHours(1.25 * HOUR_MS), "1h")
+  assert.equal(Model.fmtWholeHours(null), "0h")
+})
+
 // ---- monthlyTotals -------------------------------------------------------
 
 test("monthlyTotals aggregates raw days for recent months", () => {
@@ -782,6 +821,59 @@ test("yearTotal ignores different years", () => {
   const days = { "2025-08-19": { total: 9999999 } }
   const months = { "2025-01": 8888888 }
   assert.equal(Model.yearTotal(days, months, 2026), 0)
+})
+
+// ---- calendarTrivia -------------------------------------------------------
+
+function triviaDays() {
+  return {
+    "2026-01-02": { total: 2 * HOUR_MS, apps: { web: 2 * HOUR_MS } },
+    "2026-01-03": { total: HOUR_MS, apps: { web: HOUR_MS } },
+    "2026-01-04": { total: HOUR_MS, apps: {} },
+    "2026-02-01": { total: 3 * HOUR_MS, apps: { editor: 3 * HOUR_MS } },
+    "2026-03-02": { total: 8 * HOUR_MS, apps: { "com.omarchy.agent": 8 * HOUR_MS } },
+    "2026-03-03": { total: 8 * HOUR_MS, apps: { "com.omarchy.agent": 8 * HOUR_MS } },
+    "2026-03-04": { total: 5 * HOUR_MS, apps: {} },
+    "2026-12-24": { total: 10 * HOUR_MS, apps: { web: 10 * HOUR_MS } }
+  }
+}
+
+test("calendarTrivia returns empty when the year has no data", () => {
+  assert.deepEqual(Model.calendarTrivia({}, {}, 2026), [])
+})
+
+test("calendarTrivia cards carry glyph, label, value, sub, color", () => {
+  const cards = Model.calendarTrivia(triviaDays(), {}, 2026)
+  assert.ok(cards.length > 0)
+  for (const c of cards) {
+    assert.equal(typeof c.glyph, "string")
+    assert.ok(c.glyph.length > 0)
+    assert.equal(typeof c.label, "string")
+    assert.ok(c.label.length > 0)
+    assert.equal(typeof c.value, "string")
+    assert.ok(c.value.length > 0)
+    assert.equal(typeof c.sub, "string")
+    assert.ok(c.sub.length > 0)
+    assert.equal(typeof c.color, "string")
+  }
+})
+
+test("calendarTrivia reports real numbers, not silly equivalences", () => {
+  const cards = Model.calendarTrivia(triviaDays(), {}, 2026)
+  const labels = cards.map(c => c.label)
+  for (const l of ["Peak month", "Quietest month", "Year total", "Month coverage"]) {
+    assert.ok(labels.includes(l), `missing card ${l}`)
+  }
+  for (const l of labels) {
+    assert.ok(!/\$/.test(l), `no cash gimmick: ${l}`)
+  }
+  assert.ok(!labels.some(l => /coffee|espresso|missions|movie|diploma|master|world cup|waking/i.test(l)))
+})
+
+test("calendarTrivia stays month-scale, never app or window-local claims", () => {
+  const cards = Model.calendarTrivia(triviaDays(), {}, 2026)
+  const labels = cards.map(c => c.label)
+  assert.ok(!labels.some(l => /app|streak|weekend|biggest day|active/i.test(l)))
 })
 
 // ---- rollupPrunedDays ----------------------------------------------------

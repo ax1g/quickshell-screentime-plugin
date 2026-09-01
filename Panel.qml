@@ -54,12 +54,27 @@ Panel {
     }
     return max
   }
+  // Y-axis for the week bar graph: baseline, midpoint and peak gridlines,
+  // derived from the same maximum the bars scale against so a bar's top
+  // always lands on the gridline its duration describes.
+  readonly property var axisTicks: Model.weekAxisTicks(root.visibleWeekMax)
+  readonly property double axisMaxMs: root.axisTicks.length
+    ? root.axisTicks[root.axisTicks.length - 1] : 0
   // Sum of the visible week's days, shown under the paginated bar graph.
   readonly property double visibleWeekTotalMs: root.visibleWeek
     ? Model.weekTotal(root.visibleWeek.days) : 0
   property bool expanded: false
   property bool calendarOpen: false
   property int weekOffset: 0
+  // Whether any week before the currently visible one has data.
+  readonly property bool hasPrevWeekData: {
+    for (var i = root.weekOffset + 1; i < root.scrollableWeeks.length; i++) {
+      var w = root.scrollableWeeks[i]
+      if (!w || !w.days) continue
+      for (var j = 0; j < w.days.length; j++) if (Number(w.days[j].ms) > 0) return true
+    }
+    return false
+  }
   // Header total toggles between absolute time and share of the full week.
   property bool weekTotalAsPct: false
 
@@ -69,7 +84,8 @@ Panel {
   property int currentYearOffset: 0
   readonly property int currentYear: root.todayYear - root.currentYearOffset
   readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months) : root.todayYear
-  readonly property string calendarYearTotal: serviceReady ? Model.fmt(Model.yearTotal(root.days, root.months, root.currentYear)) : "0h"
+  readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear) / 3600000) + "h" : "0h"
+  readonly property var calendarTrivia: serviceReady ? Model.calendarTrivia(root.days, root.months, root.currentYear) : []
   readonly property var monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   readonly property var monthNamesLong: ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
@@ -160,6 +176,9 @@ Panel {
   // Guarded so the widget renders before the bar is injected.
   readonly property color contentForeground: bar ? bar.foreground : Color.foreground
   readonly property string contentFontFamily: bar ? bar.fontFamily : Style.font.family
+  // Panel surface colour, matching the drawer: used so the translucent bar
+  // fills sit on an opaque plate and the gridlines don't show through them.
+  readonly property color surfaceColor: bar ? bar.background : Color.background
 
   function open() {
     root.controller.show()
@@ -215,8 +234,14 @@ Panel {
 
   // Open/close the yearly overview. Arms the drawer slide so the move
   // animates; layout-driven repositions stay instant (see calendarDrawer).
+  // Opening the yearly view also grows the card to full height so the
+  // yearly graph never renders squeezed inside the show-less height.
   function openCalendar(open) {
     calendarDrawer.sliding = true
+    if (open && !root.expanded) {
+      keyCatcher.collapsedCardH = keyCatcher.height
+      root.expanded = true
+    }
     root.calendarOpen = open
   }
 
@@ -279,8 +304,7 @@ Panel {
       Item {
         id: calendarDrawer
         width: keyCatcher.drawerWidth
-        height: keyCatcher.collapsedCardH > 0
-          ? Math.min(keyCatcher.height, keyCatcher.collapsedCardH) : keyCatcher.height
+        height: keyCatcher.height
         anchors.top: parent.top
         x: root.calendarOpen ? 0 : -keyCatcher.drawerWidth
         z: 10
@@ -318,10 +342,171 @@ Panel {
           onClicked: function (mouse) { mouse.accepted = true }
         }
 
+        // Fixed hero header (consistent with the main panel's hero). It
+        // stays put while the year overview below scrolls.
+        Item {
+          id: yearHeader
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          height: implicitHeight
+          implicitHeight: Math.max(yearHeroIcon.implicitHeight, yearHeroLabels.implicitHeight, backCorner.implicitHeight)
+
+          // Left: large yearly icon (mirrors the main hero's hourglass).
+          // Clicking it returns to the main panel.
+          Text {
+            id: yearHeroIcon
+            text: "\uf073"
+            color: yearHeroIconMouse.containsMouse
+              ? root.contentForeground : Qt.darker(root.contentForeground, 1.2)
+            font.family: root.contentFontFamily
+            font.pixelSize: Style.fontPx(2.4)
+            anchors.left: parent.left
+            anchors.leftMargin: Style.space(10)
+            anchors.top: parent.top
+            anchors.topMargin: -Style.space(4)
+
+            MouseArea {
+              id: yearHeroIconMouse
+              anchors.fill: parent
+              anchors.margins: -Style.space(6)
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.openCalendar(false)
+            }
+          }
+
+          // Label stack: big bold year-total + year nav caption
+          // (mirrors the main hero's value + caption).
+          Column {
+            id: yearHeroLabels
+            anchors.left: yearHeroIcon.right
+            anchors.leftMargin: Style.space(14)
+            anchors.right: parent.right
+            anchors.rightMargin: backCorner.implicitWidth + Style.space(12)
+            anchors.top: parent.top
+            spacing: Style.space(2)
+
+            Text {
+              text: root.calendarYearTotal
+              color: root.contentForeground
+              font.family: root.contentFontFamily
+              font.pixelSize: Style.fontPx(1.5)
+              font.bold: true
+              elide: Text.ElideRight
+              width: parent.width
+            }
+
+            Row {
+              width: parent.width
+              spacing: Style.space(10)
+
+              Text {
+                id: yearPrevGlyph
+                text: "\uf053"
+                color: yearPrevMouse.enabled && yearPrevMouse.containsMouse
+                  ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
+                opacity: yearPrevMouse.enabled ? 1.0 : 0.25
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.bodySmall
+                anchors.verticalCenter: parent.verticalCenter
+
+                MouseArea {
+                  id: yearPrevMouse
+                  anchors.fill: parent
+                  anchors.margins: -Style.space(6)
+                  hoverEnabled: true
+                  enabled: root.currentYear > root.oldestDataYear
+                  cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                  onClicked: root.currentYearOffset += 1
+                }
+              }
+
+              Text {
+                id: yearValue
+                text: String(root.currentYear)
+                color: root.contentForeground
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Text {
+                id: yearNextGlyph
+                text: "\uf054"
+                color: yearNextMouse.enabled && yearNextMouse.containsMouse
+                  ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
+                opacity: yearNextMouse.enabled ? 1.0 : 0.25
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.bodySmall
+                anchors.verticalCenter: parent.verticalCenter
+
+                MouseArea {
+                  id: yearNextMouse
+                  anchors.fill: parent
+                  anchors.margins: -Style.space(6)
+                  hoverEnabled: true
+                  enabled: root.currentYearOffset > 0
+                  cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                  onClicked: root.currentYearOffset -= 1
+                }
+              }
+            }
+          }
+
+          // Corner action: BACK (mirrors the main hero's SHOW MORE/LESS).
+          Item {
+            id: backCorner
+            anchors.right: parent.right
+            anchors.top: parent.top
+            width: backRow.implicitWidth
+            height: backRow.implicitHeight
+
+            Row {
+              id: backRow
+              anchors.fill: parent
+              spacing: Style.space(4)
+
+              Text {
+                text: "\u25c0"
+                color: backCornerMouse.containsMouse
+                  ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.title
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Text {
+                text: "BACK"
+                color: backCornerMouse.containsMouse
+                  ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.2
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            MouseArea {
+              id: backCornerMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.openCalendar(false)
+            }
+          }
+        }
+
         Flickable {
           id: calendarScroll
-          anchors.fill: parent
-          anchors.margins: Style.space(6)
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          anchors.top: yearHeader.bottom
           contentWidth: width
           contentHeight: calendarColumn.implicitHeight
           clip: true
@@ -331,109 +516,15 @@ Panel {
           Column {
             id: calendarColumn
             width: calendarScroll.width
-            spacing: Style.space(4)
-
-            Item {
-              id: yearHeader
-              width: parent.width
-              height: Math.max(calendarBack.implicitHeight, yearNav.implicitHeight, yearTotalLabel.implicitHeight)
-
-              // Closes the yearly overview and returns to the main panel.
-              Text {
-                id: calendarBack
-                text: "\uf053"
-                color: calendarBackMouse.containsMouse
-                  ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.bodySmall
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-
-                MouseArea {
-                  id: calendarBackMouse
-                  anchors.fill: parent
-                  anchors.margins: -Style.space(6)
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.openCalendar(false)
-                }
-              }
-
-              Row {
-                id: yearNav
-                spacing: Style.space(10)
-                anchors.centerIn: parent
-
-                Text {
-                  text: "\uf053"
-                  color: yearPrevMouse.enabled && yearPrevMouse.containsMouse
-                    ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
-                  opacity: yearPrevMouse.enabled ? 1.0 : 0.25
-                  Behavior on opacity { NumberAnimation { duration: 150 } }
-                  font.family: root.contentFontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  anchors.verticalCenter: parent.verticalCenter
-
-                  MouseArea {
-                    id: yearPrevMouse
-                    anchors.fill: parent
-                    anchors.margins: -Style.space(6)
-                    hoverEnabled: true
-                    enabled: root.currentYear > root.oldestDataYear
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: root.currentYearOffset += 1
-                  }
-                }
-
-                Text {
-                  text: String(root.currentYear)
-                  color: root.contentForeground
-                  font.family: root.contentFontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  font.bold: true
-                  anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                  text: "\uf054"
-                  color: yearNextMouse.enabled && yearNextMouse.containsMouse
-                    ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
-                  opacity: yearNextMouse.enabled ? 1.0 : 0.25
-                  Behavior on opacity { NumberAnimation { duration: 150 } }
-                  font.family: root.contentFontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  anchors.verticalCenter: parent.verticalCenter
-
-                  MouseArea {
-                    id: yearNextMouse
-                    anchors.fill: parent
-                    anchors.margins: -Style.space(6)
-                    hoverEnabled: true
-                    enabled: root.currentYearOffset > 0
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: root.currentYearOffset -= 1
-                  }
-                }
-              }
-
-              Text {
-                id: yearTotalLabel
-                text: root.calendarYearTotal
-                color: Qt.darker(root.contentForeground, 1.4)
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-              }
-            }
+            spacing: Style.space(10)
 
             // Year overview: one bar per month, length = share of the
             // busiest month. Hover a bar for its exact total.
             Column {
               id: heatGrid
               width: parent.width
-              spacing: Style.space(3)
+              spacing: Style.space(6)
+              bottomPadding: Style.space(4)
 
               readonly property var months: root.serviceReady
                 ? Model.monthlyTotals(root.days, root.months, root.currentYear) : []
@@ -454,7 +545,7 @@ Panel {
               Text {
                 id: hoursMetrics
                 visible: false
-                text: "888h 88m"
+                text: "8888h"
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.caption
               }
@@ -467,7 +558,7 @@ Panel {
                   required property int index
 
                   width: heatGrid.width
-                  height: Style.space(10)
+                  height: Style.space(12)
 
                   readonly property bool isCurrentMonth: heatGrid.isThisYear && index === heatGrid.nowMonth
                   readonly property real hoursW: heatGrid.hoursW
@@ -536,6 +627,118 @@ Panel {
                     elide: Text.ElideRight
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
+                  }
+                }
+              }
+
+              Item {
+                width: parent.width
+                height: Style.space(10) + 1 + Style.space(4)
+                PanelSeparator {
+                  anchors.top: parent.top
+                  anchors.topMargin: Style.space(10)
+                  foreground: root.contentForeground
+                }
+              }
+
+              Text {
+                text: "Insights " + root.currentYear
+                color: root.contentForeground
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+                width: parent.width
+                topPadding: Style.space(4)
+                bottomPadding: Style.space(6)
+              }
+
+              Grid {
+                id: yearlyInsightsGrid
+                width: parent.width
+                columns: 2
+                columnSpacing: Style.space(8)
+                rowSpacing: Style.space(8)
+                visible: root.calendarTrivia.length > 0
+
+                Repeater {
+                  model: root.calendarTrivia
+
+                  Rectangle {
+                    required property var modelData
+
+                    readonly property string glyph: String(modelData.glyph || "")
+                    readonly property string label: String(modelData.label || "")
+                    readonly property string value: String(modelData.value || "")
+                    readonly property string sub: String(modelData.sub || "")
+                    readonly property string accent: String(modelData.color || Color.accent)
+
+                    width: (yearlyInsightsGrid.width - Style.space(8)) / 2
+                    height: recordsColumn.implicitHeight + Style.space(20)
+                    radius: Style.space(6)
+                    color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
+                    border.color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.08)
+                    border.width: 1
+
+                    Column {
+                      id: recordsColumn
+                      anchors.left: parent.left
+                      anchors.leftMargin: Style.space(10)
+                      anchors.right: parent.right
+                      anchors.rightMargin: Style.space(10)
+                      anchors.top: parent.top
+                      anchors.topMargin: Style.space(10)
+                      spacing: Style.space(2)
+
+                      Row {
+                        width: parent.width
+                        spacing: Style.space(4)
+
+                        Text {
+                          text: glyph
+                          color: accent
+                          font.family: root.contentFontFamily
+                          font.pixelSize: Style.font.icon
+                          font.bold: true
+                          anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                          text: label
+                          color: root.contentForeground
+                          opacity: 0.6
+                          font.family: root.contentFontFamily
+                          font.pixelSize: Style.font.caption
+                          font.bold: true
+                          elide: Text.ElideRight
+                          width: parent.width - Style.space(18)
+                          anchors.verticalCenter: parent.verticalCenter
+                        }
+                      }
+
+                      Text {
+                        text: value
+                        color: root.contentForeground
+                        font.family: root.contentFontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: true
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                      }
+
+                      Text {
+                        text: sub
+                        color: root.contentForeground
+                        opacity: 0.5
+                        font.family: root.contentFontFamily
+                        font.pixelSize: Style.font.caption
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                      }
+                    }
                   }
                 }
               }
@@ -727,17 +930,17 @@ Panel {
               spacing: Style.space(2)
 
               Text {
-                text: "Screen Time"
+                text: root.dayTotal > 0 ? Model.fmt(root.dayTotal) : "0m"
                 color: root.contentForeground
                 font.family: root.contentFontFamily
-                font.pixelSize: Style.font.title
+                font.pixelSize: Style.fontPx(1.5)
                 font.bold: true
                 elide: Text.ElideRight
                 width: parent.width
               }
 
               Text {
-                text: root.dayTotal > 0 ? Model.fmtWords(root.dayTotal) : "0 MINUTES"
+                text: root.activeDayLabel + ", " + String(root.activeDayKey).split("-")[0]
                 color: Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.caption
@@ -867,7 +1070,6 @@ Panel {
               anchors.left: donutItem.right
               anchors.leftMargin: Style.space(16)
               anchors.right: parent.right
-              anchors.rightMargin: Style.space(4)
               anchors.verticalCenter: parent.verticalCenter
               clip: true
               contentWidth: width
@@ -961,7 +1163,7 @@ Panel {
               property real ratio: legendScroll.contentHeight > 0
                 ? legendScroll.height / legendScroll.contentHeight : 0
               visible: legendScroll.contentHeight > legendScroll.height
-              width: Style.space(3)
+              width: 2
               height: Math.max(Style.space(16), legendScroll.height * ratio)
               radius: width / 2
               color: root.contentForeground
@@ -989,6 +1191,7 @@ Panel {
               PanelSeparator {
                 width: parent.width
                 foreground: root.contentForeground
+                strength: 0.12
               }
 
               // Paginated Mon-Sun week bar graph with < Month Year > navigation.
@@ -1001,7 +1204,7 @@ Panel {
                 Column {
                   id: weekNavColumn
                   width: parent.width
-                  spacing: Style.space(18)
+                  spacing: Style.space(8)
 
                   // Header row: < Month Year > on the left, the visible
                   // week's total on the right. Arrows stay visible but fade
@@ -1030,7 +1233,7 @@ Panel {
                           anchors.fill: parent
                           anchors.margins: -Style.space(6)
                           hoverEnabled: true
-                          enabled: root.weekOffset < 12
+                          enabled: root.weekOffset < 12 && root.hasPrevWeekData
                           cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                           onClicked: root.weekOffset = Math.min(12, root.weekOffset + 1)
                         }
@@ -1085,6 +1288,7 @@ Panel {
                       font.pixelSize: Style.font.caption
                       elide: Text.ElideRight
                       anchors.right: parent.right
+                      anchors.rightMargin: Style.space(2)
                       anchors.verticalCenter: parent.verticalCenter
 
                       MouseArea {
@@ -1105,11 +1309,81 @@ Panel {
                     }
                   }
 
-                  // 7 day bars for the visible week.
-                  Row {
+                  // 7 day bars for the visible week, drawn on an opaque
+                  // plate with a y-axis scale reference (gridlines plus
+                  // whole-hour tick labels) that the bars scale against.
+                  Item {
                     width: parent.width
-                    spacing: 0
-                    topPadding: Style.space(8)
+                    // 80px chart plus a 12px top pad (headroom for the top
+                    // gridline's label) and an 8px bottom pad inside the plate
+                    // so the bars clear the plate edge instead of hugging it.
+                    height: Style.space(80) + Style.space(20)
+                    clip: true
+
+                    // Opaque plate behind the translucent bar fills so the
+                    // gridlines don't bleed through them.
+                    Rectangle {
+                      anchors.fill: parent
+                      color: root.surfaceColor
+                    }
+
+                    // Chart content, nudged down to leave headroom for the
+                    // top gridline's whole-hour label.
+                    Item {
+                      anchors.left: parent.left
+                      anchors.right: parent.right
+                      anchors.top: parent.top
+                      anchors.topMargin: Style.space(12)
+                      height: Style.space(80)
+
+                    // Horizontal gridlines and right-hand labels at each tick.
+                    Repeater {
+                      model: root.axisTicks
+
+                      Item {
+                        required property double modelData
+                        width: parent.width
+                        height: 1
+                        z: 1
+                        y: root.axisMaxMs > 0
+                          ? (parent.height - Style.space(14) - Style.space(64) * Number(modelData) / root.axisMaxMs)
+                          : parent.height
+
+                        // Continuous gridline over the bar area only, kept
+                        // clear of the right-hand y-axis label column so the
+                        // lines never cross the labels.
+                        Rectangle {
+                          anchors.left: parent.left
+                          anchors.right: parent.right
+                          anchors.rightMargin: Style.space(26)
+                          height: 1
+                          color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
+                        }
+
+                        Text {
+                          text: Model.fmtWholeHours(modelData)
+                          color: Qt.darker(root.contentForeground, 1.35)
+                          font.family: root.contentFontFamily
+                          font.pixelSize: Style.font.caption
+                          font.bold: false
+                          width: Style.space(20)
+                          anchors.right: parent.right
+                          anchors.rightMargin: Style.space(2)
+                          anchors.verticalCenter: parent.verticalCenter
+                          horizontalAlignment: Text.AlignRight
+                        }
+                      }
+                    }
+
+                    // 7 day bars for the visible week, ending just before the
+                    // right-hand y-axis labels.
+                    Row {
+                      anchors.left: parent.left
+                      anchors.right: parent.right
+                      anchors.rightMargin: Style.space(26)
+                      anchors.verticalCenter: parent.verticalCenter
+                      z: 2
+                      spacing: 0
 
                       Repeater {
                         model: root.visibleWeek ? root.visibleWeek.days : []
@@ -1124,10 +1398,10 @@ Panel {
                           property bool isActive: modelData.key === root.activeDayKey
                           property bool isFuture: modelData.isFuture
                           property bool isEmpty: !isFuture && modelData.ms <= 0
-                          property bool hasData: !isFuture && !isEmpty && root.visibleWeekMax > 0
+                          property bool hasData: !isFuture && !isEmpty && root.axisMaxMs > 0
                           property real barPx: hasData
-                            ? Math.max(3, Style.space(64) * Number(modelData.ms) / root.visibleWeekMax)
-                            : 3
+                            ? Math.max(3, Style.space(64) * Number(modelData.ms) / root.axisMaxMs)
+                            : 0
 
                           Rectangle {
                             width: parent.width * 0.5
@@ -1136,8 +1410,10 @@ Panel {
                               ? Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
                               : (parent.isActive
                                   ? Color.accent
-                                  : Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.28))
-                            opacity: parent.hasData && barMouse.containsMouse && !parent.isActive ? 0.5 : 1.0
+                                  : (barMouse.containsMouse
+                                      ? Qt.lighter(root.contentForeground, 1.4)
+                                      : Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.9)))
+                            opacity: 1.0
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.bottom: parent.bottom
                             anchors.bottomMargin: Style.space(14)
@@ -1167,13 +1443,15 @@ Panel {
                         }
                       }
                     }
-
+                    }
                   }
                 }
+              }
 
               PanelSeparator {
                 width: parent.width
                 foreground: root.contentForeground
+                strength: 0.12
               }
 
               Repeater {
