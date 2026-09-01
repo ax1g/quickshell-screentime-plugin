@@ -6,22 +6,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-01
+
 ### Added
 
 - Wrapped-style yearly retro: the Insights year now reads a two-year per-day
-  archive, so it shows real day counts, longest streak, top months, average
-  active day, weekday rhythm, and the single busiest day. Pruned days land in
-  the archive instead of month lumps, and month-scale readers (totals, bars,
-  oldest year) understand it.
-- Coloured pattern insights: top-app glyph glows gold, gains green / losses
-  red, busiest day violet; only signed deltas take colour.
+  archive, so it shows active days, longest streak, top months, average
+  active day, weekday rhythm, the single busiest day, and the year's share of
+  your screen time. Days pruned from daily retention land in the archive
+  instead of month lumps, and month-scale views (totals, bars, oldest year)
+  understand it.
+- Colour-coded insights: the top-app row glows gold, gains green / losses
+  red, and the busiest-day row violet; only signed deltas take colour.
 
 ### Changed
 
-- Yearly insights are data, not jokes: trivia cards (LOTR marathons, chair
-  tenure, pixel personality…) replaced with the retrospective above.
-- Tighter hero and calendar spacing: 1.4 letter-spacing on the year total,
-  zero-gap hero columns, and bottom margins mirrored to the top.
+- The sticky yearly header gains a small bottom pad, so the hero no longer
+  butts against the scrolling month bars and insights.
 
 ### Fixed
 
@@ -29,6 +30,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`chrome-music.apple.com__…-Default` → `music.apple.com`), and usage of the
   same web app across browser profiles now folds into one row; dotted
   non-reverse-DNS names like `Minecraft* 26.2` pass through intact.
+- The yearly retro's "average screen day" and "weekday rhythm" scale from
+  day-granular data only, so a year that mixes pre-archive month lumps with
+  archived days no longer inflates them.
 
 ## [1.3.0] - 2026-08-21
 

@@ -68,6 +68,9 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
   },
   "months": {
     "2026-07": 9823400
+  },
+  "years": {
+    "2026": { "2026-08-15": 582190 }
   }
 }
 ```
