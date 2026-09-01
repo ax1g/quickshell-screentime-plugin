@@ -22,6 +22,7 @@ import os
 import re
 import subprocess
 import sys
+from collections import deque
 
 
 # comm names of internal browser worker processes. These must never show up
@@ -185,10 +186,10 @@ def _find_tty_session(terminal_pid):
     that descendant's proc_stat (its ``tpgid`` is the foreground group),
     or None when no descendant owns a tty.
     """
-    frontier = [(pid, 1) for pid in _children(terminal_pid)]
+    frontier = deque((pid, 1) for pid in _children(terminal_pid))
     seen = set()
     while frontier:
-        pid, depth = frontier.pop(0)
+        pid, depth = frontier.popleft()
         if pid in seen or depth > _MAX_TTY_SEARCH_DEPTH:
             continue
         seen.add(pid)
