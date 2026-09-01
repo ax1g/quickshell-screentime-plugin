@@ -237,10 +237,25 @@ Panel {
     return ""
   }
 
-  // More time than yesterday reads full, less time reads dimmed.
+  // Glyph colour per insight, drawn from the yearly trivia palette so the
+  // three rows read as accents of the same family.
   function insightIconColor(label, value) {
-    if (label.indexOf("vs") === 0 && String(value).charAt(0) === "-")
+    if (label.indexOf("Top app") === 0) return "#ffe66d"
+    if (label.indexOf("vs") === 0) {
+      if (String(value).charAt(0) === "+") return "#ff6b6b"
+      if (String(value).charAt(0) === "-") return "#34d399"
       return Qt.darker(root.contentForeground, 1.5)
+    }
+    if (label.indexOf("Busiest") === 0) return "#a78bfa"
+    return root.contentForeground
+  }
+
+  // Right-hand value colour: only the signed delta carries a colour (its
+  // direction), everything else stays neutral — logic over rainbow.
+  function insightValueColor(label, value) {
+    if (label.indexOf("vs") === 0
+        && (String(value).charAt(0) === "+" || String(value).charAt(0) === "-"))
+      return root.insightIconColor(label, value)
     return root.contentForeground
   }
 
@@ -462,7 +477,7 @@ Panel {
             anchors.right: parent.right
             anchors.rightMargin: backCorner.implicitWidth + Style.space(12)
             anchors.top: parent.top
-            spacing: Style.space(2)
+            spacing: 0
 
             Text {
               text: root.calendarYearTotal
@@ -470,7 +485,7 @@ Panel {
               font.family: root.contentFontFamily
               font.pixelSize: Style.fontPx(1.5)
               font.bold: true
-              font.letterSpacing: 1.0
+              font.letterSpacing: 1.4
               elide: Text.ElideRight
               width: parent.width
             }
@@ -602,7 +617,8 @@ Panel {
               id: heatGrid
               width: parent.width
               spacing: Style.space(6)
-              bottomPadding: Style.space(4)
+              topPadding: Style.space(2)
+              bottomPadding: Style.space(2)
 
               readonly property var months: root.serviceReady
                 ? Model.monthlyTotals(root.days, root.months, root.currentYear) : []
@@ -1002,7 +1018,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
               anchors.right: parent.right
               anchors.rightMargin: showMoreCorner.implicitWidth + Style.space(12)
               anchors.top: parent.top
-              spacing: Style.space(2)
+              spacing: 0
 
               Text {
                 text: root.dayTotal > 0 ? Model.fmt(root.dayTotal) : "0m"
@@ -1547,7 +1563,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                     text: root.insightIcon(label, value)
                     color: root.insightIconColor(label, value)
                     font.family: root.contentFontFamily
-                    font.pixelSize: Style.font.bodySmall
+                    font.pixelSize: Style.font.bodySmall + 3
                     width: Style.space(16)
                     horizontalAlignment: Text.AlignHCenter
                     anchors.left: parent.left
@@ -1562,14 +1578,14 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall
                     anchors.left: iconText.right
-                    anchors.leftMargin: Style.space(2)
+                    anchors.leftMargin: Style.space(5)
                     anchors.verticalCenter: parent.verticalCenter
                   }
 
                   Text {
                     id: valueText
                     text: value
-                    color: root.contentForeground
+                    color: root.insightValueColor(label, value)
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall
                     anchors.right: parent.right
