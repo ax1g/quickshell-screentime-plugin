@@ -438,9 +438,8 @@ Panel {
             color: yearHeroIconMouse.containsMouse
               ? root.contentForeground : Qt.darker(root.contentForeground, 1.2)
             font.family: root.contentFontFamily
-            font.pixelSize: Style.fontPx(2.8)
+            font.pixelSize: Style.fontPx(2.4)
             anchors.left: parent.left
-            anchors.leftMargin: Style.space(10)
             anchors.top: parent.top
             anchors.topMargin: -Style.space(4)
 
@@ -471,6 +470,7 @@ Panel {
               font.family: root.contentFontFamily
               font.pixelSize: Style.fontPx(1.5)
               font.bold: true
+              font.letterSpacing: 1.0
               elide: Text.ElideRight
               width: parent.width
             }
@@ -549,7 +549,7 @@ Panel {
               spacing: Style.space(4)
 
               Text {
-                text: "\u25c0"
+                text: "\u25c2"
                 color: backCornerMouse.containsMouse
                   ? root.contentForeground : Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
@@ -663,7 +663,7 @@ Panel {
                     width: monthRow.availW
                     height: parent.height
                     radius: Style.space(2)
-                    color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.08)
+color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.02)
                   }
 
                   Rectangle {
