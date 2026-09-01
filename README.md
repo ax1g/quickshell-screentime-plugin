@@ -24,13 +24,13 @@ local.
 | **Clickable week bars** | Click any day to inspect it; click again to return to today. |
 | **13-week trend** | Paginated Mon–Sun pages with ISO-week header; today in your theme accent. |
 | **Week total** | Header total flips between time and share of the week's 168 hours. |
-| **Yearly overview** | Per-month bars across every recorded year, with year trivia cards. |
+| **Yearly overview** | Per-month bars across every recorded year, with a Wrapped-style yearly retro: day counts, longest streak, top months, weekday rhythm, peak day. |
 | **Usage patterns** | Top app, vs yesterday, busiest day in 7. |
 | **Icon-only mode** | Right-click collapses the widget to a single glyph; remembered. |
 | **Keyboard-first** | `Esc` closes, `p` toggles patterns, `j`/`k` and arrows scroll; wheel works too. |
 | **Keybind-friendly** | Summon and control the panel from a keybind via the `agx.screen-time` IPC target. |
 | **Hourglass easter egg** | Flips over on the hour; gold sparkles on hover. |
-| **Private by design** | One local JSON file; old days roll into monthly totals; colours follow your theme accent. |
+| **Private by design** | One local JSON file; old days roll into a two-year per-day archive, then monthly totals; colours follow your theme accent. |
 
 ## Install
 
@@ -76,9 +76,11 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 - Focus is credited to the day it started on, so a session spanning midnight
   still lands on the right day.
 - Daily detail older than ~3 months (95 days, matching the 13-week trend) is
-  pruned, but its total is folded into a per-month aggregate first — so the
-  yearly overview remembers your history even though raw days are forgotten.
-  Delete the file to reset.
+  pruned, but its total folds into a per-day archive first — the current and
+  previous calendar year's day totals survive as `"years"`, so the yearly
+  overview keeps day counts, streaks, and peak days even though raw app
+  detail is forgotten. Older years live on as per-month aggregates. Delete
+  the file to reset.
 
 ## Development
 

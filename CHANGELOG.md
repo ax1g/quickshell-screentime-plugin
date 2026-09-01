@@ -6,6 +6,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Wrapped-style yearly retro: the Insights year now reads a two-year per-day
+  archive, so it shows real day counts, longest streak, top months, average
+  active day, weekday rhythm, and the single busiest day. Pruned days land in
+  the archive instead of month lumps, and month-scale readers (totals, bars,
+  oldest year) understand it.
+- Coloured pattern insights: top-app glyph glows gold, gains green / losses
+  red, busiest day violet; only signed deltas take colour.
+
+### Changed
+
+- Yearly insights are data, not jokes: trivia cards (LOTR marathons, chair
+  tenure, pixel personality…) replaced with the retrospective above.
+- Tighter hero and calendar spacing: 1.4 letter-spacing on the year total,
+  zero-gap hero columns, and bottom margins mirrored to the top.
+
 ### Fixed
 
 - Chromium-family web apps no longer render as malformed names
