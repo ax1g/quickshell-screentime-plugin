@@ -360,7 +360,7 @@ Panel {
             color: yearHeroIconMouse.containsMouse
               ? root.contentForeground : Qt.darker(root.contentForeground, 1.2)
             font.family: root.contentFontFamily
-            font.pixelSize: Style.fontPx(2.4)
+            font.pixelSize: Style.fontPx(2.8)
             anchors.left: parent.left
             anchors.leftMargin: Style.space(10)
             anchors.top: parent.top
@@ -409,7 +409,7 @@ Panel {
                 opacity: yearPrevMouse.enabled ? 1.0 : 0.25
                 Behavior on opacity { NumberAnimation { duration: 150 } }
                 font.family: root.contentFontFamily
-                font.pixelSize: Style.font.bodySmall
+                font.pixelSize: Style.font.caption
                 anchors.verticalCenter: parent.verticalCenter
 
                 MouseArea {
@@ -426,7 +426,7 @@ Panel {
               Text {
                 id: yearValue
                 text: String(root.currentYear)
-                color: root.contentForeground
+                color: Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.caption
                 font.bold: true
@@ -441,7 +441,7 @@ Panel {
                 opacity: yearNextMouse.enabled ? 1.0 : 0.25
                 Behavior on opacity { NumberAnimation { duration: 150 } }
                 font.family: root.contentFontFamily
-                font.pixelSize: Style.font.bodySmall
+                font.pixelSize: Style.font.caption
                 anchors.verticalCenter: parent.verticalCenter
 
                 MouseArea {
@@ -594,7 +594,9 @@ Panel {
                     width: Math.max(0, monthRow.availW * monthRow.ratio)
                     height: parent.height
                     radius: Style.space(2)
-                    color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.8)
+                    color: monthRow.isCurrentMonth
+                      ? Color.accent
+                      : Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.8)
 
                     MouseArea {
                       id: monthBarMouse
