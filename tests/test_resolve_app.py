@@ -214,6 +214,16 @@ class SteamTitleTests(unittest.TestCase):
         self.assertIsNone(
             r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
 
+    def test_is_steam_class_accepts_numeric_and_slug_forms(self):
+        self.assertTrue(r._is_steam_class("steam_app_730"))
+        # Non-Steam shortcuts (e.g. Battle.net) report a slug, not an AppID.
+        self.assertTrue(r._is_steam_class("steam_app_battlenet"))
+        self.assertTrue(r._is_steam_class("Steam_App_Battlenet"))
+
+    def test_is_steam_class_rejects_non_steam(self):
+        self.assertFalse(r._is_steam_class("foot"))
+        self.assertFalse(r._is_steam_class(None))
+
     def test_steam_title_searches_roots(self):
         with tempfile.TemporaryDirectory() as tmp:
             self._write_manifest(tmp, "570", "Dota 2")
