@@ -1036,3 +1036,30 @@ test("rollupPrunedDays handles null months input", () => {
   const result = Model.rollupPrunedDays(null, pruned)
   assert.equal(result["2026-04"], 1000000)
 })
+
+// ---- weekRangeLabel ------------------------------------------------------
+
+test("weekRangeLabel collapses same-month weeks", () => {
+  const weeks = Model.monSunWeeks({}, "2026-08-19", 1)
+  assert.equal(Model.weekRangeLabel(weeks[0]), "Aug 17 – 23, 2026 · W34")
+})
+
+test("weekRangeLabel spans months instead of showing Monday month only", () => {
+  // Reported bug: Sat Sep 5 2026 sits in the Aug 31 – Sep 6 week, which the
+  // old header rendered as "Aug 2026 · W36".
+  const weeks = Model.monSunWeeks({}, "2026-09-05", 1)
+  assert.equal(weeks[0].days[0].key, "2026-08-31")
+  assert.equal(Model.weekRangeLabel(weeks[0]), "Aug 31 – Sep 6, 2026 · W36")
+})
+
+test("weekRangeLabel names both years across New Year", () => {
+  const weeks = Model.monSunWeeks({}, "2026-01-01", 1)
+  assert.equal(weeks[0].days[0].key, "2025-12-29")
+  assert.equal(Model.weekRangeLabel(weeks[0]), "Dec 29, 2025 – Jan 4, 2026 · W1")
+})
+
+test("weekRangeLabel returns empty for bad input", () => {
+  assert.equal(Model.weekRangeLabel(null), "")
+  assert.equal(Model.weekRangeLabel({}), "")
+  assert.equal(Model.weekRangeLabel({ days: [{ key: "2026-08-17" }] }), "")
+})
