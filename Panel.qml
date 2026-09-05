@@ -1334,19 +1334,12 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                       }
 
                       Text {
-                        text: {
-                          if (!root.visibleWeek) return ""
-                          var d = root.visibleWeek.days[0]
-                          if (!d) return ""
-                          var parts = d.key.split("-")
-                          var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-                          var mi = Number(parts[1]) - 1
-                          return (monthNames[mi] || "") + " " + parts[0] + " \u00b7 W" + Model.isoWeekNumber(d.key)
-                        }
+                        text: root.visibleWeek ? Model.weekRangeLabel(root.visibleWeek) : ""
                         color: root.contentForeground
                         font.family: root.contentFontFamily
                         font.pixelSize: Style.font.caption
                         font.bold: true
+                        elide: Text.ElideRight
                         anchors.verticalCenter: parent.verticalCenter
                       }
 
