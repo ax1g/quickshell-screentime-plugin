@@ -7,11 +7,14 @@ Process-touching tests use the current process (always alive, always in
 /proc), so nothing here needs a running Hyprland session.
 """
 
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 
@@ -50,6 +53,11 @@ class ProcParsingTests(unittest.TestCase):
 
     def test_proc_stat_tolerates_missing_pid(self):
         self.assertIsNone(r.proc_stat(2**31 - 1))
+
+    def test_proc_stat_rejects_non_numeric_fields(self):
+        bad_stat = b"1 (bash) S notanumber 2 3 4 5 6 7 8 9\n"
+        with mock.patch("builtins.open", mock.mock_open(read_data=bad_stat)):
+            self.assertIsNone(r.proc_stat(1234))
 
     def test_proc_name_resolves_current_process(self):
         name = r.proc_name(os.getpid())
@@ -224,6 +232,38 @@ class SteamTitleTests(unittest.TestCase):
                 self.assertEqual(r.steam_title_for_class("steam_app_999"), None)
             finally:
                 r._STEAM_ROOTS = original
+
+
+class MainTests(unittest.TestCase):
+    """main() never crashes and stays silent on bad hyprctl output."""
+
+    def _run_main_no_args(self, run_result=None, run_error=None):
+        if run_error is not None:
+            run_mock = mock.Mock(side_effect=run_error)
+        else:
+            run_mock = mock.Mock(return_value=mock.Mock(stdout=run_result))
+        with mock.patch.object(r.subprocess, "run", run_mock):
+            with mock.patch.object(r.sys, "argv", ["resolve_app.py"]):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    with self.assertRaises(SystemExit) as cm:
+                        r.main()
+                return cm.exception.code, buf.getvalue()
+
+    def test_main_missing_hyprctl_exits_quietly(self):
+        code, out = self._run_main_no_args(run_error=FileNotFoundError("hyprctl"))
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_list_json_exits_quietly(self):
+        code, out = self._run_main_no_args(run_result="[1, 2]")
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_garbage_json_exits_quietly(self):
+        code, out = self._run_main_no_args(run_result="not json")
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
 
 
 if __name__ == "__main__":

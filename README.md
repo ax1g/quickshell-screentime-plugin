@@ -11,26 +11,34 @@ local.
 
 ## Features
 
-| Feature | What it does |
-| --- | --- |
-| **Live in the bar** | Today's total, updated as you work. |
-| **Per-app tracking** | Focus time per app; idle, locked, asleep and desktop time never counted. |
-| **Terminal-aware** | A focused terminal shows what runs inside it (`opencode`, not `foot`), re-resolved live. |
-| **Steam-aware** | `steam_app_123456` becomes the game title, read from local Steam metadata. |
-| **Donut chart** | Six biggest apps + "Other", day total in the centre. |
-| **Cross-highlight** | Hover a slice or legend row to spotlight that app. |
-| **Clean names** | Reverse-DNS IDs shortened; Chromium web apps fold by hostname across profiles. |
-| **Scrollable app list** | Bounded legend with a thin scrollbar; Show More expands the full list. |
-| **Clickable week bars** | Click any day to inspect it; click again to return to today. |
-| **13-week trend** | Paginated Mon–Sun pages with ISO-week header; today in your theme accent. |
-| **Week total** | Header total flips between time and share of the week's 168 hours. |
-| **Yearly overview** | Per-month bars across every recorded year, with a Wrapped-style yearly retro: day counts, longest streak, top months, weekday rhythm, peak day. |
-| **Usage patterns** | Top app, vs yesterday, busiest day in 7. |
-| **Icon-only mode** | Right-click collapses the widget to a single glyph; remembered. |
-| **Keyboard-first** | `Esc` closes, `p` toggles patterns, `j`/`k` and arrows scroll; wheel works too. |
-| **Keybind-friendly** | Summon and control the panel from a keybind via the `agx.screen-time` IPC target. |
-| **Hourglass easter egg** | Flips over on the hour; gold sparkles on hover. |
-| **Private by design** | One local JSON file; old days roll into a two-year per-day archive, then monthly totals; colours follow your theme accent. |
+- Live bar widget: today's total in your bar font, updated as you work.
+  Right-click collapses it to a single glyph; remembered.
+- Per-app tracking: idle, locked, suspend and desktop time never counted. A
+  focused terminal shows what runs inside it (`opencode`, not `foot`),
+  re-resolved live; `steam_app_123456` becomes the game title from local
+  Steam metadata. Reverse-DNS IDs shortened; Chromium web apps fold by
+  hostname across profiles.
+- Games count too: whatever you play — Steam, Battle.net, browser, emulator —
+  gets timed like any other app. It's focused time, so an evening of being
+  AFK in a lobby won't inflate your hours the way Steam's counter does.
+- Donut chart: six biggest apps + "Other", day total in the centre. Hover a
+  slice or legend row to spotlight that app; Show More expands the full
+  scrollable list.
+- 13-week trend: paginated Mon–Sun pages with date-range headers
+  (`Aug 31 – Sep 6, 2026 · W36`); click any day to inspect it, click again
+  for today. Header total flips between time and share of the week's
+  168 hours.
+- Yearly overview: per-month bars across every recorded year, plus a
+  Wrapped-style retro — day counts, longest streak and break, top months,
+  busiest Mon–Sun week, weekday rhythm, peak day.
+- Usage patterns: top app, vs yesterday, and busiest day of the week you're
+  looking at. Insight and retro colours follow your theme.
+- Keyboard-first and keybind-friendly: `Esc` closes, `j`/`k` and arrows
+  scroll, wheel works; summon and control the panel via the
+  `agx.screen-time` IPC target.
+- Private by design: one local JSON file; old days roll into a two-year
+  per-day archive, then monthly totals.
+- Hourglass easter egg: flips over on the hour; gold sparkles on hover.
 
 ## Install
 
@@ -76,8 +84,8 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 ```
 
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
-- Focus is credited to the day it started on, so a session spanning midnight
-  still lands on the right day.
+- A session spanning midnight splits there, so each day keeps its own
+  seconds.
 - Daily detail older than ~3 months (95 days, matching the 13-week trend) is
   pruned, but its total folds into a per-day archive first — the current and
   previous calendar year's day totals survive as `"years"`, so the yearly

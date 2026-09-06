@@ -235,8 +235,11 @@ Item {
   // which schedules the debounced disk write. The live in-memory day is
   // folded into the mirror first — root.today is the source of truth while
   // root.days mirrors what is on disk.
+  // Blocks disk writes while the corrupt-file backup is still running, so
+  // the first persist can never overwrite the file before it is moved aside.
+  property bool backupPending: false
   function persist() {
-    if (root.startupPhase) return
+    if (root.startupPhase || root.backupPending) return
     var merged = Object.assign({}, root.days)
     merged[root.todayKey] = root.today
     var kept = Model.pruneDays(merged, root.todayKey, root.keepDays)
@@ -258,7 +261,7 @@ Item {
   }
 
   function scheduleSave() {
-    if (root.startupPhase) return
+    if (root.startupPhase || root.backupPending) return
     saveTimer.restart()
   }
 
@@ -308,9 +311,11 @@ Item {
     // Expected on the very first run (file seeded by ensureDirProc) and on
     // a malformed file. Preserve a corrupt file before the next persist
     // overwrites it, then start empty rather than refusing to track.
+    // Tracking starts immediately; only disk writes wait for the backup.
     console.warn("agx.screen-time: history load failed, starting empty")
     if (!root.backupAttempted) {
       root.backupAttempted = true
+      root.backupPending = true
       backupProc.running = true
     }
     if (!root.ready) {
@@ -369,7 +374,13 @@ Item {
     id: backupProc
     environment: ({ "HOME": root.home })
     command: ["bash", "-c",
-      "f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
+      "command -v python3 >/dev/null 2>&1 || exit 0; f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
+    onExited: {
+      // Unblock disk writes (see backupPending): queued in-memory state
+      // persists on the next tick.
+      root.backupPending = false
+      root.persist()
+    }
   }
 
   // A terminal's foreground process changes without the compositor noticing
@@ -442,6 +453,9 @@ Item {
         applyState(State.closeActiveBucket(
           root, root.activeApp, root.activeStart, now,
           root.todayKey, root.suspendGapMs, root.lastTick))
+        // Waking across midnight must roll the day forward before the fresh
+        // post-wake bucket opens, or wake-time seconds land on yesterday.
+        root.rolloverIfNeeded()
         root.persist()
         root.switchActive()
       } else {

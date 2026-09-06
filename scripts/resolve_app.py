@@ -77,14 +77,17 @@ def proc_stat(pid):
     fields = data[rparen + 1 :].split()
     if len(fields) < 8:
         return None
-    return {
-        "comm": comm,
-        "ppid": int(fields[1]),
-        "pgrp": int(fields[2]),
-        "session": int(fields[3]),
-        "ttynr": int(fields[4]),
-        "tpgid": int(fields[5]),
-    }
+    try:
+        return {
+            "comm": comm,
+            "ppid": int(fields[1]),
+            "pgrp": int(fields[2]),
+            "session": int(fields[3]),
+            "ttynr": int(fields[4]),
+            "tpgid": int(fields[5]),
+        }
+    except ValueError:
+        return None
 
 
 def proc_name(pid):
@@ -272,10 +275,14 @@ def main():
                 timeout=2,
             ).stdout
             info = json.loads(out)
+            if not isinstance(info, dict):
+                raise AttributeError("hyprctl activewindow is not a JSON object")
             terminal_pid = int(info.get("pid") or 0)
             window_class = info.get("class") or ""
-        except (ValueError, json.JSONDecodeError, subprocess.SubprocessError):
+        except (ValueError, json.JSONDecodeError, subprocess.SubprocessError,
+                OSError, AttributeError):
             terminal_pid = 0
+            window_class = ""
 
     # Steam games: the class carries the AppID, so /proc walking is both
     # unnecessary and wrong (it would report the game binary). Resolve the

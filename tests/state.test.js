@@ -103,7 +103,7 @@ test("closeActiveBucket drops bucket on suspend gap", () => {
   assert.equal(result.activeStart, 0)
 })
 
-test("closeActiveBucket attributes to yesterday when bucket spans midnight", () => {
+test("closeActiveBucket splits a midnight-spanning bucket at midnight", () => {
   // Use local midnight to avoid timezone issues.
   const aug15 = localMidnight(2026, 7, 15)
   const aug16 = localMidnight(2026, 7, 16)
@@ -116,10 +116,9 @@ test("closeActiveBucket attributes to yesterday when bucket spans midnight", () 
     todayKey: "2026-08-16"
   }
   const result = State.closeActiveBucket(state, "editor", startMs, now, "2026-08-16", 30000, 0)
-  // Bucket goes to 2026-08-15, not today
-  assert.equal(result.today.total, 100)
-  assert.ok(result.days["2026-08-15"])
-  assert.equal(result.days["2026-08-15"].apps.editor, 15000)
+  // 10s lands on 2026-08-15, 5s on today — same split as commitElapsed.
+  assert.equal(result.days["2026-08-15"].apps.editor, 10000)
+  assert.equal(result.today.total, 100 + 5000)
 })
 
 test("closeActiveBucket returns new object (immutability)", () => {
@@ -380,11 +379,9 @@ test("close + rollover: bucket on yesterday lands in days, not today", () => {
   // Step 1: close the bucket (it started Aug 15, today is Aug 16)
   const closed = State.closeActiveBucket(
     state, "editor", startMs, now, "2026-08-16", 30000, now - 1000)
-  // Bucket went to Aug 15, today unchanged
-  assert.equal(closed.today.total, 500)
-  assert.ok(closed.days["2026-08-15"])
-  // 23:00 to 00:00:03 = 3603000ms (1h 0m 3s)
-  assert.equal(closed.days["2026-08-15"].apps.editor, 3603000)
+  // Split at midnight: 23:00-00:00 to Aug 15, 3s to today
+  assert.equal(closed.days["2026-08-15"].apps.editor, 3600000)
+  assert.equal(closed.today.total, 500 + 3000)
 
   // Step 2: rollover doesn't apply (already on Aug 16), but the bucket
   // was correctly attributed to Aug 15 by step 1 alone.
