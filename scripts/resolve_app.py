@@ -311,8 +311,8 @@ def main():
     # the window title can (the launcher itself titles its window "Battle.net";
     # a running game titles it with the game's own name), so use it instead of
     # leaving every game bucketed under the wrapper's slug.
-    if _is_steam_class(window_class):
-        if window_title:
+    if _steam_class_appid(window_class) is None and _is_steam_class(window_class):
+        if window_title.strip():
             print(window_title)
         sys.exit(0)
 
