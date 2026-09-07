@@ -753,8 +753,10 @@ test("weekAxisTicks anchors empty and sparse weeks to the 4h reference", () => {
 })
 
 test("weekAxisTicks scales with the week's real maximum", () => {
-  assert.deepEqual(Model.weekAxisTicks(5 * HOUR_MS), [0, 2.5 * HOUR_MS, 5 * HOUR_MS])
-  assert.deepEqual(Model.weekAxisTicks(9 * HOUR_MS), [0, 4.5 * HOUR_MS, 9 * HOUR_MS])
+  // The mid gridline label renders as whole hours, so the tick itself sits
+  // on a whole hour — never 2.5h labelled "3h".
+  assert.deepEqual(Model.weekAxisTicks(5 * HOUR_MS), [0, 3 * HOUR_MS, 5 * HOUR_MS])
+  assert.deepEqual(Model.weekAxisTicks(9 * HOUR_MS), [0, 5 * HOUR_MS, 9 * HOUR_MS])
 })
 
 test("weekAxisTicks returns empty for junk input", () => {
@@ -967,14 +969,153 @@ test("yearFacts builds the wrapped summary for a full archived year", () => {
   assert.match(find("DAY COUNT").value, /Active on 9 of 357 tracked days/)
   assert.match(find("LONGEST STREAK").value, /3 days in a row/)
   assert.match(find("LONGEST STREAK").sub, /Feb/)
-  assert.match(find("TOP MONTHS").value, /1\. Mar · 2\. Feb · 3\. Jan/)
+  assert.equal(find("TOP MONTHS").value, "Mar ● Feb ● Jan")
   assert.match(find("AVERAGE SCREEN DAY").value, /4h 53m per active day/)
   assert.match(find("WEEKDAY RHYTHM").value, /Mon leads · 91% weekdays/)
   assert.match(find("PEAK DAY").value, /Mar 9 · 11h, the year's high/)
   assert.match(find("RECHARGE MONTH").value, /Jan · 3h, the screen's break/)
-  assert.equal(cards.length, 8)
+  assert.match(find("LONGEST BREAK").value, /28 days offline/)
+  assert.match(find("LONGEST BREAK").sub, /Feb/)
+  assert.match(find("BUSIEST WEEK").value, /Mar 2–8 · 21h, your peak week/)
+  assert.equal(cards.length, 10)
   for (const c of cards)
     assert.ok(c.glyph && c.label && c.value && c.sub && c.color)
+})
+
+test("TOP MONTHS lists months as blobs with no rank numbers", () => {
+  const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
+  const cards = Model.yearFacts({}, months, {}, 2026, "2026-12-24")
+  assert.equal(cards.find(c => c.label === "TOP MONTHS").value, "Mar ● Jan")
+})
+
+test("RECHARGE MONTH skips a thin current month when history exists", () => {
+  // Sep has the least time (30min) but only one tracked day: with older
+  // months on record it must not win by new-month triviality.
+  const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
+  const days = { "2026-09-05": { total: 30 * 60000, apps: {} } }
+  const cards = Model.yearFacts(days, months, {}, 2026, "2026-09-06")
+  assert.match(
+    cards.find(c => c.label === "RECHARGE MONTH").value, /Jan · 2h/)
+})
+
+test("RECHARGE MONTH falls back to the current month when it is all there is", () => {
+  const days = { "2026-09-05": { total: HOUR_MS, apps: {} } }
+  const cards = Model.yearFacts(days, {}, {}, 2026, "2026-09-06")
+  // Single month: quietest is also the top, so the card stays hidden
+  // rather than crowning an empty default.
+  assert.ok(!cards.some(c => c.label === "RECHARGE MONTH"))
+})
+
+test("RECHARGE MONTH accepts the current month after two weeks of data", () => {
+  const days = {}
+  for (let d = 1; d <= 14; d++)
+    days["2026-09-" + String(d).padStart(2, "0")] = { total: 10 * 60000, apps: {} }
+  const months = { "2026-01": 5 * HOUR_MS }
+  const cards = Model.yearFacts(days, months, {}, 2026, "2026-09-15")
+  // Sep is genuinely quiet (140min < 5h) with real coverage: it wins fairly.
+  assert.match(
+    cards.find(c => c.label === "RECHARGE MONTH").value, /Sep · 2h/)
+})
+
+test("longestBreak finds the longest offline gap", () => {
+  const totals = [
+    { date: "2026-03-01", ms: HOUR_MS },
+    { date: "2026-03-02", ms: HOUR_MS },
+    { date: "2026-03-14", ms: HOUR_MS }
+  ]
+  assert.deepEqual(Model.longestBreak(totals), { days: 11, end: "2026-03-14" })
+})
+
+test("longestBreak ignores single missed days and short lists", () => {
+  assert.equal(Model.longestBreak([
+    { date: "2026-03-01", ms: HOUR_MS },
+    { date: "2026-03-03", ms: HOUR_MS }
+  ]), null)
+  assert.equal(Model.longestBreak([{ date: "2026-03-01", ms: HOUR_MS }]), null)
+  assert.equal(Model.longestBreak([]), null)
+})
+
+test("busiestSpan finds the peak Mon–Sun week", () => {
+  // Aug 10–16 2026 is a real Mon–Sun week; Wed peaks at 9h.
+  const totals = []
+  for (let d = 10; d <= 16; d++)
+    totals.push({ date: "2026-08-" + d, ms: d === 12 ? 9 * HOUR_MS : HOUR_MS })
+  assert.deepEqual(Model.busiestSpan(totals),
+    { start: "2026-08-10", end: "2026-08-16", ms: 15 * HOUR_MS })
+})
+
+test("busiestSpan never crowns a rolling Tue–Mon window", () => {
+  // Sun Aug 9 carries 9h: the rolling Aug 9–15 window totals 15h, but the
+  // real Mon–Sun weeks are Aug 3–9 (9h) and Aug 10–16 (7h).
+  const totals = [{ date: "2026-08-09", ms: 9 * HOUR_MS }]
+  for (let d = 10; d <= 16; d++)
+    totals.push({ date: "2026-08-" + d, ms: HOUR_MS })
+  assert.deepEqual(Model.busiestSpan(totals),
+    { start: "2026-08-03", end: "2026-08-09", ms: 9 * HOUR_MS })
+})
+
+test("busiestSpan returns null without data", () => {
+  assert.equal(Model.busiestSpan([]), null)
+  assert.equal(Model.busiestSpan(null), null)
+})
+
+test("yearFacts shows BUSIEST WEEK for a full consecutive week", () => {
+  const days = {}
+  for (let d = 10; d <= 16; d++)
+    days["2026-08-" + d] = { total: HOUR_MS, apps: {} }
+  const cards = Model.yearFacts(days, {}, {}, 2026, "2026-08-16")
+  const span = cards.find(c => c.label === "BUSIEST WEEK")
+  assert.ok(span)
+  assert.match(span.value, /Aug 10–16 · 7h, your peak week/)
+})
+
+function weekEntry(hours) {
+  return { days: hours.map(h => ({ ms: h * HOUR_MS })) }
+}
+
+test("isRecordWeek crowns a current week above all older weeks", () => {
+  const weeks = [weekEntry([9, 9]), weekEntry([5, 5]), weekEntry([8, 8])]
+  assert.equal(Model.isRecordWeek(weeks, 0), true)
+})
+
+test("isRecordWeek needs a strict win over previous weeks", () => {
+  const weeks = [weekEntry([9, 9]), weekEntry([9, 9]), weekEntry([1])]
+  assert.equal(Model.isRecordWeek(weeks, 0), false)
+  assert.equal(Model.isRecordWeek([weekEntry([9])], 0), false)
+  assert.equal(Model.isRecordWeek([], 0), false)
+})
+
+test("yearSummary merges the three stores with no double counting", () => {
+  const days = { "2026-08-15": { total: HOUR_MS, apps: {} } }
+  const months = { "2026-07": 2 * HOUR_MS }
+  const years = { 2026: { "2026-01-02": 3 * HOUR_MS } }
+  const s = Model.yearSummary(days, months, years, 2026, "2026-12-24")
+  assert.equal(s.total, 6 * HOUR_MS)
+  assert.equal(s.months.reduce((a, m) => a + m.ms, 0), s.total)
+  assert.deepEqual(s.dayTotals, [
+    { date: "2026-01-02", ms: 3 * HOUR_MS },
+    { date: "2026-08-15", ms: HOUR_MS }
+  ])
+})
+
+test("applyRetention prunes days into the archive in one step", () => {
+  const days = {
+    "2026-01-01": { total: HOUR_MS, apps: {} },
+    "2026-08-15": { total: 2 * HOUR_MS, apps: {} }
+  }
+  const r = Model.applyRetention(days, {}, "2026-08-15", 95, 2026)
+  assert.equal(r.pruned, true)
+  assert.deepEqual(Object.keys(r.days), ["2026-08-15"])
+  assert.deepEqual(r.years, { 2026: { "2026-01-01": HOUR_MS } })
+})
+
+test("applyRetention returns inputs untouched when nothing is pruned", () => {
+  const days = { "2026-08-15": { total: HOUR_MS, apps: {} } }
+  const years = { 2026: { "2026-01-02": HOUR_MS } }
+  const r = Model.applyRetention(days, years, "2026-08-15", 95, 2026)
+  assert.equal(r.pruned, false)
+  assert.equal(r.days, days)
+  assert.equal(r.years, years)
 })
 
 test("yearFacts degrades to month-scale cards when no day archive exists", () => {
@@ -1001,38 +1142,290 @@ test("yearFacts stays month and year scale, never names apps", () => {
   assert.ok(!/zen|code|opencode|firefox|editor/i.test(text))
 })
 
-// ---- rollupPrunedDays ----------------------------------------------------
+// ---- weekRangeLabel ------------------------------------------------------
 
-test("rollupPrunedDays merges day totals into months", () => {
-  const pruned = {
-    "2026-06-01": { total: 3600000 },
-    "2026-06-15": { total: 7200000 }
+test("weekRangeLabel collapses same-month weeks", () => {
+  const weeks = Model.monSunWeeks({}, "2026-08-19", 1)
+  assert.equal(Model.weekRangeLabel(weeks[0]), "Aug 17 – 23, 2026 · W34")
+})
+
+test("weekRangeLabel spans months instead of showing Monday month only", () => {
+  // Reported bug: Sat Sep 5 2026 sits in the Aug 31 – Sep 6 week, which the
+  // old header rendered as "Aug 2026 · W36".
+  const weeks = Model.monSunWeeks({}, "2026-09-05", 1)
+  assert.equal(weeks[0].days[0].key, "2026-08-31")
+  assert.equal(Model.weekRangeLabel(weeks[0]), "Aug 31 – Sep 6, 2026 · W36")
+})
+
+test("weekRangeLabel names both years across New Year", () => {
+  const weeks = Model.monSunWeeks({}, "2026-01-01", 1)
+  assert.equal(weeks[0].days[0].key, "2025-12-29")
+  assert.equal(Model.weekRangeLabel(weeks[0]), "Dec 29, 2025 – Jan 4, 2026 · W1")
+})
+
+test("weekRangeLabel returns empty for bad input", () => {
+  assert.equal(Model.weekRangeLabel(null), "")
+  assert.equal(Model.weekRangeLabel({}), "")
+  assert.equal(Model.weekRangeLabel({ days: [{ key: "2026-08-17" }] }), "")
+})
+
+// ---- insightColors (theme-following insight glyphs) ----------------------
+
+test("insightColors sources star and up from the theme roles", () => {
+  const c = Model.insightColors("#e45b93", "#a55555")
+  assert.equal(c.star, "#e45b93")
+  assert.equal(c.up, "#a55555")
+})
+
+test("insightColors derives a green down and a distinct busiest", () => {
+  const c = Model.insightColors("#e45b93", "#a55555")
+  const downHsl = Model.hexToHsl(c.down)
+  assert.ok(downHsl.h >= 120 && downHsl.h <= 180,
+    `down should be green, got hue ${downHsl.h}`)
+  assert.notEqual(c.busiest, c.star)
+  for (const k of ["star", "up", "down", "busiest"])
+    assert.match(c[k], /^#[0-9a-f]{6}$/, `${k} should be a hex color`)
+})
+
+test("insightColors tracks theme swaps", () => {
+  const a = Model.insightColors("#e45b93", "#a55555")
+  const b = Model.insightColors("#4ecdc4", "#a55555")
+  assert.notEqual(a.star, b.star)
+  assert.notEqual(a.busiest, b.busiest)
+  assert.notEqual(a.down, b.down)
+  // Urgent is passed through, so up stays put when only accent changes.
+  assert.equal(a.up, b.up)
+})
+
+test("insightColors stays vivid on a grayscale accent", () => {
+  const c = Model.insightColors("#cacccc", "#a55555")
+  assert.ok(Model.hexToHsl(c.down).s >= 40, "down should stay saturated")
+  assert.ok(Model.hexToHsl(c.busiest).s >= 40, "busiest should stay saturated")
+})
+
+test("trackedDays counts the full past year, not 31 days", () => {
+  const years = { 2025: { "2025-06-01": HOUR_MS } }
+  const cards = Model.yearFacts({}, {}, years, 2025, "2026-01-05")
+  const dayCount = cards.find(c => c.label === "DAY COUNT")
+  assert.equal(dayCount.value, "Active on 1 of 365 tracked days")
+})
+
+test("trackedDays counts 366 for a past leap year", () => {
+  const years = { 2024: { "2024-06-01": HOUR_MS } }
+  const cards = Model.yearFacts({}, {}, years, 2024, "2026-01-05")
+  const dayCount = cards.find(c => c.label === "DAY COUNT")
+  assert.equal(dayCount.value, "Active on 1 of 366 tracked days")
+})
+
+test("pruneDays with missing keepDays returns days untouched", () => {
+  const days = {
+    "2026-01-01": { total: 100 },
+    "2026-08-15": { total: 200 }
   }
-  const result = Model.rollupPrunedDays({}, pruned)
-  assert.equal(result["2026-06"], 10800000)
+  assert.equal(Model.pruneDays(days, "2026-08-15", undefined), days)
+  assert.equal(Model.pruneDays(days, "2026-08-15", NaN), days)
 })
 
-test("rollupPrunedDays accumulates onto existing months", () => {
-  const months = { "2026-06": 5000000 }
-  const pruned = { "2026-06-20": { total: 3000000 } }
-  const result = Model.rollupPrunedDays(months, pruned)
-  assert.equal(result["2026-06"], 8000000)
+test("monthlyTotals and yearTotal coerce string day totals", () => {
+  const days = { "2026-08-15": { total: "3600000", apps: {} } }
+  const totals = Model.monthlyTotals(days, {}, 2026)
+  assert.equal(totals.find(t => t.month === 7).ms, 3600000)
+  assert.equal(Model.yearTotal(days, {}, 2026), 3600000)
 })
 
-test("rollupPrunedDays returns original months when nothing to prune", () => {
-  const months = { "2026-05": 1000000 }
-  const result = Model.rollupPrunedDays(months, {})
-  assert.deepEqual(result, { "2026-05": 1000000 })
+test("yearDayTotals coerces string archive values", () => {
+  const years = { 2026: { "2026-01-02": "7200000" } }
+  assert.deepEqual(Model.yearDayTotals(years, {}, 2026, "2026-12-24"), [
+    { date: "2026-01-02", ms: 7200000 }
+  ])
 })
 
-test("rollupPrunedDays skips days with zero total", () => {
-  const pruned = { "2026-07-01": { total: 0 } }
-  const result = Model.rollupPrunedDays({}, pruned)
-  assert.deepEqual(result, {})
+test("sanitizeHistory cleans malformed day shapes", () => {
+  const days = {
+    "2026-08-15": { total: "not-a-number", apps: ["zen"] },
+    "2026-08-16": { total: -5, apps: { zen: NaN, foot: 60000 } }
+  }
+  const clean = Model.sanitizeHistory(days, {}, {})
+  assert.equal(clean.days["2026-08-15"].total, 0)
+  assert.deepEqual(clean.days["2026-08-15"].apps, {})
+  assert.equal(clean.days["2026-08-16"].total, 0)
+  assert.deepEqual(clean.days["2026-08-16"].apps, { foot: 60000 })
 })
 
-test("rollupPrunedDays handles null months input", () => {
-  const pruned = { "2026-04-05": { total: 1000000 } }
-  const result = Model.rollupPrunedDays(null, pruned)
-  assert.equal(result["2026-04"], 1000000)
+test("insights busiest day follows the navigated week", () => {
+  const days = {
+    "2026-08-19": { total: 9 * HOUR_MS },
+    "2026-09-03": { total: 1 * HOUR_MS }
+  }
+  const today = { total: 1 * HOUR_MS, apps: { a: 3600000 } }
+  // Navigated to the Aug 17–23 week (Sunday Aug 23): busiest is Aug 19,
+  // not the current week's Sep 3.
+  const rows = Model.insights(today, days, "2026-09-05", "2026-09-05", "2026-08-23")
+  assert.ok(rows[2].value.includes("Wed"))
+  assert.ok(rows[2].value.includes("9h"))
+})
+
+test("insights rows carry kind and direction, not just text", () => {
+  const day = { total: 2 * HOUR_MS, apps: { zen: 2 * HOUR_MS } }
+  const rows = Model.insights(day, {}, "2026-08-15", "2026-08-15")
+  assert.equal(rows[0].kind, "top")
+  assert.equal(rows[0].dir, null)
+  assert.equal(rows[1].kind, "delta")
+  assert.equal(rows[2].kind, "busiest")
+  assert.equal(rows[2].dir, null)
+})
+
+test("insights delta direction follows the sign", () => {
+  const up = Model.insights(
+    { total: 3 * HOUR_MS, apps: {} },
+    { "2026-08-14": { total: HOUR_MS, apps: {} } },
+    "2026-08-15", "2026-08-15")
+  assert.equal(up[1].dir, "up")
+  const down = Model.insights(
+    { total: HOUR_MS, apps: {} },
+    { "2026-08-14": { total: 3 * HOUR_MS, apps: {} } },
+    "2026-08-15", "2026-08-15")
+  assert.equal(down[1].dir, "down")
+  const flat = Model.insights(
+    { total: HOUR_MS, apps: {} },
+    { "2026-08-14": { total: HOUR_MS, apps: {} } },
+    "2026-08-15", "2026-08-15")
+  assert.equal(flat[1].dir, "flat")
+})
+
+test("insights busiest day defaults to the trailing week", () => {
+  const days = { "2026-09-03": { total: 1 * HOUR_MS } }
+  const today = { total: 1 * HOUR_MS, apps: { a: 3600000 } }
+  const rows = Model.insights(today, days, "2026-09-05", "2026-09-05")
+  assert.ok(rows[2].value.includes("Thu"))
+})
+
+test("mergeYear keeps legacy lumps and archive days side by side", () => {
+  // months holds pre-archive lumps only; nothing writes it anymore, and a
+  // day is deleted into exactly one store, so a lump and archive days in
+  // the same month describe different days — both count, never deduped.
+  const months = { "2026-06": 3600000 }
+  const years = { 2026: { "2026-06-20": 3600000 } }
+  const totals = Model.monthlyTotals({}, months, 2026, years, "2026-08-19")
+  assert.equal(totals[5].ms, 7200000)
+})
+
+test("monthlyTotals with todayKey excludes future dates like yearFacts", () => {
+  const days = {
+    "2026-08-19": { total: 3600000, apps: {} },
+    "2026-12-25": { total: 3600000, apps: {} } // future relative to todayKey
+  }
+  const filtered = Model.monthlyTotals(days, {}, 2026, {}, "2026-08-19")
+  assert.equal(filtered[7].ms, 3600000) // Aug keeps its day
+  assert.equal(filtered[11].ms, 0) // Dec future day excluded
+})
+
+test("yearFacts accepts a string year without bypassing the recharge guard", () => {
+  // Current month (Aug) is the quietest but has only 3 tracked days, so the
+  // coverage guard excludes it and RECHARGE MONTH falls to Mar. A string
+  // year must behave identically, not let Aug auto-win.
+  const days = {
+    "2026-03-10": { total: 5 * 3600000, apps: {} },
+    "2026-06-10": { total: 2 * 3600000, apps: {} },
+    "2026-08-19": { total: 3600000, apps: {} }
+  }
+  const num = Model.yearFacts(days, {}, {}, 2026, "2026-08-19", "#e45b93")
+  const str = Model.yearFacts(days, {}, {}, "2026", "2026-08-19", "#e45b93")
+  const recharge = cards => (cards.find(c => c.label === "RECHARGE MONTH") || {}).value
+  assert.equal(recharge(num), recharge(str))
+  assert.ok(recharge(num).startsWith("Jun"))
+})
+
+test("yearFacts derives card colors from the theme accent", () => {
+  const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
+  const pink = Model.yearFacts({}, months, {}, 2026, "2026-12-24", "#e45b93")
+  const teal = Model.yearFacts({}, months, {}, 2026, "2026-12-24", "#4ecdc4")
+  assert.ok(pink.length > 0)
+  assert.equal(pink[0].color, "#e45b93")
+  assert.equal(teal[0].color, "#4ecdc4")
+  assert.deepEqual(
+    pink.map(c => c.color),
+    Model.sliceColors(pink.length, "#e45b93"))
+})
+
+// ---- weekView / yearView ---------------------------------------------------
+// One derivation per view: Panel threads selection into seven separate
+// week expressions (and two year merges); the views fuse each family so
+// callers reason about the week and the year, not the primitives.
+
+const HOUR_MS_VIEW = 3600000
+
+test("weekView selects the visible week and derives its facts", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-18": { total: 2 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-10": { total: 4 * HOUR_MS_VIEW, apps: {} }
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 0)
+  assert.equal(view.weeks.length, 2)
+  assert.equal(view.week.days.length, 7)
+  assert.equal(view.max, 2 * HOUR_MS_VIEW)
+  assert.equal(view.totalMs, 3 * HOUR_MS_VIEW)
+  assert.equal(view.isRecord, false) // older week (Aug 10) is bigger
+  assert.equal(view.hasPrev, true)
+  assert.equal(view.weekEndKey, "2026-08-23")
+})
+
+test("weekView paginates to older weeks", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-10": { total: 4 * HOUR_MS_VIEW, apps: {} }
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 1)
+  assert.equal(view.week.days[0].key, "2026-08-10")
+  assert.equal(view.totalMs, 4 * HOUR_MS_VIEW)
+})
+
+test("weekView agrees with the individual primitives", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-18": { total: 2 * HOUR_MS_VIEW, apps: {} }
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 0)
+  const weeks = Model.monSunWeeks(days, "2026-08-19", 2)
+  assert.deepEqual(view.weeks, weeks)
+  assert.equal(view.max, Model.scrollableTrendMax(weeks))
+  assert.equal(view.totalMs, Model.weekTotal(view.week.days))
+  assert.equal(view.isRecord, Model.isRecordWeek(weeks, 0))
+})
+
+test("weekView tolerates an out-of-range offset", () => {
+  const view = Model.weekView({}, "2026-08-19", 2, 9)
+  assert.equal(view.week, null)
+  assert.equal(view.max, 0)
+  assert.equal(view.totalMs, 0)
+  assert.equal(view.isRecord, false)
+  assert.equal(view.hasPrev, false)
+  assert.equal(view.weekEndKey, "")
+})
+
+test("yearFactsFromSummary agrees with yearFacts on one merge", () => {
+  const days = {
+    "2026-03-10": { total: 5 * 3600000, apps: {} },
+    "2026-08-19": { total: 3600000, apps: {} }
+  }
+  const summary = Model.yearSummary(days, {}, {}, 2026, "2026-08-19")
+  assert.deepEqual(
+    Model.yearFactsFromSummary(summary, 2026, "2026-08-19", "#e45b93"),
+    Model.yearFacts(days, {}, {}, 2026, "2026-08-19", "#e45b93"))
+})
+
+test("yearView shares one merge for total and facts", () => {
+  const months = { "2026-03": 10 * HOUR_MS_VIEW, "2026-01": 2 * HOUR_MS_VIEW }
+  const view = Model.yearView({}, months, {}, 2026, "2026-12-24", "#e45b93")
+  assert.equal(view.totalLabel, Math.round(Model.yearTotal({}, months, 2026, {}) / 3600000) + "h")
+  assert.deepEqual(view.facts, Model.yearFacts({}, months, {}, 2026, "2026-12-24", "#e45b93"))
+  assert.ok(view.facts.length > 0)
+  assert.equal(view.facts[0].color, "#e45b93")
+})
+
+test("yearView is empty for a year with no data", () => {
+  const view = Model.yearView({}, {}, {}, 2026, "2026-12-24", "#e45b93")
+  assert.equal(view.totalLabel, "0h")
+  assert.deepEqual(view.facts, [])
 })

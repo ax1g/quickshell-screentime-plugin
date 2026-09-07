@@ -97,7 +97,6 @@ Item {
   readonly property bool hasActivity: today && today.total > 0
 
   function appList() { return Model.appList(root.today) }
-  function insights() { return Model.insights(root.today, root.days, root.todayKey) }
   function fmt(ms) { return Model.fmt(ms) }
   function relativeDayLabel(key) { return Model.relativeDayLabel(key, root.todayKey) }
 
@@ -205,27 +204,14 @@ Item {
 
   function rolloverIfNeeded() {
     var key = Model.dayKey(new Date())
-    var patch = State.rolloverIfNeeded(root, key)
-    if (!patch) return
     var now = Date.now()
-    var app = root.activeApp
-
-    // Close the open bucket first so its elapsed time lands on the day it
-    // started (the bucket may still be on yesterday). rolloverIfNeeded's
-    // patch then carries the live today into the new calendar day. We close
-    // and reopen rather than leaving the bucket straddling midnight because
-    // commitElapsed already handles mid-commit splits conservatively; this
-    // path is the authoritative midnight transition where attribution must
-    // be exact.
-    applyState(State.closeActiveBucket(
-      root, root.activeApp, root.activeStart, now,
-      root.todayKey, root.suspendGapMs, root.lastTick))
+    // One transition owns the whole midnight moment (close + carry +
+    // reopen, with straddling buckets split exactly); a single applyState
+    // means no ordering slip can misattribute the crossing seconds.
+    var patch = State.advanceRollover(
+      root, now, key, root.suspendGapMs, root.lastTick)
+    if (!patch) return
     applyState(patch)
-
-    // Reopen a fresh bucket for the still-focused app so tracking continues
-    // past midnight without waiting for a focus change.
-    root.activeApp = app
-    root.activeStart = app ? Date.now() : 0
     root.persist()
   }
 
@@ -235,30 +221,33 @@ Item {
   // which schedules the debounced disk write. The live in-memory day is
   // folded into the mirror first — root.today is the source of truth while
   // root.days mirrors what is on disk.
+  // Blocks disk writes while the corrupt-file backup is still running, so
+  // the first persist can never overwrite the file before it is moved aside.
+  property bool backupPending: false
   function persist() {
-    if (root.startupPhase) return
+    if (root.startupPhase || root.backupPending) return
     var merged = Object.assign({}, root.days)
     merged[root.todayKey] = root.today
-    var kept = Model.pruneDays(merged, root.todayKey, root.keepDays)
-    if (kept !== merged) {
-      // Days dropped by retention roll up into the per-day archive so the
-      // year retro keeps day-scale facts (streaks, day counts, peak day)
-      // after raw app detail expires. Months is untouched: it only holds
-      // pre-archive lumps, so archive + months never double count.
-      var pruned = {}
-      for (var k in merged) {
-        if (Object.prototype.hasOwnProperty.call(merged, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = merged[k]
-      }
-      root.years = Model.pruneArchive(
-        Model.rollupArchive(root.years, pruned), Number(String(root.todayKey).split("-")[0]))
-      historyAdapter.years = root.years
+    // Days dropped by retention roll up into the per-day archive so the
+    // year retro keeps day-scale facts (streaks, day counts, peak day)
+    // after raw app detail expires. Months is untouched: it only holds
+    // pre-archive lumps, so archive + months never double count.
+    var ret = Model.applyRetention(merged, root.years, root.todayKey,
+      root.keepDays, Number(String(root.todayKey).split("-")[0]))
+    if (ret.pruned) {
+      root.years = ret.years
+      historyAdapter.years = ret.years
     }
-    root.days = kept
-    historyAdapter.days = kept
+    root.days = ret.days
+    historyAdapter.days = ret.days
   }
 
+  // Consecutive history-save failures. Reset by any successful schedule
+  // trigger (adapter update); the retry path below backs off instead.
+  property int saveFailCount: 0
+
   function scheduleSave() {
-    if (root.startupPhase) return
+    if (root.startupPhase || root.backupPending) return
     saveTimer.restart()
   }
 
@@ -271,18 +260,13 @@ Item {
       console.warn("agx.screen-time: history.json has malformed sections; ignoring them")
     var d = clean.days
     var m = clean.months
-    var y = clean.years
-    var kept = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
-    if (kept !== d) {
-      // Same rollup as persist(): load-time retention drops also feed the
-      // per-day archive instead of being lost.
-      var pruned = {}
-      for (var k in d) {
-        if (Object.prototype.hasOwnProperty.call(d, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = d[k]
-      }
-      y = Model.pruneArchive(Model.rollupArchive(y, pruned), new Date().getFullYear())
-      historyAdapter.years = y
-    }
+    // Same retention as persist(): load-time drops also feed the per-day
+    // archive instead of being lost.
+    var ret = Model.applyRetention(d, clean.years, Model.dayKey(new Date()),
+      root.keepDays, new Date().getFullYear())
+    if (ret.pruned) historyAdapter.years = ret.years
+    var y = ret.years
+    var kept = ret.days
     root.months = m
     root.days = kept
     root.years = y
@@ -308,9 +292,11 @@ Item {
     // Expected on the very first run (file seeded by ensureDirProc) and on
     // a malformed file. Preserve a corrupt file before the next persist
     // overwrites it, then start empty rather than refusing to track.
+    // Tracking starts immediately; only disk writes wait for the backup.
     console.warn("agx.screen-time: history load failed, starting empty")
     if (!root.backupAttempted) {
       root.backupAttempted = true
+      root.backupPending = true
       backupProc.running = true
     }
     if (!root.ready) {
@@ -327,9 +313,32 @@ Item {
     path: root.historyPath
     printErrors: true
     atomicWrites: true
-    onAdapterUpdated: root.scheduleSave()
+    onAdapterUpdated: {
+      // Fresh data means the disk state is reachable again (or changed):
+      // reset the failure streak so retries resume.
+      root.saveFailCount = 0
+      root.scheduleSave()
+    }
     onLoaded: root.onHistoryLoaded()
     onLoadFailed: root.onHistoryLoadFailed()
+    onSaveFailed: function(error) {
+      // Disk didn't take the write (full disk, permissions): the data is
+      // still in memory. Retry with capped exponential backoff instead of
+      // hammering every 1.5s forever; after 6 straight failures suspend
+      // retries until fresh data arrives (which resets the streak above).
+      root.saveFailCount++
+      if (root.saveFailCount > 6) {
+        console.warn("agx.screen-time: history save failed ("
+          + FileViewError.toString(error)
+          + "), suspending retries until next change")
+        return
+      }
+      var delay = Math.min(1500 * Math.pow(2, root.saveFailCount - 1), 60000)
+      console.warn("agx.screen-time: history save failed ("
+        + FileViewError.toString(error) + "), retrying in " + delay + "ms")
+      saveRetryTimer.interval = delay
+      saveRetryTimer.restart()
+    }
 
     JsonAdapter {
       id: historyAdapter
@@ -369,7 +378,13 @@ Item {
     id: backupProc
     environment: ({ "HOME": root.home })
     command: ["bash", "-c",
-      "f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
+      "command -v python3 >/dev/null 2>&1 || exit 0; f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
+    onExited: {
+      // Unblock disk writes (see backupPending): queued in-memory state
+      // persists on the next tick.
+      root.backupPending = false
+      root.persist()
+    }
   }
 
   // A terminal's foreground process changes without the compositor noticing
@@ -442,6 +457,9 @@ Item {
         applyState(State.closeActiveBucket(
           root, root.activeApp, root.activeStart, now,
           root.todayKey, root.suspendGapMs, root.lastTick))
+        // Waking across midnight must roll the day forward before the fresh
+        // post-wake bucket opens, or wake-time seconds land on yesterday.
+        root.rolloverIfNeeded()
         root.persist()
         root.switchActive()
       } else {
@@ -470,6 +488,13 @@ Item {
   Timer {
     id: saveTimer
     interval: 1500
+    repeat: false
+    onTriggered: historyFile.writeAdapter()
+  }
+
+  // Drives save retries with the backoff computed in onSaveFailed.
+  Timer {
+    id: saveRetryTimer
     repeat: false
     onTriggered: historyFile.writeAdapter()
   }

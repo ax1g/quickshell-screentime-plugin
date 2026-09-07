@@ -103,7 +103,7 @@ test("closeActiveBucket drops bucket on suspend gap", () => {
   assert.equal(result.activeStart, 0)
 })
 
-test("closeActiveBucket attributes to yesterday when bucket spans midnight", () => {
+test("closeActiveBucket splits a midnight-spanning bucket at midnight", () => {
   // Use local midnight to avoid timezone issues.
   const aug15 = localMidnight(2026, 7, 15)
   const aug16 = localMidnight(2026, 7, 16)
@@ -116,10 +116,9 @@ test("closeActiveBucket attributes to yesterday when bucket spans midnight", () 
     todayKey: "2026-08-16"
   }
   const result = State.closeActiveBucket(state, "editor", startMs, now, "2026-08-16", 30000, 0)
-  // Bucket goes to 2026-08-15, not today
-  assert.equal(result.today.total, 100)
-  assert.ok(result.days["2026-08-15"])
-  assert.equal(result.days["2026-08-15"].apps.editor, 15000)
+  // 10s lands on 2026-08-15, 5s on today — same split as commitElapsed.
+  assert.equal(result.days["2026-08-15"].apps.editor, 10000)
+  assert.equal(result.today.total, 100 + 5000)
 })
 
 test("closeActiveBucket returns new object (immutability)", () => {
@@ -233,6 +232,125 @@ test("rolloverIfNeeded carries previous day data into today", () => {
   assert.equal(result.today.apps.b, 200)
   assert.equal(result.activeApp, "editor")
   assert.equal(result.activeStart, 0) // caller sets to Date.now()
+})
+
+// ---- advanceRollover -------------------------------------------------------
+// One transition owns the whole midnight moment: close the open bucket
+// onto the day it started, carry the live day forward, reopen the bucket.
+// Service.qml used to do this as close -> patch -> reopen across three
+// applyState calls with a pre-close app snapshot; any ordering slip there
+// silently misattributes the straddling seconds.
+
+test("dayMinus returns the unmirrored per-app remainder", () => {
+  const result = State.dayMinus(
+    { total: 70000, apps: { editor: 60000, browser: 10000 } },
+    { total: 60000, apps: { editor: 60000 } })
+  assert.deepEqual(result, { total: 10000, apps: { browser: 10000 } })
+})
+
+test("dayMinus floors at zero and tolerates junk", () => {
+  assert.deepEqual(State.dayMinus(null, null), { total: 0, apps: {} })
+  assert.deepEqual(
+    State.dayMinus({ total: 50, apps: { a: 50 } }, { total: 100, apps: { a: 100 } }),
+    { total: 0, apps: {} })
+})
+
+test("advanceRollover returns null when the day has not changed", () => {
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 100, apps: {} },
+    days: {},
+    activeApp: "editor",
+    activeStart: 1000,
+    lastTick: 5000
+  }
+  assert.equal(State.advanceRollover(state, 2000, "2026-08-15", 30000, 5000), null)
+})
+
+test("advanceRollover closes, carries and reopens in one patch", () => {
+  // Bucket opened 10s before midnight, rollover runs 5s after.
+  const before = localTime(2026, 7, 15, 23, 59, 50)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 1000, apps: { editor: 1000 } },
+    days: {},
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before
+  }
+  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before)
+  assert.ok(result)
+  assert.equal(result.todayKey, "2026-08-16")
+  // Straddling bucket split at midnight: 10s to yesterday, 5s to today.
+  // The pre-existing 1000 live ms were never mirrored, so the old day
+  // keeps 11000 rather than dropping them.
+  assert.equal(result.days["2026-08-15"].total, 11000)
+  assert.equal(result.today.total, 5000)
+  // Bucket reopened for the still-focused app at the transition moment.
+  assert.equal(result.activeApp, "editor")
+  assert.equal(result.activeStart, after)
+})
+
+test("advanceRollover drops the bucket on a suspend gap, still rolls", () => {
+  const before = localTime(2026, 7, 15, 23, 50, 0)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 1000, apps: { editor: 1000 } },
+    days: {},
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before - 3600000 // gap far beyond suspendGapMs
+  }
+  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before - 3600000)
+  assert.ok(result)
+  assert.equal(result.todayKey, "2026-08-16")
+  // The stale bucket is dropped, but the 1000 live ms tracked before the
+  // suspend are flushed into the old day instead of evaporating.
+  assert.equal(result.days["2026-08-15"].total, 1000)
+  assert.equal(result.today.total, 0)
+  assert.equal(result.lastTick, after)
+  assert.equal(result.activeApp, "editor")
+})
+
+test("advanceRollover preserves unmirrored live data in the old day", () => {
+  // Live today holds 60s never mirrored into days (commit ran, persist did
+  // not — e.g. blocked behind the corrupt-file backup). The carry must not
+  // drop it: the old day keeps the full 60s plus the straddling 10s.
+  const before = localTime(2026, 7, 15, 23, 59, 50)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 60000, apps: { editor: 60000 } },
+    days: {},
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before
+  }
+  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before)
+  assert.ok(result)
+  assert.equal(result.days["2026-08-15"].total, 70000)
+  assert.equal(result.days["2026-08-15"].apps.editor, 70000)
+  assert.equal(result.today.total, 5000)
+})
+
+test("advanceRollover with no open bucket just carries the day", () => {
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 1000, apps: { editor: 1000 } },
+    days: {},
+    activeApp: "",
+    activeStart: 0,
+    lastTick: after - 1000
+  }
+  const result = State.advanceRollover(state, after, "2026-08-16", 30000, after - 1000)
+  assert.ok(result)
+  assert.equal(result.todayKey, "2026-08-16")
+  assert.equal(result.today.total, 0)
+  assert.equal(result.activeApp, "")
+  assert.equal(result.activeStart, 0)
 })
 
 test("rolloverIfNeeded starts empty when no previous day data", () => {
@@ -380,11 +498,9 @@ test("close + rollover: bucket on yesterday lands in days, not today", () => {
   // Step 1: close the bucket (it started Aug 15, today is Aug 16)
   const closed = State.closeActiveBucket(
     state, "editor", startMs, now, "2026-08-16", 30000, now - 1000)
-  // Bucket went to Aug 15, today unchanged
-  assert.equal(closed.today.total, 500)
-  assert.ok(closed.days["2026-08-15"])
-  // 23:00 to 00:00:03 = 3603000ms (1h 0m 3s)
-  assert.equal(closed.days["2026-08-15"].apps.editor, 3603000)
+  // Split at midnight: 23:00-00:00 to Aug 15, 3s to today
+  assert.equal(closed.days["2026-08-15"].apps.editor, 3600000)
+  assert.equal(closed.today.total, 500 + 3000)
 
   // Step 2: rollover doesn't apply (already on Aug 16), but the bucket
   // was correctly attributed to Aug 15 by step 1 alone.

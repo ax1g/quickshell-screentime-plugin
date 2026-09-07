@@ -58,6 +58,10 @@ BarWidget {
   readonly property real openPanelIndicatorWidth: {
     if (root.iconOnly && !root.vertical && iconGlyph)
       return Math.max(1, Math.round(iconGlyph.tightWidth))
+    // Vertical mode paints stacked glyphs (button text is empty), so the
+    // mark takes one icon slot like every other vertical widget.
+    if (root.vertical)
+      return Style.bar.iconSlot
     return button.labelWidth
   }
   readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
@@ -120,6 +124,10 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
+    // One shared label at the global bar size: glyph and duration render
+    // uniformly in the bar font, exactly like clock and cpu-ram. Per-glyph
+    // sizing was tried and rejected — it split the widget into two optical
+    // sizes that matched neither the bar text nor each other.
     text: root.vertical
       ? ""
       : root.iconOnly ? root.glyph : root.glyph + " " + root.label
@@ -143,7 +151,7 @@ BarWidget {
       anchors.fill: parent
       text: root.glyph
       fontFamily: button.fontFamily
-      fontSize: button.fontSize
+      fontSize: Style.font.title
       color: button.foreground
     }
 

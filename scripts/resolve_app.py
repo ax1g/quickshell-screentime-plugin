@@ -77,14 +77,17 @@ def proc_stat(pid):
     fields = data[rparen + 1 :].split()
     if len(fields) < 8:
         return None
-    return {
-        "comm": comm,
-        "ppid": int(fields[1]),
-        "pgrp": int(fields[2]),
-        "session": int(fields[3]),
-        "ttynr": int(fields[4]),
-        "tpgid": int(fields[5]),
-    }
+    try:
+        return {
+            "comm": comm,
+            "ppid": int(fields[1]),
+            "pgrp": int(fields[2]),
+            "session": int(fields[3]),
+            "ttynr": int(fields[4]),
+            "tpgid": int(fields[5]),
+        }
+    except ValueError:
+        return None
 
 
 def proc_name(pid):
@@ -100,6 +103,10 @@ def proc_name(pid):
             name = os.path.basename(args[0])
     except OSError:
         pass
+    # Login shells report "-bash": strip the marker so they resolve as
+    # plain "bash" instead of tracking a separate "-bash" app.
+    if name.startswith("-"):
+        name = name[1:]
     return name
 
 
@@ -142,6 +149,7 @@ _STEAM_ROOTS = [
 ]
 
 _STEAM_CLASS_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
+_STEAM_CLASS_PREFIX_RE = re.compile(r"^steam_app_", re.IGNORECASE)
 
 
 def _steam_class_appid(class_name):
@@ -154,6 +162,19 @@ def _steam_class_appid(class_name):
         return None
     m = _STEAM_CLASS_RE.match(class_name)
     return m.group(1) if m else None
+
+
+def _is_steam_class(class_name):
+    """True for any steam_app_* class, numeric AppID or not.
+
+    Non-Steam shortcuts and third-party launch wrappers (e.g. Battle.net
+    added as a non-Steam game) report a slug instead of a numeric AppID,
+    "steam_app_battlenet" rather than "steam_app_1234567". There is no
+    appmanifest for these, so they can't resolve via steam_title_for_class,
+    but Service.qml still routes them here because it matches on the same
+    prefix.
+    """
+    return isinstance(class_name, str) and bool(_STEAM_CLASS_PREFIX_RE.match(class_name))
 
 
 def _acf_name(path):
@@ -258,6 +279,7 @@ def _resolve_terminal_foreground(terminal_pid):
 
 def main():
     window_class = ""
+    window_title = ""
     if len(sys.argv) == 2:
         try:
             terminal_pid = int(sys.argv[1])
@@ -272,10 +294,20 @@ def main():
                 timeout=2,
             ).stdout
             info = json.loads(out)
+            if not isinstance(info, dict):
+                raise AttributeError("hyprctl activewindow is not a JSON object")
             terminal_pid = int(info.get("pid") or 0)
-            window_class = info.get("class") or ""
-        except (ValueError, json.JSONDecodeError, subprocess.SubprocessError):
+            window_class = str(info.get("class") or "")
+            # Titles must be strings to be usable: a non-string title is
+            # malformed data, and coercing it would mint garbage
+            # tracking keys like "123". Stay silent instead.
+            raw_title = info.get("title")
+            window_title = raw_title if isinstance(raw_title, str) else ""
+        except (ValueError, json.JSONDecodeError, subprocess.SubprocessError,
+                OSError, AttributeError):
             terminal_pid = 0
+            window_class = ""
+            window_title = ""
 
     # Steam games: the class carries the AppID, so /proc walking is both
     # unnecessary and wrong (it would report the game binary). Resolve the
@@ -284,6 +316,19 @@ def main():
     # flip-flopping to a binary name.
     if _steam_class_appid(window_class) is not None:
         title = steam_title_for_class(window_class)
+        if title:
+            print(title)
+        sys.exit(0)
+
+    # Non-Steam shortcuts and launch wrappers (e.g. Battle.net added to Steam
+    # as a non-Steam game as is the common in Omarchy) report a fixed slug
+    # instead of a numeric AppID "steam_app_battlenet" for World of Warcraft
+    # Diablo, Overwatch, etc. alike. No manifest can tell them apart, but
+    # the window title can (the launcher itself titles its window "Battle.net";
+    # a running game titles it with the game's own name), so use it instead of
+    # leaving every game bucketed under the wrapper's slug.
+    if _steam_class_appid(window_class) is None and _is_steam_class(window_class):
+        title = window_title.strip()
         if title:
             print(title)
         sys.exit(0)

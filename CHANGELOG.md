@@ -6,6 +6,75 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-07
+
+### Added
+
+- Two Wrapped-style yearly cards: LONGEST BREAK (longest offline gap, single
+  missed days don't count) and BUSIEST WEEK (peak real Mon–Sun week, so a hot
+  Sunday can't crown a rolling window).
+- Record-week trophy: a gold glyph beside the week total while the current
+  week beats every older week on record.
+- Steam wrappers: non-Steam shortcuts like Battle.net report a slug instead
+  of an AppID, so the resolver falls back to the live window title
+  (contributed via PR #8).
+
+### Changed
+
+- Insights follow the theme: the top-app star takes the accent, gains take
+  urgent, drops take a theme-derived green, and the yearly retro cards take
+  one accent shade each instead of fixed rainbow hexes. Insight rows carry
+  typed kind/direction facts, so rendering never parses label text.
+- The year merge is a single module: one merge across raw days, month lumps
+  and the per-day archive, with one retention entry point for prune, rollup
+  and archive bounds. The year header and the retro cards share that merge
+  instead of paying for two.
+- Midnight rollover is one state transition: close, carry and reopen happen
+  in a single patch, and buckets straddling midnight split exactly instead
+  of landing on the wrong day. Unmirrored live seconds flush into the old
+  day rather than evaporating at the transition.
+- The panel derives the week trend and the year view from one Model view
+  each instead of threading a dozen separate expressions.
+- The bar widget renders glyph and duration uniformly in the bar font;
+  icon-only mode keeps the larger title-size glyph.
+- TOP MONTHS lists months as blobs (`Mar ● Feb ● Jan`) with no rank numbers.
+- RECHARGE MONTH skips a brand-new month until it has two weeks of tracked
+  days, so it stops auto-winning by new-month triviality; with no older
+  months it still counts.
+- Empty months in the yearly overview show no background track.
+- Monthly graph gets a top margin below the year header.
+
+### Fixed
+
+- The weekly graph header shows the week's date range
+  (`Aug 31 – Sep 6, 2026 · W36`) instead of Monday's month only, so a week
+  straddling two months no longer reads as the wrong month.
+- The busiest-day insight follows the navigated week instead of always
+  showing the current week's busiest day.
+- Data correctness: past-year day counts show 365/366 instead of 31;
+  `pruneDays` no longer wipes history on a missing argument; string totals
+  add instead of concatenating; history days are shape-validated on load;
+  midnight-spanning buckets split at midnight; suspend-wake across midnight
+  rolls the day forward; disk writes wait for the corrupt-file backup.
+- Resolver no longer crashes on malformed `/proc` stats, a missing
+  `hyprctl`, or non-object `hyprctl` output; login shells resolve as plain
+  `bash`; failed history saves warn and retry instead of silently diverging.
+- Removed the dead `rollupPrunedDays` path: `rollupArchive` is the single
+  rollup implementation.
+- Future dates no longer leak into month and year totals; every year reader
+  filters beyond-todayKey identically.
+- String years no longer bypass the RECHARGE MONTH coverage guard.
+- Non-string window titles no longer crash the resolver; padded titles
+  print stripped.
+- History-save retries back off exponentially and suspend after repeated
+  failures instead of retrying every 1.5s forever.
+- Panel polish: week-range header elides instead of overlapping the total;
+  insight rows no longer overlap; hero caption guarded when not ready;
+  closing resets the year view and total mode; empty years hide the insights
+  header; donut repaints on resize and theme changes; mid gridline sits on
+  whole hours; tooltips wait for a 300ms dwell; low-contrast alphas raised;
+  weekly graph plate removed so the chart sits on the drawer background.
+
 ## [1.4.0] - 2026-09-01
 
 ### Added

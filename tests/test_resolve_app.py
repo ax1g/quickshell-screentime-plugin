@@ -7,11 +7,15 @@ Process-touching tests use the current process (always alive, always in
 /proc), so nothing here needs a running Hyprland session.
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 
@@ -50,6 +54,11 @@ class ProcParsingTests(unittest.TestCase):
 
     def test_proc_stat_tolerates_missing_pid(self):
         self.assertIsNone(r.proc_stat(2**31 - 1))
+
+    def test_proc_stat_rejects_non_numeric_fields(self):
+        bad_stat = b"1 (bash) S notanumber 2 3 4 5 6 7 8 9\n"
+        with mock.patch("builtins.open", mock.mock_open(read_data=bad_stat)):
+            self.assertIsNone(r.proc_stat(1234))
 
     def test_proc_name_resolves_current_process(self):
         name = r.proc_name(os.getpid())
@@ -120,6 +129,14 @@ class TerminalResolutionTests(unittest.TestCase):
         w.add(200, "term", 1, ttynr=5, tpgid=210)
         w.add(210, "btop", 200)
         self.assertEqual(r._resolve_terminal_foreground(200), "btop")
+
+    def test_login_shell_dash_is_stripped(self):
+        # Login shells report comm "-bash"; it must resolve as plain bash
+        # instead of tracking a separate "-bash" app.
+        w = self.world
+        w.add(300, "foot", 1)
+        w.add(310, "-bash", 300, ttynr=34817, tpgid=310)
+        self.assertEqual(r._resolve_terminal_foreground(300), "bash")
 
     def test_no_tty_owning_descendant_returns_none(self):
         w = self.world
@@ -214,6 +231,50 @@ class SteamTitleTests(unittest.TestCase):
         self.assertIsNone(
             r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
 
+    def test_is_steam_class_accepts_numeric_and_slug_forms(self):
+        self.assertTrue(r._is_steam_class("steam_app_730"))
+        # Non-Steam shortcuts (e.g. Battle.net) report a slug, not an AppID.
+        self.assertTrue(r._is_steam_class("steam_app_battlenet"))
+        self.assertTrue(r._is_steam_class("Steam_App_Battlenet"))
+
+    def test_is_steam_class_rejects_non_steam(self):
+        self.assertFalse(r._is_steam_class("foot"))
+        self.assertFalse(r._is_steam_class(None))
+
+    def test_main_resolves_slug_steam_class_from_window_title(self):
+        """A slug class with no manifest falls back to the live window title."""
+        activewindow = json.dumps({
+            "pid": 0,
+            "class": "steam_app_battlenet",
+            "title": "World of Warcraft",
+        })
+        fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
+        out = io.StringIO()
+        with mock.patch.object(r.subprocess, "run", fake_run), \
+                mock.patch.object(r.sys, "argv", ["resolve_app.py"]), \
+                contextlib.redirect_stdout(out), \
+                self.assertRaises(SystemExit) as cm:
+            r.main()
+        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(out.getvalue().strip(), "World of Warcraft")
+
+    def test_main_slug_steam_class_without_title_stays_silent(self):
+        """No title -> no output, so tracking keeps the stable slug key."""
+        activewindow = json.dumps({
+            "pid": 0,
+            "class": "steam_app_battlenet",
+            "title": "   ",
+        })
+        fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
+        out = io.StringIO()
+        with mock.patch.object(r.subprocess, "run", fake_run), \
+                mock.patch.object(r.sys, "argv", ["resolve_app.py"]), \
+                contextlib.redirect_stdout(out), \
+                self.assertRaises(SystemExit) as cm:
+            r.main()
+        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(out.getvalue(), "")
+
     def test_steam_title_searches_roots(self):
         with tempfile.TemporaryDirectory() as tmp:
             self._write_manifest(tmp, "570", "Dota 2")
@@ -224,6 +285,51 @@ class SteamTitleTests(unittest.TestCase):
                 self.assertEqual(r.steam_title_for_class("steam_app_999"), None)
             finally:
                 r._STEAM_ROOTS = original
+
+
+class MainTests(unittest.TestCase):
+    """main() never crashes and stays silent on bad hyprctl output."""
+
+    def _run_main_no_args(self, run_result=None, run_error=None):
+        if run_error is not None:
+            run_mock = mock.Mock(side_effect=run_error)
+        else:
+            run_mock = mock.Mock(return_value=mock.Mock(stdout=run_result))
+        with mock.patch.object(r.subprocess, "run", run_mock):
+            with mock.patch.object(r.sys, "argv", ["resolve_app.py"]):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    with self.assertRaises(SystemExit) as cm:
+                        r.main()
+                return cm.exception.code, buf.getvalue()
+
+    def test_main_missing_hyprctl_exits_quietly(self):
+        code, out = self._run_main_no_args(run_error=FileNotFoundError("hyprctl"))
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_list_json_exits_quietly(self):
+        code, out = self._run_main_no_args(run_result="[1, 2]")
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_garbage_json_exits_quietly(self):
+        code, out = self._run_main_no_args(run_result="not json")
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_non_string_title_exits_quietly(self):
+        code, out = self._run_main_no_args(run_result=json.dumps({
+            "pid": 0, "class": "steam_app_battlenet", "title": 123}))
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_slug_title_prints_stripped(self):
+        code, out = self._run_main_no_args(run_result=json.dumps({
+            "pid": 0, "class": "steam_app_battlenet", "title": "  World of Warcraft  "}))
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "World of Warcraft")
+        self.assertEqual(out, "World of Warcraft\n")
 
 
 if __name__ == "__main__":

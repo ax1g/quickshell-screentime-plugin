@@ -40,21 +40,23 @@ Panel {
   // garbage labels ("NaN-NaN-NaN") instead of an empty chart.
   readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
   readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
-  readonly property var insightRows: serviceReady ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey) : []
-  readonly property var scrollableWeeks: serviceReady ? Model.monSunWeeks(root.days, root.todayKey, 13) : []
+  // One derivation for the paginated week trend: the week list plus every
+  // fact the panel used to thread separately (visible week, its max and
+  // total, the record flag, older-week data, the Sunday key anchoring
+  // "Busiest day (7d)" to the week on screen).
+  readonly property var weekView: serviceReady
+    // Clamped like the pager buttons (0–12): a stray offset must show an
+    // empty week, never diverge from the navigation.
+    ? Model.weekView(root.days, root.todayKey, 13, Math.max(0, Math.min(root.weekOffset, 12))) : null
+  // Sunday of the visible week: anchors "Busiest day (7d)" to the week the
+  // user is looking at instead of always the current week.
+  readonly property string insightWeekEndKey: root.weekView ? root.weekView.weekEndKey : ""
+  readonly property var insightRows: serviceReady
+    ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey, root.insightWeekEndKey) : []
+  readonly property var scrollableWeeks: root.weekView ? root.weekView.weeks : []
   readonly property double scrollableMax: Model.scrollableTrendMax(root.scrollableWeeks)
-  readonly property var visibleWeek: root.scrollableWeeks.length > root.weekOffset
-    ? root.scrollableWeeks[root.weekOffset] : null
-  readonly property double visibleWeekMax: {
-    if (!root.visibleWeek) return 0
-    var max = 0
-    var days = root.visibleWeek.days
-    for (var i = 0; i < days.length; i++) {
-      var ms = Number(days[i].ms) || 0
-      if (ms > max) max = ms
-    }
-    return max
-  }
+  readonly property var visibleWeek: root.weekView ? root.weekView.week : null
+  readonly property double visibleWeekMax: root.weekView ? root.weekView.max : 0
   // Y-axis for the week bar graph: baseline, midpoint and peak gridlines,
   // derived from the same maximum the bars scale against so a bar's top
   // always lands on the gridline its duration describes.
@@ -62,20 +64,19 @@ Panel {
   readonly property double axisMaxMs: root.axisTicks.length
     ? root.axisTicks[root.axisTicks.length - 1] : 0
   // Sum of the visible week's days, shown under the paginated bar graph.
-  readonly property double visibleWeekTotalMs: root.visibleWeek
-    ? Model.weekTotal(root.visibleWeek.days) : 0
+  readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
+  // True while the current week beats every older week in the window:
+  // drives the gold record-week trophy beside the week total.
+  readonly property bool recordWeek: root.weekOffset === 0 && serviceReady
+    ? (root.weekView ? root.weekView.isRecord : false) : false
   property bool expanded: false
+  // Expanding swaps the legend model: restart at the top instead of
+  // opening scrolled mid-list.
+  onExpandedChanged: legendScroll.contentY = 0
   property bool calendarOpen: false
   property int weekOffset: 0
   // Whether any week before the currently visible one has data.
-  readonly property bool hasPrevWeekData: {
-    for (var i = root.weekOffset + 1; i < root.scrollableWeeks.length; i++) {
-      var w = root.scrollableWeeks[i]
-      if (!w || !w.days) continue
-      for (var j = 0; j < w.days.length; j++) if (Number(w.days[j].ms) > 0) return true
-    }
-    return false
-  }
+  readonly property bool hasPrevWeekData: root.weekView ? root.weekView.hasPrev : false
   // Header total toggles between absolute time and share of the full week.
   property bool weekTotalAsPct: false
 
@@ -85,18 +86,33 @@ Panel {
   property int currentYearOffset: 0
   readonly property int currentYear: root.todayYear - root.currentYearOffset
   readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
-  readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear, root.years) / 3600000) + "h" : "0h"
-  readonly property var yearFacts: serviceReady ? Model.yearFacts(root.days, root.months, root.years, root.currentYear, root.todayKey) : []
+  // One derivation for the year view: the header total and the retro cards
+  // share a single merge instead of paying for two.
+  readonly property var yearView: serviceReady ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
+  readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
+  readonly property var yearFacts: root.yearView ? root.yearView.facts : []
   readonly property var monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   readonly property var monthNamesLong: ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
   // Shared panel-styled tooltip: matches the drawer's background, foreground
   // and font so popups read as part of the shell rather than platform chrome.
+  // Tooltip with a dwell delay: sweeping across adjacent bars restarts the
+  // timer on every enter, so the tip only appears after hovering one target
+  // for 300ms instead of flashing along the sweep.
   component PanelToolTip: ToolTip {
     id: panelTip
     property string tipText: ""
-    delay: 300
+    property bool hovered: false
     padding: 0
+    visible: false
+    Timer {
+      id: showTimer
+      interval: 300
+      repeat: false
+      running: panelTip.hovered
+      onTriggered: panelTip.visible = true
+    }
+    onHoveredChanged: if (!hovered) panelTip.visible = false
     background: Rectangle {
       color: bar ? bar.background : Color.background
       border.color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.25)
@@ -231,48 +247,47 @@ Panel {
 
   // Per-row glyph for the patterns section: a filled star for the top app,
   // a trend arrow for vs-yesterday, a hollow star for the busiest day.
-  function insightIcon(label, value) {
-    if (label.indexOf("Top app") === 0) return "\u2605"
-    if (label.indexOf("vs") === 0) return root.deltaArrow(value)
-    if (label.indexOf("Busiest") === 0) return "\u2606"
+  // Insight rendering reads row meaning (kind/dir from Model.insights),
+  // never label text: renaming a label can't silently recolor anything.
+  function insightIcon(kind, dir) {
+    if (kind === "top") return "\u2605"
+    if (kind === "delta") return root.deltaArrow(dir)
+    if (kind === "busiest") return "\u2606"
     return ""
   }
 
-  // Glyph colour per insight, drawn from the yearly palette so the three rows
-  // read as accents of the same family.
-  function insightIconColor(label, value) {
-    if (label.indexOf("Top app") === 0) return "#ffe66d"
-    if (label.indexOf("vs") === 0) {
-      if (String(value).charAt(0) === "+") return "#ff6b6b"
-      if (String(value).charAt(0) === "-") return "#34d399"
+  // Glyph colours follow the theme via Model.insightColors: star = accent,
+  // delta direction = urgent / theme-derived green, busiest = accent sibling.
+  // Re-evaluates on theme swaps through the Color bindings.
+  readonly property var insightPalette: Model.insightColors(Color.accent, Color.urgent)
+  function insightIconColor(kind, dir) {
+    if (kind === "top") return root.insightPalette.star
+    if (kind === "delta") {
+      if (dir === "up") return root.insightPalette.up
+      if (dir === "down") return root.insightPalette.down
       return Qt.darker(root.contentForeground, 1.5)
     }
-    if (label.indexOf("Busiest") === 0) return "#a78bfa"
+    if (kind === "busiest") return root.insightPalette.busiest
     return root.contentForeground
   }
 
   // Right-hand value colour: only the signed delta carries a colour (its
   // direction), everything else stays neutral — logic over rainbow.
-  function insightValueColor(label, value) {
-    if (label.indexOf("vs") === 0
-        && (String(value).charAt(0) === "+" || String(value).charAt(0) === "-"))
-      return root.insightIconColor(label, value)
+  function insightValueColor(kind, dir) {
+    if (kind === "delta" && (dir === "up" || dir === "down"))
+      return root.insightIconColor(kind, dir)
     return root.contentForeground
   }
 
-  function deltaArrow(value) {
-    var sign = String(value).charAt(0)
-    if (sign === "+") return "\u2197"
-    if (sign === "-") return "\u2198"
+  function deltaArrow(dir) {
+    if (dir === "up") return "\u2197"
+    if (dir === "down") return "\u2198"
     return "\u2192"
   }
 
   // Guarded so the widget renders before the bar is injected.
   readonly property color contentForeground: bar ? bar.foreground : Color.foreground
   readonly property string contentFontFamily: bar ? bar.fontFamily : Style.font.family
-  // Panel surface colour, matching the drawer: used so the translucent bar
-  // fills sit on an opaque plate and the gridlines don't show through them.
-  readonly property color surfaceColor: bar ? bar.background : Color.background
 
   function open() {
     root.controller.show()
@@ -620,11 +635,11 @@ Panel {
               id: heatGrid
               width: parent.width
               spacing: Style.space(6)
-              topPadding: Style.space(2)
+              topPadding: Style.space(10)
               bottomPadding: Style.space(2)
 
               readonly property var months: root.serviceReady
-                ? Model.monthlyTotals(root.days, root.months, root.currentYear, root.years) : []
+                ? Model.monthlyTotals(root.days, root.months, root.currentYear, root.years, root.todayKey) : []
               readonly property real maxMs: {
                 var max = 0
                 for (var i = 0; i < months.length; i++) {
@@ -676,13 +691,15 @@ Panel {
                     anchors.verticalCenter: parent.verticalCenter
                   }
 
-                  // Faint full-width track so empty months still read as rows.
+                  // Faint full-width track behind months with data; empty
+                  // months show no background, just the label and 0h.
                   Rectangle {
+                    visible: monthRow.ratio > 0
                     x: heatGrid.labelW + heatGrid.labelGap
                     width: monthRow.availW
                     height: parent.height
                     radius: Style.space(2)
-color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.02)
+color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.07)
                   }
 
                   Rectangle {
@@ -703,7 +720,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                     }
 
                     PanelToolTip {
-                      visible: monthBarMouse.containsMouse
+                      hovered: monthBarMouse.containsMouse
                       tipText: {
                         var m = heatGrid.months[monthRow.index]
                         return root.monthNamesLong[monthRow.index] + " \u00b7 " + (m ? Model.fmt(m.ms) : "0h")
@@ -733,6 +750,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
               Item {
                 width: parent.width
                 height: Style.space(10) + 1 + Style.space(4)
+                visible: root.yearFacts.length > 0
                 PanelSeparator {
                   anchors.top: parent.top
                   anchors.topMargin: Style.space(10)
@@ -742,6 +760,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
 
               Text {
                 text: "Insights " + root.currentYear
+                visible: root.yearFacts.length > 0
                 color: root.contentForeground
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.title
@@ -1034,7 +1053,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
               }
 
               Text {
-                text: root.activeDayLabel + ", " + String(root.activeDayKey).split("-")[0]
+                text: root.activeDayKey ? root.activeDayLabel + ", " + String(root.activeDayKey).split("-")[0] : ""
                 color: Qt.darker(root.contentForeground, 1.4)
                 font.family: root.contentFontFamily
                 font.pixelSize: Style.font.caption
@@ -1065,12 +1084,14 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
               Canvas {
                 id: donutCanvas
                 anchors.fill: parent
+                onWidthChanged: donutCanvas.requestPaint()
 
                 Connections {
                   target: root
                   function onSegmentsChanged() { donutCanvas.requestPaint() }
                   function onSliceColorsChanged() { donutCanvas.requestPaint() }
                   function onHoverSliceChanged() { donutCanvas.requestPaint() }
+                  function onContentForegroundChanged() { donutCanvas.requestPaint() }
                 }
 
                 onPaint: {
@@ -1115,7 +1136,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
-                cursorShape: root.hoverSlice >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                cursorShape: Qt.ArrowCursor
                 onPositionChanged: function(mouse) {
                   var i = root.sliceAt(mouse.x, mouse.y)
                   if (i >= 0) {
@@ -1334,19 +1355,17 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                       }
 
                       Text {
-                        text: {
-                          if (!root.visibleWeek) return ""
-                          var d = root.visibleWeek.days[0]
-                          if (!d) return ""
-                          var parts = d.key.split("-")
-                          var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-                          var mi = Number(parts[1]) - 1
-                          return (monthNames[mi] || "") + " " + parts[0] + " \u00b7 W" + Model.isoWeekNumber(d.key)
-                        }
+                        text: root.visibleWeek ? Model.weekRangeLabel(root.visibleWeek) : ""
                         color: root.contentForeground
                         font.family: root.contentFontFamily
                         font.pixelSize: Style.font.caption
                         font.bold: true
+                        elide: Text.ElideRight
+                        // Cap at the header width minus arrows and the week
+                        // total so cross-year labels elide instead of
+                        // overlapping it.
+                        width: Math.max(40, Math.min(implicitWidth,
+                          weekNavColumn.width - weekTotalLabel.implicitWidth - Style.space(76)))
                         anchors.verticalCenter: parent.verticalCenter
                       }
 
@@ -1368,6 +1387,32 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                           cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                           onClicked: root.weekOffset = Math.max(0, root.weekOffset - 1)
                         }
+                      }
+                    }
+
+                    // Record-week trophy: gold glyph beside the total while
+                    // the current week beats every older week on record.
+                    Text {
+                      visible: root.recordWeek
+                      text: "\uF091"
+                      color: "#FFD700"
+                      font.family: root.contentFontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      anchors.right: weekTotalLabel.left
+                      anchors.rightMargin: Style.space(4)
+                      anchors.verticalCenter: parent.verticalCenter
+
+                      MouseArea {
+                        id: recordTrophyMouse
+                        anchors.fill: parent
+                        anchors.margins: -Style.space(4)
+                        hoverEnabled: true
+                        cursorShape: Qt.ArrowCursor
+                      }
+
+                      PanelToolTip {
+                        hovered: recordTrophyMouse.containsMouse
+                        tipText: "Busiest week on record — new high!"
                       }
                     }
 
@@ -1395,7 +1440,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                       }
 
                       PanelToolTip {
-                        visible: weekTotalMouse.containsMouse
+                        hovered: weekTotalMouse.containsMouse
                         tipText: root.weekTotalAsPct
                           ? "% of the week's 168 hours"
                           : "logged of 168 possible hours"
@@ -1403,23 +1448,17 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                     }
                   }
 
-                  // 7 day bars for the visible week, drawn on an opaque
-                  // plate with a y-axis scale reference (gridlines plus
-                  // whole-hour tick labels) that the bars scale against.
+                  // 7 day bars for the visible week with a y-axis scale
+                  // reference (gridlines plus whole-hour tick labels) that
+                  // the bars scale against. No plate: the chart sits on the
+                  // drawer background like every other widget.
                   Item {
                     width: parent.width
                     // 80px chart plus a 12px top pad (headroom for the top
-                    // gridline's label) and an 8px bottom pad inside the plate
-                    // so the bars clear the plate edge instead of hugging it.
+                    // gridline's label) and an 8px bottom pad so the bars
+                    // clear the edge instead of hugging it.
                     height: Style.space(80) + Style.space(20)
                     clip: true
-
-                    // Opaque plate behind the translucent bar fills so the
-                    // gridlines don't bleed through them.
-                    Rectangle {
-                      anchors.fill: parent
-                      color: root.surfaceColor
-                    }
 
                     // Chart content, nudged down to leave headroom for the
                     // top gridline's whole-hour label.
@@ -1501,7 +1540,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                             width: parent.width * 0.5
                             radius: Style.space(2)
                             color: (parent.isFuture || parent.isEmpty)
-                              ? Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.06)
+                              ? Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.10)
                               : (parent.isActive
                                   ? Color.accent
                                   : (barMouse.containsMouse
@@ -1526,7 +1565,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                           Text {
                             text: modelData.label
                             color: root.contentForeground
-                            opacity: (parent.isActive || (!parent.isFuture && modelData.ms > 0)) ? 1.0 : 0.3
+                            opacity: (parent.isActive || (!parent.isFuture && modelData.ms > 0)) ? 1.0 : 0.45
                             font.family: root.contentFontFamily
                             font.pixelSize: Style.font.caption
                             font.bold: parent.isActive
@@ -1556,6 +1595,8 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
 
                   readonly property string label: String(modelData.label || "")
                   readonly property string value: String(modelData.value || "")
+                  readonly property string kind: String(modelData.kind || "")
+                  readonly property string dir: String(modelData.dir || "")
 
                   width: parent.width
                   height: implicitHeight
@@ -1563,8 +1604,8 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
 
                   Text {
                     id: iconText
-                    text: root.insightIcon(label, value)
-                    color: root.insightIconColor(label, value)
+                    text: root.insightIcon(kind, dir || null)
+                    color: root.insightIconColor(kind, dir || null)
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall + 3
                     width: Style.space(16)
@@ -1582,13 +1623,16 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                     font.pixelSize: Style.font.bodySmall
                     anchors.left: iconText.right
                     anchors.leftMargin: Style.space(5)
+                    anchors.right: valueText.left
+                    anchors.rightMargin: Style.space(8)
                     anchors.verticalCenter: parent.verticalCenter
+                    elide: Text.ElideRight
                   }
 
                   Text {
                     id: valueText
                     text: value
-                    color: root.insightValueColor(label, value)
+                    color: root.insightValueColor(kind, dir || null)
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall
                     anchors.right: parent.right
@@ -1614,6 +1658,8 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
         root.selectedKey = ""
         root.openCalendar(false)
         root.weekOffset = 0
+        root.currentYearOffset = 0
+        root.weekTotalAsPct = false
         root.clearHover()
       }
     }
