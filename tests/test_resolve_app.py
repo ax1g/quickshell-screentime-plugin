@@ -318,6 +318,19 @@ class MainTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(out, "")
 
+    def test_main_non_string_title_exits_quietly(self):
+        code, out = self._run_main_no_args(run_result=json.dumps({
+            "pid": 0, "class": "steam_app_battlenet", "title": 123}))
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+
+    def test_main_slug_title_prints_stripped(self):
+        code, out = self._run_main_no_args(run_result=json.dumps({
+            "pid": 0, "class": "steam_app_battlenet", "title": "  World of Warcraft  "}))
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "World of Warcraft")
+        self.assertEqual(out, "World of Warcraft\n")
+
 
 if __name__ == "__main__":
     unittest.main()
