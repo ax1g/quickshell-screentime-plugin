@@ -205,27 +205,14 @@ Item {
 
   function rolloverIfNeeded() {
     var key = Model.dayKey(new Date())
-    var patch = State.rolloverIfNeeded(root, key)
-    if (!patch) return
     var now = Date.now()
-    var app = root.activeApp
-
-    // Close the open bucket first so its elapsed time lands on the day it
-    // started (the bucket may still be on yesterday). rolloverIfNeeded's
-    // patch then carries the live today into the new calendar day. We close
-    // and reopen rather than leaving the bucket straddling midnight because
-    // commitElapsed already handles mid-commit splits conservatively; this
-    // path is the authoritative midnight transition where attribution must
-    // be exact.
-    applyState(State.closeActiveBucket(
-      root, root.activeApp, root.activeStart, now,
-      root.todayKey, root.suspendGapMs, root.lastTick))
+    // One transition owns the whole midnight moment (close + carry +
+    // reopen, with straddling buckets split exactly); a single applyState
+    // means no ordering slip can misattribute the crossing seconds.
+    var patch = State.advanceRollover(
+      root, now, key, root.suspendGapMs, root.lastTick)
+    if (!patch) return
     applyState(patch)
-
-    // Reopen a fresh bucket for the still-focused app so tracking continues
-    // past midnight without waiting for a focus change.
-    root.activeApp = app
-    root.activeStart = app ? Date.now() : 0
     root.persist()
   }
 
