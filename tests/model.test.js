@@ -1311,3 +1311,74 @@ test("yearFacts derives card colors from the theme accent", () => {
     pink.map(c => c.color),
     Model.sliceColors(pink.length, "#e45b93"))
 })
+
+// ---- weekView / yearView ---------------------------------------------------
+// One derivation per view: Panel threads selection into seven separate
+// week expressions (and two year merges); the views fuse each family so
+// callers reason about the week and the year, not the primitives.
+
+const HOUR_MS_VIEW = 3600000
+
+test("weekView selects the visible week and derives its facts", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-18": { total: 2 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-10": { total: 4 * HOUR_MS_VIEW, apps: {} }
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 0)
+  assert.equal(view.weeks.length, 2)
+  assert.equal(view.week.days.length, 7)
+  assert.equal(view.max, 2 * HOUR_MS_VIEW)
+  assert.equal(view.totalMs, 3 * HOUR_MS_VIEW)
+  assert.equal(view.isRecord, false) // older week (Aug 10) is bigger
+  assert.equal(view.hasPrev, true)
+  assert.equal(view.weekEndKey, "2026-08-23")
+})
+
+test("weekView paginates to older weeks", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-10": { total: 4 * HOUR_MS_VIEW, apps: {} }
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 1)
+  assert.equal(view.week.days[0].key, "2026-08-10")
+  assert.equal(view.totalMs, 4 * HOUR_MS_VIEW)
+})
+
+test("weekView agrees with the individual primitives", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-18": { total: 2 * HOUR_MS_VIEW, apps: {} }
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 0)
+  const weeks = Model.monSunWeeks(days, "2026-08-19", 2)
+  assert.deepEqual(view.weeks, weeks)
+  assert.equal(view.max, Model.scrollableTrendMax(weeks))
+  assert.equal(view.totalMs, Model.weekTotal(view.week.days))
+  assert.equal(view.isRecord, Model.isRecordWeek(weeks, 0))
+})
+
+test("weekView tolerates an out-of-range offset", () => {
+  const view = Model.weekView({}, "2026-08-19", 2, 9)
+  assert.equal(view.week, null)
+  assert.equal(view.max, 0)
+  assert.equal(view.totalMs, 0)
+  assert.equal(view.isRecord, false)
+  assert.equal(view.hasPrev, false)
+  assert.equal(view.weekEndKey, "")
+})
+
+test("yearView shares one merge for total and facts", () => {
+  const months = { "2026-03": 10 * HOUR_MS_VIEW, "2026-01": 2 * HOUR_MS_VIEW }
+  const view = Model.yearView({}, months, {}, 2026, "2026-12-24", "#e45b93")
+  assert.equal(view.totalLabel, Math.round(Model.yearTotal({}, months, 2026, {}) / 3600000) + "h")
+  assert.deepEqual(view.facts, Model.yearFacts({}, months, {}, 2026, "2026-12-24", "#e45b93"))
+  assert.ok(view.facts.length > 0)
+  assert.equal(view.facts[0].color, "#e45b93")
+})
+
+test("yearView is empty for a year with no data", () => {
+  const view = Model.yearView({}, {}, {}, 2026, "2026-12-24", "#e45b93")
+  assert.equal(view.totalLabel, "0h")
+  assert.deepEqual(view.facts, [])
+})
