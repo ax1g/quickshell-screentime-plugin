@@ -10,9 +10,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Midnight rollover is one state transition: close, carry and reopen happen
   in a single patch, and buckets straddling midnight split exactly instead
-  of landing on the wrong day.
+  of landing on the wrong day. Unmirrored live seconds flush into the old
+  day rather than evaporating at the transition.
 - The panel derives the week trend and the year view from one Model view
-  each instead of threading a dozen separate expressions.
+  each instead of threading a dozen separate expressions; the year header
+  and the retro cards share a single merge.
+
+### Fixed
+
+- Future dates no longer leak into month and year totals; every year reader
+  now filters beyond-todayKey identically.
+- String years no longer bypass the RECHARGE MONTH coverage guard.
+- Non-string window titles no longer crash the resolver; padded titles
+  print stripped.
+- History-save retries back off exponentially and suspend after repeated
+  failures instead of retrying every 1.5s forever.
 
 ## [1.5.0] - 2026-09-06
 
