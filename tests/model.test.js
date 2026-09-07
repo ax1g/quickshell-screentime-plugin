@@ -1394,6 +1394,17 @@ test("weekView tolerates an out-of-range offset", () => {
   assert.equal(view.weekEndKey, "")
 })
 
+test("yearFactsFromSummary agrees with yearFacts on one merge", () => {
+  const days = {
+    "2026-03-10": { total: 5 * 3600000, apps: {} },
+    "2026-08-19": { total: 3600000, apps: {} }
+  }
+  const summary = Model.yearSummary(days, {}, {}, 2026, "2026-08-19")
+  assert.deepEqual(
+    Model.yearFactsFromSummary(summary, 2026, "2026-08-19", "#e45b93"),
+    Model.yearFacts(days, {}, {}, 2026, "2026-08-19", "#e45b93"))
+})
+
 test("yearView shares one merge for total and facts", () => {
   const months = { "2026-03": 10 * HOUR_MS_VIEW, "2026-01": 2 * HOUR_MS_VIEW }
   const view = Model.yearView({}, months, {}, 2026, "2026-12-24", "#e45b93")
