@@ -1300,6 +1300,16 @@ test("insights busiest day defaults to the trailing week", () => {
   assert.ok(rows[2].value.includes("Thu"))
 })
 
+test("monthlyTotals with todayKey excludes future dates like yearFacts", () => {
+  const days = {
+    "2026-08-19": { total: 3600000, apps: {} },
+    "2026-12-25": { total: 3600000, apps: {} } // future relative to todayKey
+  }
+  const filtered = Model.monthlyTotals(days, {}, 2026, {}, "2026-08-19")
+  assert.equal(filtered[7].ms, 3600000) // Aug keeps its day
+  assert.equal(filtered[11].ms, 0) // Dec future day excluded
+})
+
 test("yearFacts accepts a string year without bypassing the recharge guard", () => {
   // Current month (Aug) is the quietest but has only 3 tracked days, so the
   // coverage guard excludes it and RECHARGE MONTH falls to Mar. A string
