@@ -241,6 +241,20 @@ test("rolloverIfNeeded carries previous day data into today", () => {
 // applyState calls with a pre-close app snapshot; any ordering slip there
 // silently misattributes the straddling seconds.
 
+test("dayMinus returns the unmirrored per-app remainder", () => {
+  const result = State.dayMinus(
+    { total: 70000, apps: { editor: 60000, browser: 10000 } },
+    { total: 60000, apps: { editor: 60000 } })
+  assert.deepEqual(result, { total: 10000, apps: { browser: 10000 } })
+})
+
+test("dayMinus floors at zero and tolerates junk", () => {
+  assert.deepEqual(State.dayMinus(null, null), { total: 0, apps: {} })
+  assert.deepEqual(
+    State.dayMinus({ total: 50, apps: { a: 50 } }, { total: 100, apps: { a: 100 } }),
+    { total: 0, apps: {} })
+})
+
 test("advanceRollover returns null when the day has not changed", () => {
   const state = {
     todayKey: "2026-08-15",
