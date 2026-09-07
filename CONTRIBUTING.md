@@ -77,7 +77,6 @@ docs/assets/        README images
   source files (tests may use `const`/`let`).
 - **Python**: PEP 8, no external dependencies.
 - **QML**: follow existing patterns in the file you're editing.
-- **No comments unless asked** — the code should be self-documenting.
 
 ## Commit messages
 
