@@ -1300,6 +1300,16 @@ test("insights busiest day defaults to the trailing week", () => {
   assert.ok(rows[2].value.includes("Thu"))
 })
 
+test("mergeYear keeps legacy lumps and archive days side by side", () => {
+  // months holds pre-archive lumps only; nothing writes it anymore, and a
+  // day is deleted into exactly one store, so a lump and archive days in
+  // the same month describe different days — both count, never deduped.
+  const months = { "2026-06": 3600000 }
+  const years = { 2026: { "2026-06-20": 3600000 } }
+  const totals = Model.monthlyTotals({}, months, 2026, years, "2026-08-19")
+  assert.equal(totals[5].ms, 7200000)
+})
+
 test("monthlyTotals with todayKey excludes future dates like yearFacts", () => {
   const days = {
     "2026-08-19": { total: 3600000, apps: {} },
