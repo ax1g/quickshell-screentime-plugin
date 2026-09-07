@@ -255,10 +255,12 @@ Panel {
 
   // Per-row glyph for the patterns section: a filled star for the top app,
   // a trend arrow for vs-yesterday, a hollow star for the busiest day.
-  function insightIcon(label, value) {
-    if (label.indexOf("Top app") === 0) return "\u2605"
-    if (label.indexOf("vs") === 0) return root.deltaArrow(value)
-    if (label.indexOf("Busiest") === 0) return "\u2606"
+  // Insight rendering reads row meaning (kind/dir from Model.insights),
+  // never label text: renaming a label can't silently recolor anything.
+  function insightIcon(kind, dir) {
+    if (kind === "top") return "\u2605"
+    if (kind === "delta") return root.deltaArrow(dir)
+    if (kind === "busiest") return "\u2606"
     return ""
   }
 
@@ -266,30 +268,28 @@ Panel {
   // delta direction = urgent / theme-derived green, busiest = accent sibling.
   // Re-evaluates on theme swaps through the Color bindings.
   readonly property var insightPalette: Model.insightColors(Color.accent, Color.urgent)
-  function insightIconColor(label, value) {
-    if (label.indexOf("Top app") === 0) return root.insightPalette.star
-    if (label.indexOf("vs") === 0) {
-      if (String(value).charAt(0) === "+") return root.insightPalette.up
-      if (String(value).charAt(0) === "-") return root.insightPalette.down
+  function insightIconColor(kind, dir) {
+    if (kind === "top") return root.insightPalette.star
+    if (kind === "delta") {
+      if (dir === "up") return root.insightPalette.up
+      if (dir === "down") return root.insightPalette.down
       return Qt.darker(root.contentForeground, 1.5)
     }
-    if (label.indexOf("Busiest") === 0) return root.insightPalette.busiest
+    if (kind === "busiest") return root.insightPalette.busiest
     return root.contentForeground
   }
 
   // Right-hand value colour: only the signed delta carries a colour (its
   // direction), everything else stays neutral — logic over rainbow.
-  function insightValueColor(label, value) {
-    if (label.indexOf("vs") === 0
-        && (String(value).charAt(0) === "+" || String(value).charAt(0) === "-"))
-      return root.insightIconColor(label, value)
+  function insightValueColor(kind, dir) {
+    if (kind === "delta" && (dir === "up" || dir === "down"))
+      return root.insightIconColor(kind, dir)
     return root.contentForeground
   }
 
-  function deltaArrow(value) {
-    var sign = String(value).charAt(0)
-    if (sign === "+") return "\u2197"
-    if (sign === "-") return "\u2198"
+  function deltaArrow(dir) {
+    if (dir === "up") return "\u2197"
+    if (dir === "down") return "\u2198"
     return "\u2192"
   }
 
@@ -1603,6 +1603,8 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
 
                   readonly property string label: String(modelData.label || "")
                   readonly property string value: String(modelData.value || "")
+                  readonly property string kind: String(modelData.kind || "")
+                  readonly property string dir: String(modelData.dir || "")
 
                   width: parent.width
                   height: implicitHeight
@@ -1610,8 +1612,8 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
 
                   Text {
                     id: iconText
-                    text: root.insightIcon(label, value)
-                    color: root.insightIconColor(label, value)
+                    text: root.insightIcon(kind, dir || null)
+                    color: root.insightIconColor(kind, dir || null)
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall + 3
                     width: Style.space(16)
@@ -1638,7 +1640,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
                   Text {
                     id: valueText
                     text: value
-                    color: root.insightValueColor(label, value)
+                    color: root.insightValueColor(kind, dir || null)
                     font.family: root.contentFontFamily
                     font.pixelSize: Style.font.bodySmall
                     anchors.right: parent.right

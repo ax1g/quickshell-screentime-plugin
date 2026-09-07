@@ -129,6 +129,14 @@ class TerminalResolutionTests(unittest.TestCase):
         w.add(210, "btop", 200)
         self.assertEqual(r._resolve_terminal_foreground(200), "btop")
 
+    def test_login_shell_dash_is_stripped(self):
+        # Login shells report comm "-bash"; it must resolve as plain bash
+        # instead of tracking a separate "-bash" app.
+        w = self.world
+        w.add(300, "foot", 1)
+        w.add(310, "-bash", 300, ttynr=34817, tpgid=310)
+        self.assertEqual(r._resolve_terminal_foreground(300), "bash")
+
     def test_no_tty_owning_descendant_returns_none(self):
         w = self.world
         w.add(300, "term", 1)

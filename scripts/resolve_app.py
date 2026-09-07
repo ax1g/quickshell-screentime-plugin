@@ -103,6 +103,10 @@ def proc_name(pid):
             name = os.path.basename(args[0])
     except OSError:
         pass
+    # Login shells report "-bash": strip the marker so they resolve as
+    # plain "bash" instead of tracking a separate "-bash" app.
+    if name.startswith("-"):
+        name = name[1:]
     return name
 
 

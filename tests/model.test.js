@@ -1085,6 +1085,39 @@ test("isRecordWeek needs a strict win over previous weeks", () => {
   assert.equal(Model.isRecordWeek([], 0), false)
 })
 
+test("yearSummary merges the three stores with no double counting", () => {
+  const days = { "2026-08-15": { total: HOUR_MS, apps: {} } }
+  const months = { "2026-07": 2 * HOUR_MS }
+  const years = { 2026: { "2026-01-02": 3 * HOUR_MS } }
+  const s = Model.yearSummary(days, months, years, 2026, "2026-12-24")
+  assert.equal(s.total, 6 * HOUR_MS)
+  assert.equal(s.months.reduce((a, m) => a + m.ms, 0), s.total)
+  assert.deepEqual(s.dayTotals, [
+    { date: "2026-01-02", ms: 3 * HOUR_MS },
+    { date: "2026-08-15", ms: HOUR_MS }
+  ])
+})
+
+test("applyRetention prunes days into the archive in one step", () => {
+  const days = {
+    "2026-01-01": { total: HOUR_MS, apps: {} },
+    "2026-08-15": { total: 2 * HOUR_MS, apps: {} }
+  }
+  const r = Model.applyRetention(days, {}, "2026-08-15", 95, 2026)
+  assert.equal(r.pruned, true)
+  assert.deepEqual(Object.keys(r.days), ["2026-08-15"])
+  assert.deepEqual(r.years, { 2026: { "2026-01-01": HOUR_MS } })
+})
+
+test("applyRetention returns inputs untouched when nothing is pruned", () => {
+  const days = { "2026-08-15": { total: HOUR_MS, apps: {} } }
+  const years = { 2026: { "2026-01-02": HOUR_MS } }
+  const r = Model.applyRetention(days, years, "2026-08-15", 95, 2026)
+  assert.equal(r.pruned, false)
+  assert.equal(r.days, days)
+  assert.equal(r.years, years)
+})
+
 test("yearFacts degrades to month-scale cards when no day archive exists", () => {
   const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
   const cards = Model.yearFacts({}, months, {}, 2026, "2026-12-24")
@@ -1107,42 +1140,6 @@ test("yearFacts stays month and year scale, never names apps", () => {
   const cards = Model.yearFacts(days, {}, {}, 2026, "2026-08-31")
   const text = cards.map(c => (c.label + c.value + c.sub).toLowerCase()).join(" ")
   assert.ok(!/zen|code|opencode|firefox|editor/i.test(text))
-})
-
-// ---- rollupPrunedDays ----------------------------------------------------
-
-test("rollupPrunedDays merges day totals into months", () => {
-  const pruned = {
-    "2026-06-01": { total: 3600000 },
-    "2026-06-15": { total: 7200000 }
-  }
-  const result = Model.rollupPrunedDays({}, pruned)
-  assert.equal(result["2026-06"], 10800000)
-})
-
-test("rollupPrunedDays accumulates onto existing months", () => {
-  const months = { "2026-06": 5000000 }
-  const pruned = { "2026-06-20": { total: 3000000 } }
-  const result = Model.rollupPrunedDays(months, pruned)
-  assert.equal(result["2026-06"], 8000000)
-})
-
-test("rollupPrunedDays returns original months when nothing to prune", () => {
-  const months = { "2026-05": 1000000 }
-  const result = Model.rollupPrunedDays(months, {})
-  assert.deepEqual(result, { "2026-05": 1000000 })
-})
-
-test("rollupPrunedDays skips days with zero total", () => {
-  const pruned = { "2026-07-01": { total: 0 } }
-  const result = Model.rollupPrunedDays({}, pruned)
-  assert.deepEqual(result, {})
-})
-
-test("rollupPrunedDays handles null months input", () => {
-  const pruned = { "2026-04-05": { total: 1000000 } }
-  const result = Model.rollupPrunedDays(null, pruned)
-  assert.equal(result["2026-04"], 1000000)
 })
 
 // ---- weekRangeLabel ------------------------------------------------------
@@ -1266,6 +1263,34 @@ test("insights busiest day follows the navigated week", () => {
   const rows = Model.insights(today, days, "2026-09-05", "2026-09-05", "2026-08-23")
   assert.ok(rows[2].value.includes("Wed"))
   assert.ok(rows[2].value.includes("9h"))
+})
+
+test("insights rows carry kind and direction, not just text", () => {
+  const day = { total: 2 * HOUR_MS, apps: { zen: 2 * HOUR_MS } }
+  const rows = Model.insights(day, {}, "2026-08-15", "2026-08-15")
+  assert.equal(rows[0].kind, "top")
+  assert.equal(rows[0].dir, null)
+  assert.equal(rows[1].kind, "delta")
+  assert.equal(rows[2].kind, "busiest")
+  assert.equal(rows[2].dir, null)
+})
+
+test("insights delta direction follows the sign", () => {
+  const up = Model.insights(
+    { total: 3 * HOUR_MS, apps: {} },
+    { "2026-08-14": { total: HOUR_MS, apps: {} } },
+    "2026-08-15", "2026-08-15")
+  assert.equal(up[1].dir, "up")
+  const down = Model.insights(
+    { total: HOUR_MS, apps: {} },
+    { "2026-08-14": { total: 3 * HOUR_MS, apps: {} } },
+    "2026-08-15", "2026-08-15")
+  assert.equal(down[1].dir, "down")
+  const flat = Model.insights(
+    { total: HOUR_MS, apps: {} },
+    { "2026-08-14": { total: HOUR_MS, apps: {} } },
+    "2026-08-15", "2026-08-15")
+  assert.equal(flat[1].dir, "flat")
 })
 
 test("insights busiest day defaults to the trailing week", () => {

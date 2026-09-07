@@ -242,22 +242,18 @@ Item {
     if (root.startupPhase || root.backupPending) return
     var merged = Object.assign({}, root.days)
     merged[root.todayKey] = root.today
-    var kept = Model.pruneDays(merged, root.todayKey, root.keepDays)
-    if (kept !== merged) {
-      // Days dropped by retention roll up into the per-day archive so the
-      // year retro keeps day-scale facts (streaks, day counts, peak day)
-      // after raw app detail expires. Months is untouched: it only holds
-      // pre-archive lumps, so archive + months never double count.
-      var pruned = {}
-      for (var k in merged) {
-        if (Object.prototype.hasOwnProperty.call(merged, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = merged[k]
-      }
-      root.years = Model.pruneArchive(
-        Model.rollupArchive(root.years, pruned), Number(String(root.todayKey).split("-")[0]))
-      historyAdapter.years = root.years
+    // Days dropped by retention roll up into the per-day archive so the
+    // year retro keeps day-scale facts (streaks, day counts, peak day)
+    // after raw app detail expires. Months is untouched: it only holds
+    // pre-archive lumps, so archive + months never double count.
+    var ret = Model.applyRetention(merged, root.years, root.todayKey,
+      root.keepDays, Number(String(root.todayKey).split("-")[0]))
+    if (ret.pruned) {
+      root.years = ret.years
+      historyAdapter.years = ret.years
     }
-    root.days = kept
-    historyAdapter.days = kept
+    root.days = ret.days
+    historyAdapter.days = ret.days
   }
 
   function scheduleSave() {
@@ -274,18 +270,13 @@ Item {
       console.warn("agx.screen-time: history.json has malformed sections; ignoring them")
     var d = clean.days
     var m = clean.months
-    var y = clean.years
-    var kept = Model.pruneDays(d, Model.dayKey(new Date()), root.keepDays)
-    if (kept !== d) {
-      // Same rollup as persist(): load-time retention drops also feed the
-      // per-day archive instead of being lost.
-      var pruned = {}
-      for (var k in d) {
-        if (Object.prototype.hasOwnProperty.call(d, k) && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = d[k]
-      }
-      y = Model.pruneArchive(Model.rollupArchive(y, pruned), new Date().getFullYear())
-      historyAdapter.years = y
-    }
+    // Same retention as persist(): load-time drops also feed the per-day
+    // archive instead of being lost.
+    var ret = Model.applyRetention(d, clean.years, Model.dayKey(new Date()),
+      root.keepDays, new Date().getFullYear())
+    if (ret.pruned) historyAdapter.years = ret.years
+    var y = ret.years
+    var kept = ret.days
     root.months = m
     root.days = kept
     root.years = y
@@ -335,6 +326,14 @@ Item {
     onAdapterUpdated: root.scheduleSave()
     onLoaded: root.onHistoryLoaded()
     onLoadFailed: root.onHistoryLoadFailed()
+    onSaveFailed: function(error) {
+      // Disk didn't take the write (full disk, permissions): the data is
+      // still in memory, so re-schedule the debounced save and retry on
+      // the next tick instead of silently diverging from disk.
+      console.warn("agx.screen-time: history save failed ("
+        + FileViewError.toString(error) + "), will retry")
+      root.scheduleSave()
+    }
 
     JsonAdapter {
       id: historyAdapter
