@@ -6,27 +6,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-
-- Midnight rollover is one state transition: close, carry and reopen happen
-  in a single patch, and buckets straddling midnight split exactly instead
-  of landing on the wrong day. Unmirrored live seconds flush into the old
-  day rather than evaporating at the transition.
-- The panel derives the week trend and the year view from one Model view
-  each instead of threading a dozen separate expressions; the year header
-  and the retro cards share a single merge.
-
-### Fixed
-
-- Future dates no longer leak into month and year totals; every year reader
-  now filters beyond-todayKey identically.
-- String years no longer bypass the RECHARGE MONTH coverage guard.
-- Non-string window titles no longer crash the resolver; padded titles
-  print stripped.
-- History-save retries back off exponentially and suspend after repeated
-  failures instead of retrying every 1.5s forever.
-
-## [1.5.0] - 2026-09-06
+## [1.5.0] - 2026-09-07
 
 ### Added
 
@@ -47,7 +27,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   typed kind/direction facts, so rendering never parses label text.
 - The year merge is a single module: one merge across raw days, month lumps
   and the per-day archive, with one retention entry point for prune, rollup
-  and archive bounds.
+  and archive bounds. The year header and the retro cards share that merge
+  instead of paying for two.
+- Midnight rollover is one state transition: close, carry and reopen happen
+  in a single patch, and buckets straddling midnight split exactly instead
+  of landing on the wrong day. Unmirrored live seconds flush into the old
+  day rather than evaporating at the transition.
+- The panel derives the week trend and the year view from one Model view
+  each instead of threading a dozen separate expressions.
 - The bar widget renders glyph and duration uniformly in the bar font;
   icon-only mode keeps the larger title-size glyph.
 - TOP MONTHS lists months as blobs (`Mar ● Feb ● Jan`) with no rank numbers.
@@ -74,6 +61,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `bash`; failed history saves warn and retry instead of silently diverging.
 - Removed the dead `rollupPrunedDays` path: `rollupArchive` is the single
   rollup implementation.
+- Future dates no longer leak into month and year totals; every year reader
+  filters beyond-todayKey identically.
+- String years no longer bypass the RECHARGE MONTH coverage guard.
+- Non-string window titles no longer crash the resolver; padded titles
+  print stripped.
+- History-save retries back off exponentially and suspend after repeated
+  failures instead of retrying every 1.5s forever.
 - Panel polish: week-range header elides instead of overlapping the total;
   insight rows no longer overlap; hero caption guarded when not ready;
   closing resets the year view and total mode; empty years hide the insights
