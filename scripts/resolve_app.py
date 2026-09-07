@@ -297,12 +297,17 @@ def main():
             if not isinstance(info, dict):
                 raise AttributeError("hyprctl activewindow is not a JSON object")
             terminal_pid = int(info.get("pid") or 0)
-            window_class = info.get("class") or ""
-            window_title = info.get("title") or ""
+            window_class = str(info.get("class") or "")
+            # Titles must be strings to be usable: a non-string title is
+            # malformed data, and coercing it would mint garbage
+            # tracking keys like "123". Stay silent instead.
+            raw_title = info.get("title")
+            window_title = raw_title if isinstance(raw_title, str) else ""
         except (ValueError, json.JSONDecodeError, subprocess.SubprocessError,
                 OSError, AttributeError):
             terminal_pid = 0
             window_class = ""
+            window_title = ""
 
     # Steam games: the class carries the AppID, so /proc walking is both
     # unnecessary and wrong (it would report the game binary). Resolve the
@@ -323,8 +328,9 @@ def main():
     # a running game titles it with the game's own name), so use it instead of
     # leaving every game bucketed under the wrapper's slug.
     if _steam_class_appid(window_class) is None and _is_steam_class(window_class):
-        if window_title.strip():
-            print(window_title)
+        title = window_title.strip()
+        if title:
+            print(title)
         sys.exit(0)
 
     if not terminal_pid:
