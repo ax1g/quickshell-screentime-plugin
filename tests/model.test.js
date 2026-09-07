@@ -1300,6 +1300,22 @@ test("insights busiest day defaults to the trailing week", () => {
   assert.ok(rows[2].value.includes("Thu"))
 })
 
+test("yearFacts accepts a string year without bypassing the recharge guard", () => {
+  // Current month (Aug) is the quietest but has only 3 tracked days, so the
+  // coverage guard excludes it and RECHARGE MONTH falls to Mar. A string
+  // year must behave identically, not let Aug auto-win.
+  const days = {
+    "2026-03-10": { total: 5 * 3600000, apps: {} },
+    "2026-06-10": { total: 2 * 3600000, apps: {} },
+    "2026-08-19": { total: 3600000, apps: {} }
+  }
+  const num = Model.yearFacts(days, {}, {}, 2026, "2026-08-19", "#e45b93")
+  const str = Model.yearFacts(days, {}, {}, "2026", "2026-08-19", "#e45b93")
+  const recharge = cards => (cards.find(c => c.label === "RECHARGE MONTH") || {}).value
+  assert.equal(recharge(num), recharge(str))
+  assert.ok(recharge(num).startsWith("Jun"))
+})
+
 test("yearFacts derives card colors from the theme accent", () => {
   const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
   const pink = Model.yearFacts({}, months, {}, 2026, "2026-12-24", "#e45b93")
