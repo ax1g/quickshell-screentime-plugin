@@ -40,26 +40,21 @@ Panel {
   // garbage labels ("NaN-NaN-NaN") instead of an empty chart.
   readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
   readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
+  // One derivation for the paginated week trend: the week list plus every
+  // fact the panel used to thread separately (visible week, its max and
+  // total, the record flag, older-week data, the Sunday key anchoring
+  // "Busiest day (7d)" to the week on screen).
+  readonly property var weekView: serviceReady
+    ? Model.weekView(root.days, root.todayKey, 13, root.weekOffset) : null
   // Sunday of the visible week: anchors "Busiest day (7d)" to the week the
   // user is looking at instead of always the current week.
-  readonly property string insightWeekEndKey: root.visibleWeek && root.visibleWeek.days.length === 7
-    ? String(root.visibleWeek.days[6].key || "") : ""
+  readonly property string insightWeekEndKey: root.weekView ? root.weekView.weekEndKey : ""
   readonly property var insightRows: serviceReady
     ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey, root.insightWeekEndKey) : []
-  readonly property var scrollableWeeks: serviceReady ? Model.monSunWeeks(root.days, root.todayKey, 13) : []
+  readonly property var scrollableWeeks: root.weekView ? root.weekView.weeks : []
   readonly property double scrollableMax: Model.scrollableTrendMax(root.scrollableWeeks)
-  readonly property var visibleWeek: root.scrollableWeeks.length > root.weekOffset
-    ? root.scrollableWeeks[root.weekOffset] : null
-  readonly property double visibleWeekMax: {
-    if (!root.visibleWeek) return 0
-    var max = 0
-    var days = root.visibleWeek.days
-    for (var i = 0; i < days.length; i++) {
-      var ms = Number(days[i].ms) || 0
-      if (ms > max) max = ms
-    }
-    return max
-  }
+  readonly property var visibleWeek: root.weekView ? root.weekView.week : null
+  readonly property double visibleWeekMax: root.weekView ? root.weekView.max : 0
   // Y-axis for the week bar graph: baseline, midpoint and peak gridlines,
   // derived from the same maximum the bars scale against so a bar's top
   // always lands on the gridline its duration describes.
@@ -67,12 +62,11 @@ Panel {
   readonly property double axisMaxMs: root.axisTicks.length
     ? root.axisTicks[root.axisTicks.length - 1] : 0
   // Sum of the visible week's days, shown under the paginated bar graph.
-  readonly property double visibleWeekTotalMs: root.visibleWeek
-    ? Model.weekTotal(root.visibleWeek.days) : 0
+  readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
   // True while the current week beats every older week in the window:
   // drives the gold record-week trophy beside the week total.
   readonly property bool recordWeek: root.weekOffset === 0 && serviceReady
-    ? Model.isRecordWeek(root.scrollableWeeks, 0) : false
+    ? (root.weekView ? root.weekView.isRecord : false) : false
   property bool expanded: false
   // Expanding swaps the legend model: restart at the top instead of
   // opening scrolled mid-list.
@@ -80,14 +74,7 @@ Panel {
   property bool calendarOpen: false
   property int weekOffset: 0
   // Whether any week before the currently visible one has data.
-  readonly property bool hasPrevWeekData: {
-    for (var i = root.weekOffset + 1; i < root.scrollableWeeks.length; i++) {
-      var w = root.scrollableWeeks[i]
-      if (!w || !w.days) continue
-      for (var j = 0; j < w.days.length; j++) if (Number(w.days[j].ms) > 0) return true
-    }
-    return false
-  }
+  readonly property bool hasPrevWeekData: root.weekView ? root.weekView.hasPrev : false
   // Header total toggles between absolute time and share of the full week.
   property bool weekTotalAsPct: false
 
@@ -97,8 +84,11 @@ Panel {
   property int currentYearOffset: 0
   readonly property int currentYear: root.todayYear - root.currentYearOffset
   readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
-  readonly property string calendarYearTotal: serviceReady ? Math.round(Model.yearTotal(root.days, root.months, root.currentYear, root.years) / 3600000) + "h" : "0h"
-  readonly property var yearFacts: serviceReady ? Model.yearFacts(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : []
+  // One derivation for the year view: the header total and the retro cards
+  // share a single merge instead of paying for two.
+  readonly property var yearView: serviceReady ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
+  readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
+  readonly property var yearFacts: root.yearView ? root.yearView.facts : []
   readonly property var monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
   readonly property var monthNamesLong: ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
