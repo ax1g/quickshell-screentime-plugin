@@ -45,7 +45,9 @@ Panel {
   // total, the record flag, older-week data, the Sunday key anchoring
   // "Busiest day (7d)" to the week on screen).
   readonly property var weekView: serviceReady
-    ? Model.weekView(root.days, root.todayKey, 13, root.weekOffset) : null
+    // Clamped like the pager buttons (0–12): a stray offset must show an
+    // empty week, never diverge from the navigation.
+    ? Model.weekView(root.days, root.todayKey, 13, Math.max(0, Math.min(root.weekOffset, 12))) : null
   // Sunday of the visible week: anchors "Busiest day (7d)" to the week the
   // user is looking at instead of always the current week.
   readonly property string insightWeekEndKey: root.weekView ? root.weekView.weekEndKey : ""

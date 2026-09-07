@@ -242,6 +242,10 @@ Item {
     historyAdapter.days = ret.days
   }
 
+  // Consecutive history-save failures. Reset by any successful schedule
+  // trigger (adapter update); the retry path below backs off instead.
+  property int saveFailCount: 0
+
   function scheduleSave() {
     if (root.startupPhase || root.backupPending) return
     saveTimer.restart()
@@ -309,16 +313,31 @@ Item {
     path: root.historyPath
     printErrors: true
     atomicWrites: true
-    onAdapterUpdated: root.scheduleSave()
+    onAdapterUpdated: {
+      // Fresh data means the disk state is reachable again (or changed):
+      // reset the failure streak so retries resume.
+      root.saveFailCount = 0
+      root.scheduleSave()
+    }
     onLoaded: root.onHistoryLoaded()
     onLoadFailed: root.onHistoryLoadFailed()
     onSaveFailed: function(error) {
       // Disk didn't take the write (full disk, permissions): the data is
-      // still in memory, so re-schedule the debounced save and retry on
-      // the next tick instead of silently diverging from disk.
+      // still in memory. Retry with capped exponential backoff instead of
+      // hammering every 1.5s forever; after 6 straight failures suspend
+      // retries until fresh data arrives (which resets the streak above).
+      root.saveFailCount++
+      if (root.saveFailCount > 6) {
+        console.warn("agx.screen-time: history save failed ("
+          + FileViewError.toString(error)
+          + "), suspending retries until next change")
+        return
+      }
+      var delay = Math.min(1500 * Math.pow(2, root.saveFailCount - 1), 60000)
       console.warn("agx.screen-time: history save failed ("
-        + FileViewError.toString(error) + "), will retry")
-      root.scheduleSave()
+        + FileViewError.toString(error) + "), retrying in " + delay + "ms")
+      saveRetryTimer.interval = delay
+      saveRetryTimer.restart()
     }
 
     JsonAdapter {
@@ -469,6 +488,13 @@ Item {
   Timer {
     id: saveTimer
     interval: 1500
+    repeat: false
+    onTriggered: historyFile.writeAdapter()
+  }
+
+  // Drives save retries with the backoff computed in onSaveFailed.
+  Timer {
+    id: saveRetryTimer
     repeat: false
     onTriggered: historyFile.writeAdapter()
   }
