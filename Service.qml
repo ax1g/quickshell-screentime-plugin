@@ -97,7 +97,6 @@ Item {
   readonly property bool hasActivity: today && today.total > 0
 
   function appList() { return Model.appList(root.today) }
-  function insights() { return Model.insights(root.today, root.days, root.todayKey) }
   function fmt(ms) { return Model.fmt(ms) }
   function relativeDayLabel(key) { return Model.relativeDayLabel(key, root.todayKey) }
 

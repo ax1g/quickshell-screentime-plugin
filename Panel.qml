@@ -637,7 +637,7 @@ Panel {
               bottomPadding: Style.space(2)
 
               readonly property var months: root.serviceReady
-                ? Model.monthlyTotals(root.days, root.months, root.currentYear, root.years) : []
+                ? Model.monthlyTotals(root.days, root.months, root.currentYear, root.years, root.todayKey) : []
               readonly property real maxMs: {
                 var max = 0
                 for (var i = 0; i < months.length; i++) {
