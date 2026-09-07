@@ -269,7 +269,9 @@ test("advanceRollover closes, carries and reopens in one patch", () => {
   assert.ok(result)
   assert.equal(result.todayKey, "2026-08-16")
   // Straddling bucket split at midnight: 10s to yesterday, 5s to today.
-  assert.equal(result.days["2026-08-15"].total, 10000)
+  // The pre-existing 1000 live ms were never mirrored, so the old day
+  // keeps 11000 rather than dropping them.
+  assert.equal(result.days["2026-08-15"].total, 11000)
   assert.equal(result.today.total, 5000)
   // Bucket reopened for the still-focused app at the transition moment.
   assert.equal(result.activeApp, "editor")
@@ -290,10 +292,33 @@ test("advanceRollover drops the bucket on a suspend gap, still rolls", () => {
   const result = State.advanceRollover(state, after, "2026-08-16", 30000, before - 3600000)
   assert.ok(result)
   assert.equal(result.todayKey, "2026-08-16")
-  assert.equal(result.days["2026-08-15"], undefined)
+  // The stale bucket is dropped, but the 1000 live ms tracked before the
+  // suspend are flushed into the old day instead of evaporating.
+  assert.equal(result.days["2026-08-15"].total, 1000)
   assert.equal(result.today.total, 0)
   assert.equal(result.lastTick, after)
   assert.equal(result.activeApp, "editor")
+})
+
+test("advanceRollover preserves unmirrored live data in the old day", () => {
+  // Live today holds 60s never mirrored into days (commit ran, persist did
+  // not — e.g. blocked behind the corrupt-file backup). The carry must not
+  // drop it: the old day keeps the full 60s plus the straddling 10s.
+  const before = localTime(2026, 7, 15, 23, 59, 50)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 60000, apps: { editor: 60000 } },
+    days: {},
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before
+  }
+  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before)
+  assert.ok(result)
+  assert.equal(result.days["2026-08-15"].total, 70000)
+  assert.equal(result.days["2026-08-15"].apps.editor, 70000)
+  assert.equal(result.today.total, 5000)
 })
 
 test("advanceRollover with no open bucket just carries the day", () => {
