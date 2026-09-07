@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Midnight rollover is one state transition: close, carry and reopen happen
+  in a single patch, and buckets straddling midnight split exactly instead
+  of landing on the wrong day.
+- The panel derives the week trend and the year view from one Model view
+  each instead of threading a dozen separate expressions.
+
 ## [1.5.0] - 2026-09-06
 
 ### Added
