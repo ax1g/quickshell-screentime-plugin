@@ -7,6 +7,7 @@ Process-touching tests use the current process (always alive, always in
 /proc), so nothing here needs a running Hyprland session.
 """
 
+import contextlib
 import io
 import json
 import os
@@ -229,6 +230,50 @@ class SteamTitleTests(unittest.TestCase):
     def test_acf_name_missing_file_is_none(self):
         self.assertIsNone(
             r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
+
+    def test_is_steam_class_accepts_numeric_and_slug_forms(self):
+        self.assertTrue(r._is_steam_class("steam_app_730"))
+        # Non-Steam shortcuts (e.g. Battle.net) report a slug, not an AppID.
+        self.assertTrue(r._is_steam_class("steam_app_battlenet"))
+        self.assertTrue(r._is_steam_class("Steam_App_Battlenet"))
+
+    def test_is_steam_class_rejects_non_steam(self):
+        self.assertFalse(r._is_steam_class("foot"))
+        self.assertFalse(r._is_steam_class(None))
+
+    def test_main_resolves_slug_steam_class_from_window_title(self):
+        """A slug class with no manifest falls back to the live window title."""
+        activewindow = json.dumps({
+            "pid": 0,
+            "class": "steam_app_battlenet",
+            "title": "World of Warcraft",
+        })
+        fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
+        out = io.StringIO()
+        with mock.patch.object(r.subprocess, "run", fake_run), \
+                mock.patch.object(r.sys, "argv", ["resolve_app.py"]), \
+                contextlib.redirect_stdout(out), \
+                self.assertRaises(SystemExit) as cm:
+            r.main()
+        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(out.getvalue().strip(), "World of Warcraft")
+
+    def test_main_slug_steam_class_without_title_stays_silent(self):
+        """No title -> no output, so tracking keeps the stable slug key."""
+        activewindow = json.dumps({
+            "pid": 0,
+            "class": "steam_app_battlenet",
+            "title": "   ",
+        })
+        fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
+        out = io.StringIO()
+        with mock.patch.object(r.subprocess, "run", fake_run), \
+                mock.patch.object(r.sys, "argv", ["resolve_app.py"]), \
+                contextlib.redirect_stdout(out), \
+                self.assertRaises(SystemExit) as cm:
+            r.main()
+        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(out.getvalue(), "")
 
     def test_steam_title_searches_roots(self):
         with tempfile.TemporaryDirectory() as tmp:
