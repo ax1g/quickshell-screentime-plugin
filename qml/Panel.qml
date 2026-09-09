@@ -45,6 +45,7 @@ Panel {
     readonly property var visibleWeek: root.weekView ? root.weekView.week : null
     readonly property double visibleWeekMax: root.weekView ? root.weekView.max : 0
     // Ticks share the bars' scale so bar tops land on gridlines.
+    readonly property var axisTicks: Model.weekAxisTicks(root.visibleWeekMax)
     readonly property double axisMaxMs: root.axisTicks.length ? root.axisTicks[root.axisTicks.length - 1] : 0
     readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
     // Current week beating all older weeks earns the record trophy.
