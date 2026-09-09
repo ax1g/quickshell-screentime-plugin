@@ -102,66 +102,11 @@ Item {
             id: sparkleRepeater
             model: 6
 
-            Text {
-                id: sp
-                required property int index
-
-                text: "\u2726"
-                color: "#FFD700"
-                font.family: heroHeader.fontFamily
-                font.pixelSize: Style.font.caption
-                opacity: 0
-                scale: 1
-
-                property real drift: Style.space(8)
-
-                function respawn(cx, cy) {
-                    var spreadX = sparkles.width * 0.22;
-                    var spreadY = sparkles.height * 0.3;
-                    x = Math.max(2, Math.min(sparkles.width - 2, cx + (Math.random() * 2 - 1) * spreadX));
-                    y = Math.max(sparkles.height * 0.2, Math.min(sparkles.height * 0.85, cy + (Math.random() * 2 - 1) * spreadY));
-                    font.pixelSize = Style.font.caption * (0.65 + Math.random() * 0.85);
-                    drift = Style.space(6) + Style.space(10) * Math.random();
-                }
-
-                SequentialAnimation {
-                    running: sparkles.go
-                    PauseAnimation {
-                        duration: sp.index * 80
-                    }
-                    NumberAnimation {
-                        target: sp
-                        property: "opacity"
-                        from: 0
-                        to: 0.85
-                        duration: 180
-                    }
-                    ParallelAnimation {
-                        NumberAnimation {
-                            target: sp
-                            property: "y"
-                            from: sp.y
-                            to: sp.y - sp.drift
-                            duration: 650
-                            easing.type: Easing.OutQuad
-                        }
-                        NumberAnimation {
-                            target: sp
-                            property: "opacity"
-                            from: 0.85
-                            to: 0
-                            duration: 650
-                            easing.type: Easing.InQuad
-                        }
-                        NumberAnimation {
-                            target: sp
-                            property: "scale"
-                            from: 1
-                            to: 0.6
-                            duration: 650
-                        }
-                    }
-                }
+            Sparkle {
+                areaW: sparkles.width
+                areaH: sparkles.height
+                fontFamily: heroHeader.fontFamily
+                go: sparkles.go
             }
         }
         // qmllint enable unqualified
