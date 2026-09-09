@@ -100,29 +100,13 @@ Item {
                 width: parent.width
                 spacing: Style.space(10)
 
-                Text {
-                    id: yearPrevGlyph
-                    text: "\uf053"
-                    color: yearPrevMouse.enabled && yearPrevMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
-                    opacity: yearPrevMouse.enabled ? 1.0 : 0.25
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: 150
-                        }
-                    }
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    MouseArea {
-                        id: yearPrevMouse
-                        anchors.fill: parent
-                        anchors.margins: -Style.space(6)
-                        hoverEnabled: true
-                        enabled: root.currentYear > root.oldestDataYear
-                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: root.prevYearRequested()
-                    }
+                PagerArrow {
+                    glyph: "\uf053"
+                    active: root.currentYear > root.oldestDataYear
+                    foreground: root.foreground
+                    fontFamily: root.fontFamily
+                    fontSize: Style.font.caption
+                    onClicked: root.prevYearRequested()
                 }
 
                 Text {
@@ -135,29 +119,13 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Text {
-                    id: yearNextGlyph
-                    text: "\uf054"
-                    color: yearNextMouse.enabled && yearNextMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
-                    opacity: yearNextMouse.enabled ? 1.0 : 0.25
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: 150
-                        }
-                    }
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    MouseArea {
-                        id: yearNextMouse
-                        anchors.fill: parent
-                        anchors.margins: -Style.space(6)
-                        hoverEnabled: true
-                        enabled: root.currentYearOffset > 0
-                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: root.nextYearRequested()
-                    }
+                PagerArrow {
+                    glyph: "\uf054"
+                    active: root.currentYearOffset > 0
+                    foreground: root.foreground
+                    fontFamily: root.fontFamily
+                    fontSize: Style.font.caption
+                    onClicked: root.nextYearRequested()
                 }
             }
         }

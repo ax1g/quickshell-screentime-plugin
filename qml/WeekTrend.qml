@@ -39,27 +39,13 @@ Column {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
 
-            Text {
-                text: "\uf053"
-                color: weekPrevMouse.enabled && weekPrevMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
-                opacity: weekPrevMouse.enabled ? 1.0 : 0.25
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: 150
-                    }
-                }
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                anchors.verticalCenter: parent.verticalCenter
-                MouseArea {
-                    id: weekPrevMouse
-                    anchors.fill: parent
-                    anchors.margins: -Style.space(6)
-                    hoverEnabled: true
-                    enabled: root.weekOffset < 12 && root.hasPrevWeekData
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: root.prevWeekRequested()
-                }
+            PagerArrow {
+                glyph: "\uf053"
+                active: root.weekOffset < 12 && root.hasPrevWeekData
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: root.prevWeekRequested()
             }
 
             Text {
@@ -74,27 +60,13 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
             }
 
-            Text {
-                text: "\uf054"
-                color: weekNextMouse.enabled && weekNextMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
-                opacity: weekNextMouse.enabled ? 1.0 : 0.25
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: 150
-                    }
-                }
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                anchors.verticalCenter: parent.verticalCenter
-                MouseArea {
-                    id: weekNextMouse
-                    anchors.fill: parent
-                    anchors.margins: -Style.space(6)
-                    hoverEnabled: true
-                    enabled: root.weekOffset > 0
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: root.nextWeekRequested()
-                }
+            PagerArrow {
+                glyph: "\uf054"
+                active: root.weekOffset > 0
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: root.nextWeekRequested()
             }
         }
 
