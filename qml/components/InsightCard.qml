@@ -62,7 +62,7 @@ Rectangle {
         Text {
             text: insightCard.stat
             color: insightCard.foreground
-            font.family: fontFamily
+            font.family: insightCard.fontFamily
             font.pixelSize: Style.font.bodySmall
             font.bold: true
             width: parent.width
@@ -73,7 +73,7 @@ Rectangle {
             text: insightCard.oneLiner
             color: insightCard.foreground
             opacity: 0.5
-            font.family: fontFamily
+            font.family: insightCard.fontFamily
             font.pixelSize: Style.font.caption
             width: parent.width
             wrapMode: Text.Wrap

@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
-import qs.Ui
 
 // Shared panel-styled tooltip: matches the drawer's background, foreground
 // and font so popups read as part of the shell rather than platform chrome.
