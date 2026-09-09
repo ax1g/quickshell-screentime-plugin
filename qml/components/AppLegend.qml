@@ -55,55 +55,14 @@ Item {
             Repeater {
                 model: legend.rows
 
-                Item {
-                    id: rowDelegate
-                    required property var modelData
-                    required property int index
-
-                    readonly property string appName: String(modelData.app || "")
-                    readonly property string appLabel: Model.displayName(modelData.app)
-                    readonly property string timeLabel: Model.fmt(modelData.ms)
-                    // Top apps keep the grouped palette; rows folded into
-                    // "Other" share that slice's color.
-                    readonly property color swatchColor: legend.expanded && rowDelegate.index >= legend.groupedCount - 1 ? legend.otherColor : (legend.sliceColors[rowDelegate.index] || legend.accent)
-
-                    width: parent.width
-                    implicitHeight: Math.max(swatch.implicitHeight, Math.max(appNameText.implicitHeight, appTimeText.implicitHeight))
-
-                    Rectangle {
-                        id: swatch
-                        width: Style.space(7)
-                        height: width
-                        radius: width / 2
-                        color: rowDelegate.swatchColor
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        id: appNameText
-                        text: rowDelegate.appLabel
-                        color: legend.foreground
-                        opacity: 0.6
-                        font.family: legend.fontFamily
-                        font.pixelSize: Style.font.bodySmall
-                        elide: Text.ElideRight
-                        width: parent.width - appTimeText.implicitWidth - Style.space(8)
-                        anchors.left: swatch.right
-                        anchors.leftMargin: Style.space(6)
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        id: appTimeText
-                        text: rowDelegate.timeLabel
-                        color: legend.foreground
-                        font.family: legend.fontFamily
-                        font.pixelSize: Style.font.bodySmall
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        elide: Text.ElideRight
-                    }
+                LegendRow {
+                    expanded: legend.expanded
+                    groupedCount: legend.groupedCount
+                    sliceColors: legend.sliceColors
+                    otherColor: legend.otherColor
+                    foreground: legend.foreground
+                    fontFamily: legend.fontFamily
+                    accent: legend.accent
                 }
             }
             // qmllint enable unqualified
