@@ -216,8 +216,9 @@ Item {
                     height: Style.space(10) + 1 + Style.space(4)
                     visible: root.yearFacts.length > 0
                     PanelSeparator {
-                        anchors.top: parent.top
-                        anchors.topMargin: Style.space(10)
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
                         foreground: root.foreground
                     }
                 }
@@ -239,9 +240,9 @@ Item {
                     width: parent.width
                     visible: root.yearFacts.length > 0
                     spacing: Style.space(8)
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
+
+                    property var leftCards: []
+                    property var rightCards: []
 
                     // Columns drift independently; cards keep own height.
                     function splitCards() {
