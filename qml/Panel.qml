@@ -70,9 +70,6 @@ Panel {
     // drives the gold record-week trophy beside the week total.
     readonly property bool recordWeek: root.weekOffset === 0 && serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
     property bool expanded: false
-    // Expanding swaps the legend model: restart at the top instead of
-    // opening scrolled mid-list.
-    onExpandedChanged: legendScroll.contentY = 0
     property bool calendarOpen: false
     property int weekOffset: 0
     // Whether any week before the currently visible one has data.
@@ -101,32 +98,12 @@ Panel {
     // The "Other" slice color: last in the grouped palette.
     readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
 
-    // Donut cross-highlight: which ring slice is hovered (-1 = none), plus
-    // the label pair shown in the donut center while hovering.
-    property int hoverSlice: -1
-    property string hoverApp: ""
-    property double hoverMs: 0
-    readonly property bool sliceHovered: root.hoverSlice >= 0 && root.hoverSlice < root.segments.length && root.hoverApp !== ""
-
-    // Ring geometry: the radius is fixed for the base stroke so it never
-    // clips against the Shape bounds.
+    // Donut diameter; also sizes the donut+legend row.
     readonly property real ringSize: Style.space(116)
-    readonly property real ringBaseWidth: Style.space(14)
-    readonly property real ringRadius: root.ringSize / 2 - root.ringBaseWidth / 2
 
     // Legend scroll cap: fits the 6-row grouped list fully; when expanded
     // the full app list scrolls inside this height with a ▾ indicator.
     readonly property real legendMaxHeight: Style.space(140)
-
-    // Slice color at a given alpha (alpha 1 for the ring, dimmed variants
-    // used by the trend bars).
-    function sliceColor(index, alpha) {
-        var hex = String(root.sliceColors[index] || Color.accent).replace(/[#\s]/g, "");
-        var r = parseInt(hex.substr(0, 2), 16) / 255;
-        var g = parseInt(hex.substr(2, 2), 16) / 255;
-        var b = parseInt(hex.substr(4, 2), 16) / 255;
-        return Qt.rgba(r, g, b, alpha);
-    }
 
     // Guarded so the widget renders before the bar is injected.
     readonly property color contentForeground: bar ? bar.foreground : Color.foreground
@@ -177,18 +154,6 @@ Panel {
             root.selectedKey = key;
     }
 
-    function setSliceHover(slice, appName, ms) {
-        root.hoverSlice = slice;
-        root.hoverApp = appName;
-        root.hoverMs = ms;
-    }
-
-    function clearHover() {
-        root.hoverSlice = -1;
-        root.hoverApp = "";
-        root.hoverMs = 0;
-    }
-
     // Open/close the yearly overview. Arms the drawer slide so the move
     // animates; layout-driven repositions stay instant (see calendarDrawer).
     // Opening the yearly view also grows the card to full height so the
@@ -200,32 +165,6 @@ Panel {
             root.expanded = true;
         }
         root.calendarOpen = open;
-    }
-
-    // Angle hit-test for the ring; x/y are in donutItem coordinates. Angles
-    // are degrees clockwise from 12 o'clock (arcSegments' convention); atan2
-    // with y-down screen coordinates matches once normalized to [-90, 270).
-    function sliceAt(x, y) {
-        var segs = root.segments;
-        if (!segs || segs.length === 0)
-            return -1;
-        var dx = x - donutItem.width / 2;
-        var dy = y - donutItem.height / 2;
-        var r = Math.sqrt(dx * dx + dy * dy);
-        var inner = root.ringRadius - root.ringBaseWidth / 2 - Style.space(3);
-        var outer = root.ringRadius + root.ringBaseWidth / 2 + Style.space(3);
-        if (r < inner || r > outer)
-            return -1;
-        var deg = Math.atan2(dy, dx) * 180 / Math.PI;
-        if (deg < -90)
-            deg += 360;
-        for (var i = 0; i < segs.length; i++) {
-            var start = segs[i].startAngle;
-            var end = start + segs[i].sweepAngle;
-            if (end <= 360 ? (deg >= start && deg <= end) : (deg >= start || deg <= end - 360))
-                return i;
-        }
-        return -1;
     }
 
     KeyboardPanel {
@@ -759,228 +698,39 @@ Panel {
 
                     // ---- Per-app donut + legend ------------------------------------
                     Item {
-                        width: parent.width
-                        height: implicitHeight
-                        implicitHeight: Math.max(root.ringSize, legendScroll.height)
+                      width: parent.width
+                      height: Math.max(root.ringSize, root.legendMaxHeight)
 
-                        Item {
-                            id: donutItem
-                            width: root.ringSize
-                            height: root.ringSize
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
+                      DonutChart {
+                        id: donutChart
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        segments: root.segments
+                        sliceColors: root.sliceColors
+                        ringSize: root.ringSize
+                        activeDayLabel: root.activeDayLabel
+                        dayTotal: root.dayTotal
+                        foreground: root.contentForeground
+                        fontFamily: root.contentFontFamily
+                        accent: Color.accent
+                      }
 
-                            // Qt's Shape does not pick up ShapePath children that are
-                            // created after it initializes, so a Repeater inside a Shape
-                            // renders nothing. Canvas is the QML-native way to draw a ring
-                            // with a variable number of slices; it repaints only on demand.
-                            Canvas {
-                                id: donutCanvas
-                                anchors.fill: parent
-                                onWidthChanged: donutCanvas.requestPaint()
-
-                                Connections {
-                                    target: root
-                                    function onSegmentsChanged() {
-                                        donutCanvas.requestPaint();
-                                    }
-                                    function onSliceColorsChanged() {
-                                        donutCanvas.requestPaint();
-                                    }
-                                    function onHoverSliceChanged() {
-                                        donutCanvas.requestPaint();
-                                    }
-                                    function onContentForegroundChanged() {
-                                        donutCanvas.requestPaint();
-                                    }
-                                }
-
-                                onPaint: {
-                                    var ctx = getContext("2d");
-                                    ctx.reset();
-                                    var segs = root.segments;
-                                    var size = width;
-                                    var cx = size / 2;
-                                    var cy = size / 2;
-                                    var rad = root.ringRadius;
-                                    var toRad = Math.PI / 180;
-
-                                    if (!segs || segs.length === 0) {
-                                        ctx.lineWidth = root.ringBaseWidth;
-                                        ctx.strokeStyle = Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentForeground.b, 0.1);
-                                        ctx.beginPath();
-                                        ctx.arc(cx, cy, rad, 0, Math.PI * 2, false);
-                                        ctx.stroke();
-                                        return;
-                                    }
-
-                                    for (var i = 0; i < segs.length; i++) {
-                                        var seg = segs[i];
-                                        ctx.lineWidth = root.ringBaseWidth;
-                                        // Cross-highlight: the hovered slice stays full, the
-                                        // rest dim so the eye locks onto one app.
-                                        ctx.strokeStyle = root.sliceColor(i, root.hoverSlice < 0 || i === root.hoverSlice ? 1.0 : 0.25);
-                                        ctx.beginPath();
-                                        ctx.arc(cx, cy, rad, seg.startAngle * toRad, (seg.startAngle + seg.sweepAngle) * toRad, false);
-                                        ctx.stroke();
-                                    }
-                                }
-                            }
-
-                            // Slice hover: pointer feedback plus the app's own readout
-                            // in place of the day summary.
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                acceptedButtons: Qt.NoButton
-                                cursorShape: Qt.ArrowCursor
-                                onPositionChanged: function (mouse) {
-                                    var i = root.sliceAt(mouse.x, mouse.y);
-                                    if (i >= 0) {
-                                        var seg = root.segments[i];
-                                        root.setSliceHover(i, Model.displayName(seg.app), seg.ms || 0);
-                                    } else {
-                                        root.clearHover();
-                                    }
-                                }
-                                onContainsMouseChanged: if (!containsMouse)
-                                    root.clearHover()
-                            }
-
-                            // Center readout: active day label + total, or the hovered
-                            // slice's app while cross-highlighting.
-                            Column {
-                                anchors.centerIn: parent
-                                width: parent.width * 0.6
-                                spacing: Style.space(1)
-
-                                Text {
-                                    text: root.sliceHovered ? root.hoverApp : root.activeDayLabel
-                                    color: root.contentForeground
-                                    font.family: root.contentFontFamily
-                                    font.pixelSize: Style.font.bodySmall
-                                    font.bold: true
-                                    elide: Text.ElideRight
-                                    width: parent.width
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-
-                                Text {
-                                    text: Model.fmt(root.sliceHovered ? root.hoverMs : root.dayTotal)
-                                    color: Qt.darker(root.contentForeground, 1.4)
-                                    font.family: root.contentFontFamily
-                                    font.pixelSize: Style.font.caption
-                                    font.bold: true
-                                    elide: Text.ElideRight
-                                    width: parent.width
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-                            }
-                        }
-
-                        Flickable {
-                            id: legendScroll
-                            anchors.left: donutItem.right
-                            anchors.leftMargin: Style.space(16)
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            clip: true
-                            contentWidth: width
-                            contentHeight: legendList.implicitHeight
-                            // Fixed height so the panel size stays identical across days.
-                            height: root.legendMaxHeight
-                            interactive: contentHeight > height
-                            flickableDirection: Flickable.VerticalFlick
-                            boundsBehavior: Flickable.StopAtBounds
-
-                            Column {
-                                id: legendList
-                                width: parent.width - Style.space(8)
-                                spacing: Style.space(5)
-                                // Vertically center short lists within the fixed-height
-                                // viewport; clamp to 0 so long lists still scroll from top.
-                                y: Math.max(0, (legendScroll.height - implicitHeight) / 2)
-
-                                // Empty-state message when the selected day has no data.
-                                Text {
-                                    visible: root.groupedApps.length === 0
-                                    text: "No data"
-                                    color: root.contentForeground
-                                    opacity: 0.4
-                                    font.family: root.contentFontFamily
-                                    font.pixelSize: Style.font.bodySmall
-                                    width: parent.width
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-
-                                Repeater {
-                                    model: root.expanded ? root.fullApps : root.groupedApps
-
-                                    Item {
-                                        required property var modelData
-                                        required property int index
-
-                                        readonly property string appName: String(modelData.app || "")
-                                        readonly property string appLabel: Model.displayName(modelData.app)
-                                        readonly property string timeLabel: Model.fmt(modelData.ms)
-                                        // Top N-1 apps keep the grouped palette; everything that
-                                        // was collapsed into "Other" shares that slice's color.
-                                        readonly property color swatchColor: root.expanded && index >= root.groupedCount - 1 ? root.otherColor : (root.sliceColors[index] || Color.accent)
-
-                                        width: parent.width
-                                        implicitHeight: Math.max(swatch.implicitHeight, Math.max(appNameText.implicitHeight, appTimeText.implicitHeight))
-
-                                        Rectangle {
-                                            id: swatch
-                                            width: Style.space(7)
-                                            height: width
-                                            radius: width / 2
-                                            color: swatchColor
-                                            anchors.left: parent.left
-                                            anchors.verticalCenter: parent.verticalCenter
-                                        }
-
-                                        Text {
-                                            id: appNameText
-                                            text: appLabel
-                                            color: root.contentForeground
-                                            opacity: 0.6
-                                            font.family: root.contentFontFamily
-                                            font.pixelSize: Style.font.bodySmall
-                                            elide: Text.ElideRight
-                                            width: parent.width - appTimeText.implicitWidth - Style.space(8)
-                                            anchors.left: swatch.right
-                                            anchors.leftMargin: Style.space(6)
-                                            anchors.verticalCenter: parent.verticalCenter
-                                        }
-
-                                        Text {
-                                            id: appTimeText
-                                            text: timeLabel
-                                            color: root.contentForeground
-                                            font.family: root.contentFontFamily
-                                            font.pixelSize: Style.font.bodySmall
-                                            anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Thin scrollbar indicator on the right edge.
-                        Rectangle {
-                            property real ratio: legendScroll.contentHeight > 0 ? legendScroll.height / legendScroll.contentHeight : 0
-                            visible: legendScroll.contentHeight > legendScroll.height
-                            width: 2
-                            height: Math.max(Style.space(16), legendScroll.height * ratio)
-                            radius: width / 2
-                            color: root.contentForeground
-                            opacity: 0.25
-                            anchors.right: legendScroll.right
-                            y: legendScroll.y + (legendScroll.height - height) * (legendScroll.contentHeight > legendScroll.height ? legendScroll.contentY / (legendScroll.contentHeight - legendScroll.height) : 0)
-                        }
+                      AppLegend {
+                        anchors.left: donutChart.right
+                        anchors.leftMargin: Style.space(16)
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: root.legendMaxHeight
+                        rows: root.expanded ? root.fullApps : root.groupedApps
+                        expanded: root.expanded
+                        groupedCount: root.groupedCount
+                        sliceColors: root.sliceColors
+                        otherColor: root.otherColor
+                        foreground: root.contentForeground
+                        fontFamily: root.contentFontFamily
+                        accent: Color.accent
+                        maxHeight: root.legendMaxHeight
+                      }
                     }
 
                     // ---- Week trend + insights (only on SHOW MORE) -----------------
@@ -1052,7 +802,7 @@ Panel {
                 root.weekOffset = 0;
                 root.currentYearOffset = 0;
                 root.weekTotalAsPct = false;
-                root.clearHover();
+                donutChart.clearHover();
             }
         }
     }
