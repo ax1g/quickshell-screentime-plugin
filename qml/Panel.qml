@@ -6,6 +6,7 @@ import qs.Ui
 import "../js/Model.js" as Model
 
 import "components"
+import "components/tooltip"
 
 // Popup for the screen-time bar widget: today's total, the per-app
 // breakdown, and a short behaviour-insights section. Read-only — the panel
