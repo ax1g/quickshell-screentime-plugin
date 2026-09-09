@@ -128,15 +128,10 @@ def _children(pid):
 # Terminals spawn their shell directly (depth 1); wrappers are rare.
 _MAX_TTY_SEARCH_DEPTH = 4
 
-# Maximum ancestor hops when walking from a browser worker up to the
-# browser binary. A pathological ppid chain (e.g. reparented/recycled
-# workers) must terminate rather than loop forever. Real chains are only
-# a couple of hops.
+# Cap ancestor hops so a pathological ppid cycle can't loop forever.
 _MAX_ANCESTOR_HOPS = 10
 
-# steamapps directories that hold appmanifest_<appid>.acf files. The first
-# two are the same library via symlink on most installs; both are listed
-# because neither is guaranteed to exist.
+# steamapps dirs holding appmanifest_<appid>.acf (overlapping on purpose).
 _STEAM_ROOTS = [
     os.path.expanduser("~/.steam/steam/steamapps"),
     os.path.expanduser("~/.local/share/Steam/steamapps"),
@@ -254,11 +249,7 @@ def _resolve_terminal_foreground(terminal_pid):
     if not name:
         return None
 
-    # Walk up from a browser worker (Web Content, forkserver, …) to the
-    # browser binary so time attributes to the browser, not an internal
-    # process.  Only reads /proc for ancestors, not all processes.  Bounded
-    # so a pathological ppid cycle (e.g. a reparented process) can't loop
-    # forever; browser chains are a handful of hops at most.
+    # Walk up from a browser worker to the browser binary it belongs to.
     pid = tpgid
     hops = 0
     while name in BROWSER_SUBPROCESS_COMMS and hops < _MAX_ANCESTOR_HOPS:
@@ -297,9 +288,7 @@ def main():
                 raise TypeError("hyprctl activewindow is not a JSON object")
             terminal_pid = int(info.get("pid") or 0)
             window_class = str(info.get("class") or "")
-            # Titles must be strings to be usable: a non-string title is
-            # malformed data, and coercing it would mint garbage
-            # tracking keys like "123". Stay silent instead.
+            # Non-string titles would mint garbage keys; stay silent instead.
             raw_title = info.get("title")
             window_title = raw_title if isinstance(raw_title, str) else ""
         except (
@@ -314,24 +303,16 @@ def main():
             window_class = ""
             window_title = ""
 
-    # Steam games: the class carries the AppID, so /proc walking is both
-    # unnecessary and wrong (it would report the game binary). Resolve the
-    # title from local manifests; if the manifest is missing, exit without
-    # output so tracking keeps the stable steam_app_* key instead of
-    # flip-flopping to a binary name.
+    # Steam class carries the AppID: resolve via manifests, else keep the
+    # stable steam_app_* key by exiting silently.
     if _steam_class_appid(window_class) is not None:
         title = steam_title_for_class(window_class)
         if title:
             print(title)
         sys.exit(0)
 
-    # Non-Steam shortcuts and launch wrappers (e.g. Battle.net added to Steam
-    # as a non-Steam game as is the common in Omarchy) report a fixed slug
-    # instead of a numeric AppID "steam_app_battlenet" for World of Warcraft
-    # Diablo, Overwatch, etc. alike. No manifest can tell them apart, but
-    # the window title can (the launcher itself titles its window "Battle.net";
-    # a running game titles it with the game's own name), so use it instead of
-    # leaving every game bucketed under the wrapper's slug.
+    # Non-Steam slugs (e.g. steam_app_battlenet) cover many games; tell them
+    # apart by window title instead.
     if _steam_class_appid(window_class) is None and _is_steam_class(window_class):
         title = window_title.strip()
         if title:

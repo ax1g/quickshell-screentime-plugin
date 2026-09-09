@@ -36,9 +36,7 @@ Item {
         radius: Style.space(6)
     }
 
-    // Swallows hover and clicks so they don't reach the donut, legend
-    // and week graph beneath the drawer. Declared before the scroll
-    // view so the drawer's own controls stay on top of it.
+    // Swallow hover/clicks so they don't reach the panel beneath.
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
@@ -47,20 +45,17 @@ Item {
         }
     }
 
-    // Fixed hero header (consistent with the main panel's hero). It
-    // stays put while the year overview below scrolls.
+    // Fixed hero header; the overview scrolls beneath it.
     Item {
         id: yearHeader
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
         height: implicitHeight
-        // Children anchor to the top, so the extra implicitHeight becomes
-        // breathing room below the hero before the scroll view begins.
+        // Extra height is breathing room below the hero.
         implicitHeight: Math.max(yearHeroIcon.implicitHeight, yearHeroLabels.implicitHeight, backCorner.implicitHeight) + Style.space(3)
 
-        // Left: large yearly icon (mirrors the main hero's hourglass).
-        // Clicking it returns to the main panel.
+        // Icon returns to the main panel.
         Text {
             id: yearHeroIcon
             text: "\uf073"
@@ -81,8 +76,6 @@ Item {
             }
         }
 
-        // Label stack: big bold year-total + year nav caption
-        // (mirrors the main hero's value + caption).
         Column {
             id: yearHeroLabels
             anchors.left: yearHeroIcon.right
@@ -169,7 +162,6 @@ Item {
             }
         }
 
-        // Corner action: BACK (mirrors the main hero's SHOW MORE/LESS).
         Item {
             id: backCorner
             anchors.right: parent.right
@@ -228,8 +220,7 @@ Item {
             width: calendarScroll.width
             spacing: Style.space(10)
 
-            // Year overview: one bar per month, length = share of the
-            // busiest month. Hover a bar for its exact total.
+            // Month bars scale to the busiest month; hover for exact total.
             Column {
                 id: heatGrid
                 width: parent.width
@@ -250,7 +241,7 @@ Item {
                 readonly property int nowMonth: new Date().getMonth()
                 readonly property real labelW: Style.space(26)
                 readonly property real labelGap: Style.space(4)
-                // Wide enough for any "NNNh NNm" total at the current font.
+                // Width fits any hour total at this font.
                 readonly property real hoursW: hoursMetrics.implicitWidth
 
                 Text {
@@ -291,8 +282,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
-                        // Faint full-width track behind months with data; empty
-                        // months show no background, just the label and 0h.
+                        // Empty months show label + 0h only, no track.
                         Rectangle {
                             visible: monthRow.ratio > 0
                             x: heatGrid.labelW + heatGrid.labelGap
@@ -385,7 +375,7 @@ Item {
                     Component {
                         id: cardsDelegate
                         InsightCard {
-                            // Outer-id read, idiomatic for delegates.
+                            // Outer-id reads are idiomatic in delegates; muted for the linter.
                             // qmllint disable unqualified
                             foreground: root.foreground
                             fontFamily: root.fontFamily
@@ -393,8 +383,7 @@ Item {
                         }
                     }
 
-                    // Masonry split: cards keep their own height, so the two
-                    // columns drift independently instead of flexing to match.
+                    // Columns drift independently; cards keep own height.
                     function splitCards() {
                         var cards = root.yearFacts;
                         var left = [];

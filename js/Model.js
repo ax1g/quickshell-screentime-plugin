@@ -7,18 +7,9 @@ function pad2(n) {
   return n < 10 ? "0" + n : String(n)
 }
 
-// Canonical tracking keys for multi-process browsers. A browser launched
-// from a terminal resolves to its binary name (e.g. "zen-bin"), and its
-// subprocesses can leak process names (Web Content, forkserver, …). Screen
-// time must fold all of those into the single per-app key, otherwise a
-// browser shows up as several individual rows.
-//
-// Canonical copy: lib/browser_aliases.json. Node require()s it directly;
-// scripts/resolve_app.py loads it at runtime. QML cannot read the file
-// synchronously (Quickshell's XHR blocks local files and Qt.include() is
-// deprecated), so qmlBrowserAliases() mirrors the data as a literal — a
-// Node test asserts the mirror matches the JSON so the two can never
-// silently drift.
+// Fold browser binaries and worker comms into one canonical app key.
+// QML mirrors js/browser_aliases.json as a literal (no sync file reads);
+// a test asserts the mirror matches, so update both together.
 var BROWSER_ALIASES = (function () {
   if (typeof module !== "undefined" && module && module.exports)
     return require("./browser_aliases.json")
@@ -50,14 +41,9 @@ function canonicalApp(name) {
   return key
 }
 
-// Human-readable label for the panel. Chromium site windows are reduced
-// to their hostname, reverse-DNS app IDs from the compositor (e.g.
-// "com.github.user.Codium") are shortened to the last segment and
-// lowercased, and plain binary names pass through unchanged.
-// Steam window classes (e.g. "steam_app_730") arrive already resolved to
-// game titles by scripts/resolve_app.py; unresolved ones fall through to
-// the plain-name path. This layer never touches the filesystem: QML's JS
-// engine has no require(), so fs-based lookups would throw at runtime.
+// Display label: Chromium windows fold to hostname, reverse-DNS IDs to the
+// last segment, binaries pass through. Steam classes arrive pre-resolved
+// by python/resolve_app.py. Never touches the filesystem.
 function displayName(app) {
   if (!app) return ""
   var s = String(app)
@@ -72,10 +58,7 @@ function displayName(app) {
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
 }
 
-// Guards against a hand-edited or corrupted history file: only plain
-// objects are accepted for days/months. Arrays pass a typeof "object"
-// check but are not valid history containers; anything malformed falls
-// back to empty so tracking starts clean instead of failing later.
+// Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
 }
@@ -97,10 +80,7 @@ function sanitizeHistory(days, months, years) {
   }
 }
 
-// Cleans one history day ({ total, apps }): totals become finite ms >= 0,
-// app maps become plain objects of finite ms >= 0. Returns
-// { day, changed } so callers can keep the original object (by identity)
-// when nothing was discarded.
+// Returns { day, changed }; unchanged days keep object identity.
 function sanitizeDay(d) {
   if (!isPlainObject(d)) return { day: newDay(), changed: true }
   var total = Number(d.total) || 0
@@ -210,12 +190,8 @@ function appList(today) {
   return out
 }
 
-// Beyond maxSlices the tail collapses into a single "Other" slice. Any
-// app below minPct percent is also folded into Other even if it would
-// otherwise be within the top maxSlices. The percentage of the bucket is
-// recomputed from its own accumulated ms, never by summing rounded slice
-// percentages. Both params must be passed explicitly: QML's JS engine has
-// no default parameters, and undefined would silently collapse every app.
+// Tail folds into "Other" past maxSlices or below minPct. Both params are
+// required: QML's JS engine has no default parameters.
 var DONUT_MAX_SLICES = 6
 var DONUT_MIN_PCT = 3
 // Floor for the week bar-graph y-axis: sparse weeks stay legible by never
@@ -364,10 +340,8 @@ function isRecordWeek(weeks, offset) {
   return true
 }
 
-// Drops history older than keepDays (cutoff = todayKey - (keepDays - 1)).
-// Keys are ISO "YYYY-MM-DD", so plain string comparison orders them
-// correctly. Returns the original object when nothing is pruned so callers
-// can avoid needless object churn on every persist.
+// Prune past keepDays (ISO keys compare lexicographically); unchanged
+// input returns by identity.
 function pruneDays(days, todayKey, keepDays) {
   if (!days || !(keepDays >= 1)) return days
   var cutoff = todayKey
@@ -381,12 +355,8 @@ function pruneDays(days, todayKey, keepDays) {
   return changed ? out : days
 }
 
-// Ordered list of insight rows: [{ label, value, kind, dir }]. Always
-// returns three rows; missing data shows "—" placeholders. kind is
-// "top" | "delta" | "busiest"; dir is "up" | "down" | "flat" for deltas,
-// null otherwise. weekEndKey anchors the
-// "Busiest day (7d)" row: pass the visible week's Sunday so it follows week
-// navigation instead of staying on the current week. Defaults to todayKey.
+// Three insight rows [{ label, value, kind, dir }]; weekEndKey anchors
+// the 7d row to the visible week.
 function insights(day, days, todayKey, activeKey, weekEndKey) {
   var key = activeKey || todayKey
   var isToday = key === todayKey
@@ -481,11 +451,7 @@ function hslToHex(h, s, l) {
   return "#" + ch(r) + ch(g) + ch(b)
 }
 
-// Donut slice colors for n apps. Hue rotates away from the theme accent so
-// slices stay distinguishable while the palette follows theme swaps. For a
-// near-grayscale accent there is no hue to lean on, so a fixed lightness
-// ramp that always fits the usable band guarantees distinct shades whether
-// the accent is near-white or near-black.
+// Per-app hues rotate off the accent; grayscale accents use a lightness ramp.
 function sliceColors(count, accentHex) {
   var base = hexToHsl(accentHex)
   var GRAY_RAMP = [50, 70, 32, 82, 40, 62, 28, 76]
@@ -503,13 +469,8 @@ function sliceColors(count, accentHex) {
   return out
 }
 
-// Glyph colors for the insights rows, derived from the theme so they track
-// accent/urgent swaps: star = accent, up = urgent (theme red), down = green
-// carrying the accent's saturation and lightness, busiest = accent hue + 80.
-// The shell theme exposes no green role, so down is fixed at hue 155. On a
-// near-grayscale accent there is no saturation to borrow, so a fixed vivid
-// level keeps down and busiest distinguishable (same approach as the
-// GRAY_RAMP in sliceColors).
+// Insight glyph colors track the theme; down is fixed at hue 155
+// (the shell exposes no green role).
 function insightColors(accentHex, urgentHex) {
   var base = hexToHsl(accentHex)
   var upHsl = hexToHsl(urgentHex)
@@ -609,11 +570,8 @@ function msUntilNextHour(nowMs) {
   return (3600 - d.getMinutes() * 60 - d.getSeconds()) * 1000 - d.getMilliseconds()
 }
 
-// Mon-Sun aligned weeks for the scrollable bar graph. Returns an array of
-// `weekCount` week objects, newest first. Each week:
-//   { month: "Aug", days: [{ key, ms, label, isEmpty, isFuture, isToday }] }
-// Mon = index 0, Sun = index 6. Future days in the current week are flagged
-// so the UI can render faint stubs.
+// Mon-Sun weeks, newest first: { month, days: [{ key, ms, label, flags }] }.
+// Mon = 0, Sun = 6; future days render as stubs.
 function monSunWeeks(days, todayKey, weekCount) {
   if (!todayKey || weekCount <= 0) return []
   var weeks = []
@@ -658,11 +616,7 @@ function monSunWeeks(days, todayKey, weekCount) {
   return weeks
 }
 
-// Header label for one monSunWeeks week: its Mon–Sun date range plus the
-// ISO week number, e.g. "Aug 17 – 23, 2026 · W34". Same-month weeks collapse
-// the repeated month; cross-year weeks name both years. Accepts either the
-// week object ({ days: [{ key } x7] }) or a bare 7-entry days array. Returns
-// "" for anything else so the header stays blank instead of showing garbage.
+// Week header label, e.g. "Aug 17 – 23, 2026 · W34"; "" when malformed.
 function weekRangeLabel(week) {
   var days = week && week.days ? week.days : week
   if (!days || days.length !== 7) return ""
@@ -712,12 +666,8 @@ function scrollableTrendMax(weeks) {
   return max
 }
 
-// One derivation for the paginated week trend: the week list plus every
-// fact the panel threads separately today (visible week, its max and
-// total, the record flag, whether older weeks hold data, and the Sunday
-// key anchoring "Busiest day (7d)" to the week on screen). Returns
-// { weeks, week, max, totalMs, isRecord, hasPrev, weekEndKey }; week is
-// null and the facts are zeroed when offset is out of range.
+// One week-trend derivation: { weeks, week, max, totalMs, isRecord,
+// hasPrev, weekEndKey }; null week when offset is out of range.
 function weekView(days, todayKey, weekCount, offset) {
   var weeks = monSunWeeks(days, todayKey, weekCount)
   var empty = {
@@ -752,10 +702,7 @@ function weekView(days, todayKey, weekCount, offset) {
   }
 }
 
-// Y-axis gridlines for the week bar graph: baseline, midpoint and the top
-// of the scale. Ticks are anchored to max(weekMax, TREND_REF_MS) — the same
-// value the bars scale against — so the busiest bar keeps its full height
-// and never gets silently shrunk by an over-tall rounded ladder.
+// Axis ticks anchor to the same max the bars scale against.
 function weekAxisTicks(weekMax) {
   var max = Number(weekMax)
   if (weekMax === null || weekMax === "" || !(max >= 0)) return []
@@ -766,10 +713,7 @@ function weekAxisTicks(weekMax) {
   return [0, half, ref]
 }
 
-// Whole-hour approximation for week-axis tick labels: the ticks stay at
-// exact fractions of the week's peak, but their labels render as round hour
-// figures ("0h", "2h", "6h") so the axis reads cleanly at a glance. Exact
-// durations remain available in tooltips and the hero.
+// Tick labels render whole hours; exact values live in tooltips.
 function fmtWholeHours(ms) {
   ms = Math.max(0, Number(ms) || 0)
   return Math.round(ms / 3600000) + "h"
@@ -777,25 +721,13 @@ function fmtWholeHours(ms) {
 
 // ---- Calendar view helpers -----------------------------------------------
 
-// Monthly totals for a given year. Returns 12 objects:
-//   { month: 0-11, label: "Jan", ms: number, hours: "156h" }
-// Merges raw `days` (recent data within keepDays) with persisted `months`
-// aggregates (historical data beyond keepDays). The `months` object maps
-// "YYYY-MM" keys to cumulative ms totals.
-// Coerces a possibly hand-edited total to finite ms >= 0: string totals
-// must add, never concatenate ("0" + "100" = "0100").
+// 12 monthly totals merging raw days, month lumps and archive.
 function numMs(v) {
   var n = Number(v)
   return isFinite(n) && n > 0 ? n : 0
 }
 
-// Single merge point for one calendar year across the three stores (raw
-// `days`, legacy `months` lumps, per-day `years` archive). The stores are
-// disjoint by construction: nothing writes `months` anymore, and a day is
-// deleted into exactly one store, so a lump and archive days sharing a
-// month always describe different days — both are kept. Returns
-// { monthMs: [12 numbers], dayTotals: [{ date, ms }] } with dayTotals in
-// ascending calendar order and future dates (beyond todayKey) excluded.
+// Merge the three disjoint stores into { monthMs, dayTotals }.
 function mergeYear(days, months, years, year, todayKey) {
   var y = Number(year)
   // Future dates (beyond todayKey) are excluded everywhere, not just from
@@ -872,12 +804,7 @@ function yearTotal(days, months, year, years, todayKey) {
   return yearSummary(days, months, years, year, todayKey).total
 }
 
-// Per-day screen-time archive: a whole calendar year of day totals kept in
-// per-day aggregates ({ "YYYY": { "YYYY-MM-DD": ms } }) so retro facts — day
-// counts, streaks, weekday rhythm, peak day — stay computable after the
-// 95-day raw-detail window prunes the app breakdown. Retained for the current
-// and previous calendar year only, and consumed as the single source of
-// truth: pruned days go here instead of the month lumps.
+// Per-day archive keeping retro facts past the raw-detail window.
 var YEAR_HOURS = 8760
 var YEAR_HOURS_LEAP = 8784
 var MIN_ACTIVE_DAY_MS = 60 * 1000
@@ -1065,10 +992,7 @@ function pruneArchive(years, year) {
   return keep
 }
 
-// Retention in one step: prune days older than keepDays and roll the
-// dropped days into the per-day archive. Returns { days, years, pruned };
-// when nothing is pruned the inputs come back by identity so callers can
-// skip mirror churn.
+// Prune old days into the archive; unchanged inputs return by identity.
 function applyRetention(days, years, todayKey, keepDays, year) {
   var kept = pruneDays(days, todayKey, keepDays)
   if (kept === days) return { days: days, years: years, pruned: false }
@@ -1084,14 +1008,8 @@ function applyRetention(days, years, todayKey, keepDays, year) {
   }
 }
 
-// Scroll-of-truth yearly retro: a whole year made of real day data. Each card
-// is { glyph, label, value, sub, color }. Day-scale cards only appear when
-// the per-day archive (or the live window) covers the year — months-only
-// years fall back to the month-scale trio.
-// accentHex is the theme accent ("#rrggbb"): card glyphs take one
-// sliceColors shade each, in order, so the retro follows theme swaps.
-// When omitted the cards fall back to a fixed accent instead of the old
-// hand-picked rainbow hexes.
+// Yearly retro cards [{ glyph, label, value, sub, color }]; day-scale
+// cards need per-day coverage, months-only years get the trio.
 function yearFacts(days, months, years, year, todayKey, accentHex) {
   // Normalize once: downstream strict compares (recharge guard, coverage)
   // must not treat "2026" as a different year from 2026.
@@ -1119,10 +1037,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
   }
   top.sort(function (a, b) { return b.ms - a.ms })
 
-  // Recharge candidates: a brand-new month trivially has the least time,
-  // so the current month only counts with two weeks of tracked days behind
-  // it. With no older months on record it still counts — whatever data
-  // exists is all there is.
+  // The current month needs two tracked weeks to qualify as recharge.
   var tk = String(todayKey || "").split("-")
   var tkYear = Number(tk[0])
   var tkMonth = Number(tk[1]) - 1
@@ -1262,10 +1177,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
   return out
 }
 
-// One derivation for the year view: the header total and the retro cards
-// share a single yearSummary merge instead of Panel paying for two (the
-// old calendarYearTotal + yearFacts pair merged the three stores twice).
-// Returns { totalMs, totalLabel, facts }.
+// Header total and retro cards share one merge.
 function yearView(days, months, years, year, todayKey, accentHex) {
   year = Number(year)
   var summary = yearSummary(days, months, years, year, todayKey)

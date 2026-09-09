@@ -3,8 +3,7 @@ import qs.Commons
 import "components"
 import "../js/Model.js" as Model
 
-// Paginated Mon-Sun week bar graph with < Month Year > navigation.
-// Shows one week at a time; weekOffset 0 = current week.
+// Paginated Mon-Sun page; offset 0 = current week.
 Column {
     id: root
     required property color foreground
@@ -29,9 +28,7 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    // Header row: < Month Year > on the left, the visible week's total on
-    // the right. Arrows stay visible but fade out at the edges of the
-    // 13-week window.
+    // Arrows fade at the 13-week edges.
     Item {
         width: parent.width
         implicitHeight: Math.max(navRow.implicitHeight, weekTotalLabel.implicitHeight)
@@ -72,8 +69,7 @@ Column {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 elide: Text.ElideRight
-                // Cap at the header width minus arrows and the week total so
-                // cross-year labels elide instead of overlapping it.
+                // Cap width so long labels elide instead of overlapping.
                 width: Math.max(40, Math.min(implicitWidth, root.width - weekTotalLabel.implicitWidth - Style.space(76)))
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -102,8 +98,7 @@ Column {
             }
         }
 
-        // Record-week trophy: gold glyph beside the total while the current
-        // week beats every older week on record.
+        // Gold glyph while the current week leads on record.
         Text {
             visible: root.recordWeek
             text: "\uF091"
@@ -164,20 +159,13 @@ Column {
         }
     }
 
-    // 7 day bars for the visible week with a y-axis scale reference
-    // (gridlines plus whole-hour tick labels) that the bars scale against.
-    // No plate: the chart sits on the drawer background like every other
-    // widget.
+    // Day bars on the drawer background; no plate.
     Item {
         width: parent.width
-        // 80px chart plus a 12px top pad (headroom for the top gridline's
-        // label) and an 8px bottom pad so the bars clear the edge instead
-        // of hugging it.
+        // 12px top pad for the peak label, 8px bottom clearance.
         height: Style.space(80) + Style.space(20)
         clip: true
 
-        // Chart content, nudged down to leave headroom for the top
-        // gridline's whole-hour label.
         Item {
             anchors.left: parent.left
             anchors.right: parent.right
@@ -185,7 +173,6 @@ Column {
             anchors.topMargin: Style.space(12)
             height: Style.space(80)
 
-            // Horizontal gridlines and right-hand labels at each tick.
             // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified
             Repeater {
@@ -199,9 +186,7 @@ Column {
                     z: 1
                     y: root.axisMaxMs > 0 ? (parent.height - Style.space(14) - Style.space(64) * Number(tickDelegate.modelData) / root.axisMaxMs) : parent.height
 
-                    // Continuous gridline over the bar area only, kept clear of
-                    // the right-hand y-axis label column so the lines never cross
-                    // the labels.
+                    // Gridlines stop before the y-axis labels.
                     Rectangle {
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -226,8 +211,6 @@ Column {
             }
             // qmllint enable unqualified
 
-            // 7 day bars for the visible week, ending just before the
-            // right-hand y-axis labels.
             Row {
                 anchors.left: parent.left
                 anchors.right: parent.right

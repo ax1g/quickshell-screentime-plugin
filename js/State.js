@@ -1,11 +1,5 @@
-// State machine for the screen-time service.
-//
-// Pure functions: every input is passed explicitly, every output is a new
-// object.  No Date.now(), no Qt, no side effects — fully testable in
-// Node.js.
-//
-// Service.qml owns the side effects (timers, disk writes, process
-// spawning); this module owns the state transitions.
+// Pure state machine: explicit inputs, fresh outputs, no side effects.
+// Service.qml owns timers, disk and processes; this owns transitions.
 
 // Model is imported by QML's import mechanism (global scope). For Node.js
 // testing, require it explicitly. The guard avoids shadowing the QML global.
@@ -28,9 +22,7 @@ function accumulateBucket(today, app, dur) {
   return { total: today.total + dur, apps: apps }
 }
 
-// Per-app remainder of full after base (floored at zero): the unmirrored
-// delta when the live day ran ahead of the history mirror (a commit landed
-// but persist has not yet, e.g. blocked behind the corrupt-file backup).
+// Unmirrored delta of live day over history mirror, floored at zero.
 function dayMinus(full, base) {
   var f = full && typeof full === "object" ? full : { total: 0, apps: {} }
   var b = base && typeof base === "object" ? base : { total: 0, apps: {} }
@@ -46,9 +38,7 @@ function dayMinus(full, base) {
   return { total: total, apps: apps }
 }
 
-// Closes the open bucket: accrues elapsed ms to the app that was focused
-// when it started.  Handles suspend detection (drop the stale bucket) and
-// midnight attribution (bucket goes to the day it started on).
+// Close the open bucket onto its start day; suspend gaps drop it.
 function closeActiveBucket(state, activeApp, activeStart, now, todayKey, suspendGapMs, lastTick) {
   if (!activeApp || !activeStart) return state
   if (isSuspendGap(now, lastTick, suspendGapMs)) {
@@ -97,10 +87,7 @@ function closeActiveBucket(state, activeApp, activeStart, now, todayKey, suspend
   }
 }
 
-// Crash-safety net: folds the in-flight bucket into the correct day(s),
-// then resets activeStart so a crash loses at most the current interval.
-// Unlike closeActiveBucket, this does NOT clear activeApp — the bucket
-// stays open for continued tracking.
+// Fold in-flight time in but keep the bucket open.
 function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapMs, lastTick) {
   if (!activeApp || !activeStart) return state
   if (isSuspendGap(now, lastTick, suspendGapMs)) {
@@ -130,10 +117,7 @@ function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapM
       lastTick: state.lastTick
     }
   }
-  // Bucket spans midnight: close yesterday's portion into the history
-  // mirror, and leave a fresh bucket starting at midnight for today.
-  // This way crash-safe commits never credit pre-midnight time to today;
-  // the final closeActiveBucket will handle the full attribution.
+  // Midnight split: yesterday's share to history, fresh bucket from midnight.
   var dt = new Date(now)
   var midnightMs = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime()
   var yesterdayDur = Math.max(0, midnightMs - activeStart)
@@ -152,9 +136,7 @@ function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapM
   }
 }
 
-// Midnight rollover: checks if the calendar day has changed and, if so,
-// returns the state transition to carry the live bucket forward.  Returns
-// null when no rollover is needed (caller does nothing).
+// Carry the live bucket into a new calendar day; null when unneeded.
 function rolloverIfNeeded(state, newKey) {
   if (newKey === state.todayKey) return null
   var model = modelFor(state)
@@ -170,20 +152,11 @@ function rolloverIfNeeded(state, newKey) {
   }
 }
 
-// Midnight in one transition: closes the open bucket onto the day it
-// started (dropping it on a suspend gap), carries the live day into the
-// new calendar day, and reopens a fresh bucket for the still-focused app
-// so tracking continues without waiting for a focus change.  Returns null
-// when no rollover is needed.  This fuses what Service.qml used to do as
-// close -> patch -> reopen across three separate state applications, so
-// the straddling seconds cannot be misattributed by an ordering slip.
+// Midnight in one transition (close+carry+reopen); null when unneeded.
 function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   if (newKey === state.todayKey) return null
   var app = state.activeApp
-  // Close against the NEW day: the bucket started on the old day, so the
-  // midnight-split branch attributes each portion exactly. (Closing against
-  // the old day would dump the whole straddling bucket into the orphaned
-  // today object, where the carry then loses it to the wrong date.)
+  // Close against the NEW day so the split attributes each portion exactly.
   var closed = closeActiveBucket(
     state, state.activeApp, state.activeStart, now,
     newKey, suspendGapMs, lastTick
@@ -191,14 +164,9 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   var patch = rolloverIfNeeded(closed, newKey)
   patch.activeApp = app
   patch.activeStart = app ? now : 0
-  // The carry patch has no days key; the split-off yesterday portion from
-  // the close must ride along or it is lost. Copy: the same-day and
-  // suspend branches return the input days by reference.
+  // Carry the split-off yesterday portion along or lose it.
   var d = Object.assign({}, closed.days)
-  // Flush unmirrored live data into the old day before the carry replaces
-  // it: without this, seconds committed after the last persist evaporate
-  // at midnight. The delta is computed against the pre-growth live day so
-  // the post-midnight share below is never counted twice.
+  // Flush unmirrored data first, computed pre-growth to avoid double count.
   var delta = dayMinus(state.today, state.days ? state.days[state.todayKey] : null)
   if (delta.total > 0) {
     var old = d[state.todayKey] && typeof d[state.todayKey] === "object"
@@ -214,9 +182,7 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
     d[state.todayKey] = { total: total, apps: apps }
   }
   patch.days = d
-  // The close accrued the post-midnight share into the OLD today object,
-  // which the carry replaces. Fold that growth into the carried day so the
-  // straddling seconds survive the transition.
+  // Fold post-midnight growth into the carried day.
   var grown = (closed.today ? closed.today.total : 0)
     - (state.today ? state.today.total : 0)
   if (grown > 0 && app) patch.today = accumulateBucket(patch.today, app, grown)
@@ -226,18 +192,10 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   return patch
 }
 
-// Applies a terminal resolver result.  Returns null when the result
-// should be ignored (focus moved mid-resolve, result belongs to a
-// superseded resolve request, or name unchanged).  Returns a partial
-// state patch when the resolved name opens a new bucket.  lastTick is
-// forwarded so the caller can update it.
+// Apply a terminal resolve; null when stale or unchanged.
 function applyResolvedApp(state, name, resolveForApp, todayKey, suspendGapMs, lastTick) {
   if (!state.resolveInFlight) return null
-  // appId strings alone cannot prove freshness: switching between two
-  // windows of the same terminal keeps rawApp === resolveForApp.  The
-  // generation token does — it changes on every resolve request, and an
-  // in-flight process spawned under an older token carries that token's
-  // result.
+  // Same-terminal switches keep rawApp; only the generation token proves freshness.
   if (state.resolveSpawnGen !== state.resolveGeneration) return null
   if (state.rawApp !== resolveForApp) return null
   if (!name) name = state.rawApp
