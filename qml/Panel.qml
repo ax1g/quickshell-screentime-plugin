@@ -1,6 +1,4 @@
 import QtQuick
-import QtQuick.Controls
-import Quickshell
 import qs.Commons
 import qs.Ui
 import "../js/Model.js" as Model
@@ -234,7 +232,7 @@ Panel {
                 YearDrawer {
                   foreground: root.contentForeground
                   fontFamily: root.contentFontFamily
-                  panelBackground: bar ? bar.background : Color.background
+                  panelBackground: root.bar ? root.bar.background : Color.background
                   accent: Color.accent
                   serviceReady: root.serviceReady
                   days: root.days
@@ -341,7 +339,7 @@ Panel {
                             WeekTrend {
                               foreground: root.contentForeground
                               fontFamily: root.contentFontFamily
-                              tipBackground: bar ? bar.background : Color.background
+                              tipBackground: root.bar ? root.bar.background : Color.background
                               accent: Color.accent
                               weekOffset: root.weekOffset
                               hasPrevWeekData: root.hasPrevWeekData

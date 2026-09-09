@@ -1,3 +1,7 @@
+// Functions and handlers here cross-reference timers, adapters and
+// processes by id (idiomatic QML service pattern); the directive below
+// silences the linter for that documented file-wide pattern.
+// qmllint disable unqualified
 import QtQuick
 import Quickshell
 import Quickshell.Io

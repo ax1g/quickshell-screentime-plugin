@@ -98,6 +98,9 @@ Item {
             go = true;
         }
 
+        // Delegate reads outer ids (idiomatic QML); silence the
+        // linter for that documented pattern.
+        // qmllint disable unqualified
         Repeater {
             id: sparkleRepeater
             model: 6
@@ -164,6 +167,7 @@ Item {
                 }
             }
         }
+        // qmllint enable unqualified
     }
 
     Row {

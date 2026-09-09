@@ -1,6 +1,4 @@
 import QtQuick
-import QtQuick.Controls
-import Quickshell
 import Quickshell.Io
 import qs.Ui
 import qs.Commons
@@ -189,6 +187,9 @@ BarWidget {
             visible: root.vertical
             anchors.fill: parent
 
+            // Delegate reads outer ids (idiomatic QML); silence the
+            // linter for that documented pattern.
+            // qmllint disable unqualified
             Repeater {
                 model: root.verticalLines
 
@@ -202,6 +203,7 @@ BarWidget {
                     color: button.foreground
                 }
             }
+            // qmllint enable unqualified
         }
     }
 }

@@ -62,10 +62,14 @@ Column {
         return root.foreground;
     }
 
+    // Delegates read outer props by id (idiomatic QML); the directive
+    // below silences the linter for that documented pattern.
+    // qmllint disable unqualified
     Repeater {
         model: root.rows
 
         Item {
+            id: rowDelegate
             required property var modelData
 
             readonly property string label: String(modelData.label || "")
@@ -79,8 +83,8 @@ Column {
 
             Text {
                 id: iconText
-                text: root.insightIcon(kind, dir || null)
-                color: root.insightIconColor(kind, dir || null)
+                text: root.insightIcon(rowDelegate.kind, rowDelegate.dir || null)
+                color: root.insightIconColor(rowDelegate.kind, rowDelegate.dir || null)
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall + 3
                 width: Style.space(16)
@@ -91,7 +95,7 @@ Column {
 
             Text {
                 id: labelText
-                text: label
+                text: rowDelegate.label
                 color: root.foreground
                 opacity: 0.6
                 font.family: root.fontFamily
@@ -106,8 +110,8 @@ Column {
 
             Text {
                 id: valueText
-                text: value
-                color: root.insightValueColor(kind, dir || null)
+                text: rowDelegate.value
+                color: root.insightValueColor(rowDelegate.kind, rowDelegate.dir || null)
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 anchors.right: parent.right
@@ -118,4 +122,5 @@ Column {
             }
         }
     }
+    // qmllint enable unqualified
 }

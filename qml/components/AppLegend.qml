@@ -51,6 +51,9 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
             }
 
+            // Delegate reads outer ids (idiomatic QML); silence the
+            // linter for that documented pattern.
+            // qmllint disable unqualified
             Repeater {
                 model: legend.rows
 
@@ -105,6 +108,7 @@ Item {
                     }
                 }
             }
+            // qmllint enable unqualified
         }
     }
 
