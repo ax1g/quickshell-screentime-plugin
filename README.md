@@ -103,9 +103,11 @@ ln -s "$PWD" ~/.config/omarchy/plugins/agx.screen-time
 node --check js/Model.js && node --check js/State.js
 node --test tests/model.test.js tests/state.test.js
 python3 -m unittest discover -s tests
+qmllint -I ~/.config/qml-lint-imports qml/*.qml qml/components/*.qml
 ```
 
-The same checks run in CI on every push.
+The same checks run in CI on every push. See CONTRIBUTING.md for the
+project structure and QML rules.
 
 ## License
 
