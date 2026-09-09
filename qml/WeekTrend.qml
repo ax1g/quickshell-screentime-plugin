@@ -150,35 +150,10 @@ Column {
             Repeater {
                 model: root.axisTicks
 
-                Item {
-                    id: tickDelegate
-                    required property double modelData
-                    width: parent.width
-                    height: 1
-                    z: 1
-                    y: root.axisMaxMs > 0 ? (parent.height - Style.space(14) - Style.space(64) * Number(tickDelegate.modelData) / root.axisMaxMs) : parent.height
-
-                    // Gridlines stop before the y-axis labels.
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.rightMargin: Style.space(26)
-                        height: 1
-                        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-                    }
-
-                    Text {
-                        text: Model.fmtWholeHours(tickDelegate.modelData)
-                        color: Qt.darker(root.foreground, 1.35)
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
-                        font.bold: false
-                        width: Style.space(20)
-                        anchors.right: parent.right
-                        anchors.rightMargin: Style.space(2)
-                        anchors.verticalCenter: parent.verticalCenter
-                        horizontalAlignment: Text.AlignRight
-                    }
+                WeekTick {
+                    axisMaxMs: root.axisMaxMs
+                    foreground: root.foreground
+                    fontFamily: root.fontFamily
                 }
             }
             // qmllint enable unqualified
@@ -196,50 +171,14 @@ Column {
                 Repeater {
                     model: root.visibleWeek ? root.visibleWeek.days : []
 
-                    Item {
-                        id: dayDelegate
-                        required property var modelData
-                        required property int index
-
-                        width: (parent.width - parent.spacing * 6) / 7
-                        height: Style.space(80)
-
-                        property bool isActive: modelData.key === root.activeDayKey
-                        property bool isFuture: modelData.isFuture
-                        property bool isEmpty: !isFuture && modelData.ms <= 0
-                        property bool hasData: !isFuture && !isEmpty && root.axisMaxMs > 0
-                        property real barPx: hasData ? Math.max(3, Style.space(64) * Number(modelData.ms) / root.axisMaxMs) : 0
-
-                        Rectangle {
-                            width: parent.width * 0.5
-                            radius: Style.space(2)
-                            color: (parent.isFuture || parent.isEmpty) ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.10) : (parent.isActive ? root.accent : (barMouse.containsMouse ? Qt.lighter(root.foreground, 1.4) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.9)))
-                            opacity: 1.0
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: Style.space(14)
-                            height: parent.barPx
-
-                            MouseArea {
-                                id: barMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                enabled: !parent.parent.isFuture && !parent.parent.isEmpty
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.daySelected(dayDelegate.modelData.key)
-                            }
-                        }
-
-                            Text {
-                                text: dayDelegate.modelData.label
-                            color: root.foreground
-                                opacity: (parent.isActive || (!parent.isFuture && dayDelegate.modelData.ms > 0)) ? 1.0 : 0.45
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                            font.bold: parent.isActive
-                            width: parent.width
-                            horizontalAlignment: Text.AlignHCenter
-                            anchors.bottom: parent.bottom
+                    WeekDayBar {
+                        activeDayKey: root.activeDayKey
+                        axisMaxMs: root.axisMaxMs
+                        foreground: root.foreground
+                        accent: root.accent
+                        fontFamily: root.fontFamily
+                        onSelected: function (key) {
+                            root.daySelected(key);
                         }
                     }
                 }
