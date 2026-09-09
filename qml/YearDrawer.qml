@@ -130,44 +130,13 @@ Item {
             }
         }
 
-        Item {
+        BackButton {
             id: backCorner
             anchors.right: parent.right
             anchors.top: parent.top
-            width: backRow.implicitWidth
-            height: backRow.implicitHeight
-
-            Row {
-                id: backRow
-                anchors.fill: parent
-                spacing: Style.space(4)
-
-                Text {
-                    text: "\u25c2"
-                    color: backCornerMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.title
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                    text: "BACK"
-                    color: backCornerMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    font.bold: true
-                    font.letterSpacing: 1.2
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: backCornerMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.closeRequested()
-            }
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+            onClicked: root.closeRequested()
         }
     }
 
@@ -265,25 +234,14 @@ Item {
                     bottomPadding: Style.space(6)
                 }
 
-                Item {
+                Row {
                     id: yearlyInsightsGrid
                     width: parent.width
-                    height: cardsRow.height
                     visible: root.yearFacts.length > 0
-
-                    property var leftCards: []
-                    property var rightCards: []
-
-                    Component {
-                        id: cardsDelegate
-                        InsightCard {
-                            // Outer-id reads are idiomatic in delegates; muted for the linter.
-                            // qmllint disable unqualified
-                            foreground: root.foreground
-                            fontFamily: root.fontFamily
-                            // qmllint enable unqualified
-                        }
-                    }
+                    spacing: Style.space(8)
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
 
                     // Columns drift independently; cards keep own height.
                     function splitCards() {
@@ -302,8 +260,8 @@ Item {
                                 rightScore += score;
                             }
                         }
-                        leftCards = left;
-                        rightCards = right;
+                        yearlyInsightsGrid.leftCards = left;
+                        yearlyInsightsGrid.rightCards = right;
                     }
 
                     function cardScore(card) {
@@ -328,38 +286,22 @@ Item {
 
                     Component.onCompleted: splitCards()
 
-                    Row {
-                        id: cardsRow
-                        spacing: Style.space(8)
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-
-                        // Outer-id reads are idiomatic in delegates; muted for the linter.
-                        // qmllint disable unqualified
-                        Column {
-                            id: leftColumn
-                            width: (parent.width - Style.space(8)) / 2
-                            spacing: Style.space(8)
-
-                            Repeater {
-                                model: yearlyInsightsGrid.leftCards
-                                delegate: cardsDelegate
-                            }
-                        }
-
-                        Column {
-                            id: rightColumn
-                            width: (parent.width - Style.space(8)) / 2
-                            spacing: Style.space(8)
-
-                            Repeater {
-                                model: yearlyInsightsGrid.rightCards
-                                delegate: cardsDelegate
-                            }
-                        }
-                        // qmllint enable unqualified
+                    // Outer-id reads are idiomatic in delegates; muted for the linter.
+                    // qmllint disable unqualified
+                    CardColumn {
+                        width: (parent.width - Style.space(8)) / 2
+                        cards: yearlyInsightsGrid.leftCards
+                        foreground: root.foreground
+                        fontFamily: root.fontFamily
                     }
+
+                    CardColumn {
+                        width: (parent.width - Style.space(8)) / 2
+                        cards: yearlyInsightsGrid.rightCards
+                        foreground: root.foreground
+                        fontFamily: root.fontFamily
+                    }
+                    // qmllint enable unqualified
                 }
             }
         }
