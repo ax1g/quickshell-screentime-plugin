@@ -186,15 +186,19 @@ Column {
             height: Style.space(80)
 
             // Horizontal gridlines and right-hand labels at each tick.
+            // Delegates read outer ids (idiomatic QML); silence the
+            // linter for that documented pattern.
+            // qmllint disable unqualified
             Repeater {
                 model: root.axisTicks
 
                 Item {
+                    id: tickDelegate
                     required property double modelData
                     width: parent.width
                     height: 1
                     z: 1
-                    y: root.axisMaxMs > 0 ? (parent.height - Style.space(14) - Style.space(64) * Number(modelData) / root.axisMaxMs) : parent.height
+                    y: root.axisMaxMs > 0 ? (parent.height - Style.space(14) - Style.space(64) * Number(tickDelegate.modelData) / root.axisMaxMs) : parent.height
 
                     // Continuous gridline over the bar area only, kept clear of
                     // the right-hand y-axis label column so the lines never cross
@@ -208,7 +212,7 @@ Column {
                     }
 
                     Text {
-                        text: Model.fmtWholeHours(modelData)
+                        text: Model.fmtWholeHours(tickDelegate.modelData)
                         color: Qt.darker(root.foreground, 1.35)
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
@@ -221,6 +225,7 @@ Column {
                     }
                 }
             }
+            // qmllint enable unqualified
 
             // 7 day bars for the visible week, ending just before the
             // right-hand y-axis labels.
@@ -232,10 +237,14 @@ Column {
                 z: 2
                 spacing: 0
 
+                // Delegates read outer ids (idiomatic QML); silence the
+                // linter for that documented pattern.
+                // qmllint disable unqualified
                 Repeater {
                     model: root.visibleWeek ? root.visibleWeek.days : []
 
                     Item {
+                        id: dayDelegate
                         required property var modelData
                         required property int index
 
@@ -264,14 +273,14 @@ Column {
                                 hoverEnabled: true
                                 enabled: !parent.parent.isFuture && !parent.parent.isEmpty
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.daySelected(modelData.key)
+                                onClicked: root.daySelected(dayDelegate.modelData.key)
                             }
                         }
 
-                        Text {
-                            text: modelData.label
+                            Text {
+                                text: dayDelegate.modelData.label
                             color: root.foreground
-                            opacity: (parent.isActive || (!parent.isFuture && modelData.ms > 0)) ? 1.0 : 0.45
+                                opacity: (parent.isActive || (!parent.isFuture && dayDelegate.modelData.ms > 0)) ? 1.0 : 0.45
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.caption
                             font.bold: parent.isActive
@@ -281,6 +290,7 @@ Column {
                         }
                     }
                 }
+                // qmllint enable unqualified
             }
         }
     }
