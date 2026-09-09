@@ -100,7 +100,7 @@ your checkout is all you need to iterate:
 
 ```bash
 ln -s "$PWD" ~/.config/omarchy/plugins/agx.screen-time
-node --check lib/Model.js && node --check lib/State.js
+node --check js/Model.js && node --check js/State.js
 node --test tests/model.test.js tests/state.test.js
 python3 -m unittest discover -s tests
 ```

@@ -11,8 +11,8 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "service": "Service.qml",
-    "barWidget": "BarWidget.qml"
+    "service": "qml/Service.qml",
+    "barWidget": "qml/BarWidget.qml"
   },
   "barWidget": {
     "displayName": "Screen Time",

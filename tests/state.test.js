@@ -2,8 +2,8 @@
 
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
-const State = require("../lib/State.js")
-const Model = require("../lib/Model.js")
+const State = require("../js/State.js")
+const Model = require("../js/Model.js")
 
 // Helper: epoch ms for a local-time date at midnight.
 function localMidnight(year, month, day) {

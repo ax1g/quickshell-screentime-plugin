@@ -17,7 +17,7 @@ import unittest
 from contextlib import redirect_stdout
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "python"))
 
 import resolve_app as r  # noqa: E402
 
@@ -26,7 +26,7 @@ class CanonicalizationTests(unittest.TestCase):
     def test_browser_aliases_json_is_loaded(self):
         json_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "lib", "browser_aliases.json")
+            "js", "browser_aliases.json")
         with open(json_path) as f:
             expected = json.load(f)
         self.assertEqual(r.BROWSER_BINARY_TO_APP, expected)

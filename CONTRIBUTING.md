@@ -20,11 +20,11 @@ started.
 
 ```bash
 # JavaScript (Model.js + State.js)
-node --check lib/Model.js && node --check lib/State.js
+node --check js/Model.js && node --check js/State.js
 node --test tests/model.test.js tests/state.test.js
 
 # Python (resolve_app.py)
-python3 -m py_compile scripts/resolve_app.py
+python3 -m py_compile python/resolve_app.py
 python3 -m unittest discover -s tests
 
 # QML lint (best-effort, requires qt6-declarative-tools)
@@ -36,13 +36,14 @@ All tests must pass before submitting a PR. CI runs these checks automatically.
 ## Project structure
 
 ```
-BarWidget.qml       Bar widget (today's total, popup host)
-Panel.qml           Popup panel (donut chart, legend, insights)
-Service.qml         Long-running background service (timers, persistence)
-lib/
+qml/
+  BarWidget.qml       Bar widget (today's total, popup host)
+  Panel.qml           Popup panel (donut chart, legend, insights)
+  Service.qml         Long-running background service (timers, persistence)
+js/
   Model.js          Pure JS helpers (formatting, aggregation, donut math)
   State.js          Pure JS state machine (bucket lifecycle, suspend, midnight)
-scripts/
+python/
   resolve_app.py    Terminal foreground process resolver
 tests/              Unit tests (Node.js + Python)
 docs/assets/        README images
@@ -95,8 +96,8 @@ Types: `feat`, `fix`, `test`, `refactor`, `chore`, `docs`, `perf`, `style`.
 
 If you add a new browser, update **both** files:
 
-- `lib/Model.js` → `BROWSER_ALIASES`
-- `scripts/resolve_app.py` → `BROWSER_BINARY_TO_APP`
+- `js/Model.js` → `BROWSER_ALIASES`
+- `python/resolve_app.py` → `BROWSER_BINARY_TO_APP`
 
 They must contain the same keys and map to the same canonical names.
 

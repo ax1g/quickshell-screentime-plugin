@@ -2,7 +2,7 @@
 
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
-const Model = require("../lib/Model.js")
+const Model = require("../js/Model.js")
 
 test("dayKey pads month and day", () => {
   assert.equal(Model.dayKey(new Date(2026, 7, 15)), "2026-08-15")
@@ -429,7 +429,7 @@ test("arcSegments gives a single app the full circle", () => {
 })
 
 test("browser_aliases.json is the single source of truth for canonicalApp", () => {
-  const aliases = require("../lib/browser_aliases.json")
+  const aliases = require("../js/browser_aliases.json")
   assert.equal(typeof aliases, "object")
   assert.ok(Object.keys(aliases).length > 0)
   for (const [key, target] of Object.entries(aliases)) {
@@ -445,7 +445,7 @@ test("QML inline browser aliases match browser_aliases.json", () => {
   // would fold browsers differently under QML vs Node.
   const fs = require("fs")
   const file = JSON.parse(
-    fs.readFileSync(require.resolve("../lib/browser_aliases.json"), "utf8"))
+    fs.readFileSync(require.resolve("../js/browser_aliases.json"), "utf8"))
   const qml = Model.qmlBrowserAliases()
   assert.deepEqual(qml, file)
   assert.ok(Object.keys(qml).length > 0)
@@ -726,14 +726,18 @@ test("monSunWeeks populates ms from days data", () => {
 
 test("scrollableTrendMax returns max ms across all weeks", () => {
   const weeks = [
-    { month: "Aug", days: [
-      { ms: 100 }, { ms: 500 }, { ms: 200 }, { ms: 0 },
-      { ms: 0 }, { ms: 0 }, { ms: 0 }
-    ]},
-    { month: "Aug", days: [
-      { ms: 300 }, { ms: 50 }, { ms: 0 }, { ms: 0 },
-      { ms: 0 }, { ms: 0 }, { ms: 0 }
-    ]}
+    {
+      month: "Aug", days: [
+        { ms: 100 }, { ms: 500 }, { ms: 200 }, { ms: 0 },
+        { ms: 0 }, { ms: 0 }, { ms: 0 }
+      ]
+    },
+    {
+      month: "Aug", days: [
+        { ms: 300 }, { ms: 50 }, { ms: 0 }, { ms: 0 },
+        { ms: 0 }, { ms: 0 }, { ms: 0 }
+      ]
+    }
   ]
   assert.equal(Model.scrollableTrendMax(weeks), 500)
 })
@@ -849,17 +853,19 @@ test("yearTotal ignores different years", () => {
 
 function archiveFixture() {
   const h = HOUR_MS
-  return { 2026: {
-    "2026-01-02": 2 * h,
-    "2026-01-03": h,
-    "2026-02-01": 3 * h,
-    "2026-02-02": 3 * h,
-    "2026-02-03": 3 * h,
-    "2026-03-02": 8 * h,
-    "2026-03-03": 8 * h,
-    "2026-03-04": 5 * h,
-    "2026-03-09": 11 * h
-  } }
+  return {
+    2026: {
+      "2026-01-02": 2 * h,
+      "2026-01-03": h,
+      "2026-02-01": 3 * h,
+      "2026-02-02": 3 * h,
+      "2026-02-03": 3 * h,
+      "2026-03-02": 8 * h,
+      "2026-03-03": 8 * h,
+      "2026-03-04": 5 * h,
+      "2026-03-09": 11 * h
+    }
+  }
 }
 
 test("yearFacts returns empty when the year has no data", () => {
