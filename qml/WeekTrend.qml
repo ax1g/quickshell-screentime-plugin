@@ -117,7 +117,7 @@ Column {
                 cursorShape: Qt.ArrowCursor
             }
 
-            PanelToolTip {
+            ScreenTip {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 tipBackground: root.tipBackground
@@ -148,7 +148,7 @@ Column {
                 onClicked: root.weekTotalToggled()
             }
 
-            PanelToolTip {
+            ScreenTip {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 tipBackground: root.tipBackground

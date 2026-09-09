@@ -19,12 +19,14 @@ var BROWSER_ALIASES = (function () {
 // QML mirror of lib/browser_aliases.json. Keep in sync with that file;
 // tests/model.test.js fails if this lags a change.
 function qmlBrowserAliases() {
-  return {"zen-bin":"zen","zen_browser":"zen","zen":"zen","firefox":"firefox",
-    "librewolf":"librewolf","waterfox":"waterfox","tor-browser":"tor-browser",
-    "mullvad-browser":"mullvad-browser","google-chrome":"google-chrome",
-    "chrome":"google-chrome","chromium":"chromium","brave":"brave",
-    "brave-browser":"brave","vivaldi":"vivaldi","microsoft-edge":"microsoft-edge",
-    "edge":"microsoft-edge"}
+  return {
+    "zen-bin": "zen", "zen_browser": "zen", "zen": "zen", "firefox": "firefox",
+    "librewolf": "librewolf", "waterfox": "waterfox", "tor-browser": "tor-browser",
+    "mullvad-browser": "mullvad-browser", "google-chrome": "google-chrome",
+    "chrome": "google-chrome", "chromium": "chromium", "brave": "brave",
+    "brave-browser": "brave", "vivaldi": "vivaldi", "microsoft-edge": "microsoft-edge",
+    "edge": "microsoft-edge"
+  }
 }
 
 var CHROMIUM_WEB_APP_RE = /^((?:chrome|chromium|brave|msedge|vivaldi)-([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?))(__.*-(?:Default|Profile_[0-9]+))?$/i
@@ -186,7 +188,7 @@ function appList(today) {
     if (ms < 60000) continue
     out.push({ app: app, ms: ms, pct: total > 0 ? Math.round(100 * ms / total) : 0 })
   }
-  out.sort(function(a, b) { return b.ms - a.ms })
+  out.sort(function (a, b) { return b.ms - a.ms })
   return out
 }
 
@@ -237,7 +239,7 @@ function prevKey(key) {
 
 var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 var MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 // Full date label for a dayKey, e.g. "Aug 15".
 function formatDate(key) {

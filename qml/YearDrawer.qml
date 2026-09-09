@@ -307,7 +307,7 @@ Item {
                                 hoverEnabled: true
                             }
 
-                            PanelToolTip {
+                            ScreenTip {
                                 foreground: root.foreground
                                 fontFamily: root.fontFamily
                                 tipBackground: root.panelBackground
