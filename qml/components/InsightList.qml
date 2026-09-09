@@ -3,9 +3,8 @@ import QtQuick
 import qs.Commons
 import "../../js/Model.js" as Model
 
-// Usage-pattern rows: top app, vs-yesterday delta, busiest day of the
-// visible week. Rows carry kind/dir meaning from Model.insights — rendering
-// never parses label text, so renaming a label can't silently recolor.
+// Usage-pattern rows. Rows carry kind/dir meaning, so rendering never
+// parses label text to decide color or glyph.
 Column {
     id: root
     required property var rows
@@ -27,8 +26,7 @@ Column {
         return "\u2192";
     }
 
-    // Per-row glyph: filled star for the top app, trend arrow for
-    // vs-yesterday, hollow star for the busiest day.
+    // Glyph per row kind: filled star, trend arrow, hollow star.
     function insightIcon(kind, dir) {
         if (kind === "top")
             return "\u2605";
@@ -54,16 +52,14 @@ Column {
         return root.foreground;
     }
 
-    // Right-hand value colour: only the signed delta carries a colour (its
-    // direction), everything else stays neutral — logic over rainbow.
+    // Only the signed delta carries a color; the rest stays neutral.
     function insightValueColor(kind, dir) {
         if (kind === "delta" && (dir === "up" || dir === "down"))
             return insightIconColor(kind, dir);
         return root.foreground;
     }
 
-    // Delegates read outer props by id (idiomatic QML); the directive
-    // below silences the linter for that documented pattern.
+    // Outer-id reads are idiomatic in delegates; muted for the linter.
     // qmllint disable unqualified
     Repeater {
         model: root.rows

@@ -261,8 +261,7 @@ Item {
                     font.pixelSize: Style.font.caption
                 }
 
-                // Delegates read outer ids (idiomatic QML); silence the
-                // linter for that documented pattern.
+                // Outer-id reads are idiomatic in delegates; muted for the linter.
                 // qmllint disable unqualified
                 Repeater {
                     model: 12
@@ -445,8 +444,7 @@ Item {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
-                        // Delegates read outer ids (idiomatic QML); silence the
-                        // linter for that documented pattern.
+                        // Outer-id reads are idiomatic in delegates; muted for the linter.
                         // qmllint disable unqualified
                         Column {
                             id: leftColumn

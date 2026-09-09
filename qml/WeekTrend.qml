@@ -186,8 +186,7 @@ Column {
             height: Style.space(80)
 
             // Horizontal gridlines and right-hand labels at each tick.
-            // Delegates read outer ids (idiomatic QML); silence the
-            // linter for that documented pattern.
+            // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified
             Repeater {
                 model: root.axisTicks
@@ -237,8 +236,7 @@ Column {
                 z: 2
                 spacing: 0
 
-                // Delegates read outer ids (idiomatic QML); silence the
-                // linter for that documented pattern.
+                // Outer-id reads are idiomatic in delegates; muted for the linter.
                 // qmllint disable unqualified
                 Repeater {
                     model: root.visibleWeek ? root.visibleWeek.days : []

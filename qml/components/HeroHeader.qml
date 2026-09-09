@@ -2,7 +2,7 @@ import QtQuick
 import qs.Commons
 import "../../js/Model.js" as Model
 
-// ---- Hero: today's total, SHOW MORE/LESS toggle top-right ------
+// Day total + SHOW MORE/LESS toggle.
 
 Item {
     id: heroHeader
@@ -78,9 +78,7 @@ Item {
         }
     }
 
-    // Hover sparkles: tiny stars burst around the cursor over the
-    // hourglass, drift upward and fade out. Positions and sizes are
-    // re-randomised on every hover-enter.
+    // Gold sparkles burst around the cursor on hover-enter.
     Item {
         id: sparkles
         anchors.centerIn: heroIcon
@@ -98,8 +96,7 @@ Item {
             go = true;
         }
 
-        // Delegate reads outer ids (idiomatic QML); silence the
-        // linter for that documented pattern.
+        // Outer-id reads are idiomatic in delegates; muted for the linter.
         // qmllint disable unqualified
         Repeater {
             id: sparkleRepeater

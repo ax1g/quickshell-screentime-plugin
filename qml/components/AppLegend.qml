@@ -2,8 +2,7 @@ import QtQuick
 import qs.Commons
 import "../../js/Model.js" as Model
 
-// Per-app legend: swatch rows for the donut slices. Fixed height keeps
-// the panel size identical across days; expanded list scrolls inside it.
+// Swatch rows for the donut; fixed height keeps the panel size stable.
 Item {
     id: legend
     required property var rows
@@ -19,7 +18,7 @@ Item {
     width: parent.width
     height: maxHeight
 
-    // Expanding swaps the model: restart at the top, not scrolled mid-list.
+    // Restart at the top when the model swaps.
     onExpandedChanged: legendScroll.contentY = 0
 
     Flickable {
@@ -37,7 +36,7 @@ Item {
             id: legendList
             width: parent.width - Style.space(8)
             spacing: Style.space(5)
-            // Center short lists; clamp to 0 so long lists scroll from top.
+            // Center short lists; long lists scroll from top.
             y: Math.max(0, (legendScroll.height - implicitHeight) / 2)
 
             Text {
@@ -51,8 +50,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
             }
 
-            // Delegate reads outer ids (idiomatic QML); silence the
-            // linter for that documented pattern.
+            // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified
             Repeater {
                 model: legend.rows

@@ -1,8 +1,7 @@
 import QtQuick
 import qs.Commons
 
-// Yearly fact card: glyph, label, value, and a supporting line. Heights
-// derive from its own content so cards never stretch to match a neighbour.
+// Fact card; height fits content so neighbours never stretch it.
 Rectangle {
     id: insightCard
     required property var modelData

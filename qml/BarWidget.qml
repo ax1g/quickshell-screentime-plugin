@@ -187,8 +187,7 @@ BarWidget {
             visible: root.vertical
             anchors.fill: parent
 
-            // Delegate reads outer ids (idiomatic QML); silence the
-            // linter for that documented pattern.
+            // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified
             Repeater {
                 model: root.verticalLines

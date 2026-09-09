@@ -2,11 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import qs.Commons
 
-// Shared panel-styled tooltip: matches the drawer's background, foreground
-// and font so popups read as part of the shell rather than platform chrome.
-// Tooltip with a dwell delay: sweeping across adjacent bars restarts the
-// timer on every enter, so the tip only appears after hovering one target
-// for 300ms instead of flashing along the sweep.
+// Shell-styled tooltip; 300ms dwell so sweeping across bars won't flash it.
 
 ToolTip {
     id: panelTip

@@ -2,9 +2,8 @@ import QtQuick
 import qs.Commons
 import "../../js/Model.js" as Model
 
-// Per-app donut ring: Canvas slices (Shape can't host a Repeater),
-// hover cross-highlight, center readout. Hover state is internal;
-// Panel resets it on close via clearHover().
+// Donut ring with hover cross-highlight and center readout.
+// Canvas because Shape won't host a Repeater; Panel resets hover on close.
 Item {
     id: donutChart
     required property var segments
@@ -16,11 +15,11 @@ Item {
     required property string fontFamily
     required property color accent
 
-    // Ring geometry: radius fits the base stroke inside Canvas bounds.
+    // Radius fits the base stroke inside Canvas bounds.
     readonly property real ringBaseWidth: Style.space(14)
     readonly property real ringRadius: ringSize / 2 - ringBaseWidth / 2
 
-    // Cross-highlight: hovered slice index (-1 = none) + center readout.
+    // Hovered slice (-1 = none) + center readout override.
     property int hoverSlice: -1
     property string hoverApp: ""
     property double hoverMs: 0
@@ -29,7 +28,7 @@ Item {
     width: ringSize
     height: ringSize
 
-    // Slice color at alpha: full for the ring, dimmed for cross-highlight.
+    // Slice color at the given alpha.
     function sliceColor(index, alpha) {
         var hex = String(sliceColors[index] || accent).replace(/[#\s]/g, "");
         var r = parseInt(hex.substr(0, 2), 16) / 255;
@@ -144,7 +143,7 @@ Item {
             donutChart.clearHover()
     }
 
-    // Center readout: day label + total, or the hovered slice's app.
+    // Center readout swaps to the hovered slice's app.
     Column {
         anchors.centerIn: parent
         width: parent.width * 0.6
