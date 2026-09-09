@@ -230,25 +230,25 @@ Panel {
                 }
 
                 YearDrawer {
-                  foreground: root.contentForeground
-                  fontFamily: root.contentFontFamily
-                  panelBackground: root.bar ? root.bar.background : Color.background
-                  accent: Color.accent
-                  serviceReady: root.serviceReady
-                  days: root.days
-                  months: root.months
-                  years: root.years
-                  todayKey: root.todayKey
-                  currentYear: root.currentYear
-                  currentYearOffset: root.currentYearOffset
-                  oldestDataYear: root.oldestDataYear
-                  calendarYearTotal: root.calendarYearTotal
-                  yearFacts: root.yearFacts
-                  monthNamesShort: root.monthNamesShort
-                  monthNamesLong: root.monthNamesLong
-                  onCloseRequested: root.openCalendar(false)
-                  onPrevYearRequested: root.currentYearOffset += 1
-                  onNextYearRequested: root.currentYearOffset -= 1
+                    foreground: root.contentForeground
+                    fontFamily: root.contentFontFamily
+                    panelBackground: root.bar ? root.bar.background : Color.background
+                    accent: Color.accent
+                    serviceReady: root.serviceReady
+                    days: root.days
+                    months: root.months
+                    years: root.years
+                    todayKey: root.todayKey
+                    currentYear: root.currentYear
+                    currentYearOffset: root.currentYearOffset
+                    oldestDataYear: root.oldestDataYear
+                    calendarYearTotal: root.calendarYearTotal
+                    yearFacts: root.yearFacts
+                    monthNamesShort: root.monthNamesShort
+                    monthNamesLong: root.monthNamesLong
+                    onCloseRequested: root.openCalendar(false)
+                    onPrevYearRequested: root.currentYearOffset += 1
+                    onNextYearRequested: root.currentYearOffset -= 1
                 }
             }
 
@@ -282,39 +282,39 @@ Panel {
 
                     // ---- Per-app donut + legend ------------------------------------
                     Item {
-                      width: parent.width
-                      height: Math.max(root.ringSize, root.legendMaxHeight)
+                        width: parent.width
+                        height: Math.max(root.ringSize, root.legendMaxHeight)
 
-                      DonutChart {
-                        id: donutChart
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        segments: root.segments
-                        sliceColors: root.sliceColors
-                        ringSize: root.ringSize
-                        activeDayLabel: root.activeDayLabel
-                        dayTotal: root.dayTotal
-                        foreground: root.contentForeground
-                        fontFamily: root.contentFontFamily
-                        accent: Color.accent
-                      }
+                        DonutChart {
+                            id: donutChart
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            segments: root.segments
+                            sliceColors: root.sliceColors
+                            ringSize: root.ringSize
+                            activeDayLabel: root.activeDayLabel
+                            dayTotal: root.dayTotal
+                            foreground: root.contentForeground
+                            fontFamily: root.contentFontFamily
+                            accent: Color.accent
+                        }
 
-                      AppLegend {
-                        anchors.left: donutChart.right
-                        anchors.leftMargin: Style.space(16)
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: root.legendMaxHeight
-                        rows: root.expanded ? root.fullApps : root.groupedApps
-                        expanded: root.expanded
-                        groupedCount: root.groupedCount
-                        sliceColors: root.sliceColors
-                        otherColor: root.otherColor
-                        foreground: root.contentForeground
-                        fontFamily: root.contentFontFamily
-                        accent: Color.accent
-                        maxHeight: root.legendMaxHeight
-                      }
+                        AppLegend {
+                            anchors.left: donutChart.right
+                            anchors.leftMargin: Style.space(16)
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: root.legendMaxHeight
+                            rows: root.expanded ? root.fullApps : root.groupedApps
+                            expanded: root.expanded
+                            groupedCount: root.groupedCount
+                            sliceColors: root.sliceColors
+                            otherColor: root.otherColor
+                            foreground: root.contentForeground
+                            fontFamily: root.contentFontFamily
+                            accent: Color.accent
+                            maxHeight: root.legendMaxHeight
+                        }
                     }
 
                     // ---- Week trend + insights (only on SHOW MORE) -----------------
@@ -337,23 +337,25 @@ Panel {
 
                             // Paginated Mon-Sun week bar graph; weekOffset 0 = current week.
                             WeekTrend {
-                              foreground: root.contentForeground
-                              fontFamily: root.contentFontFamily
-                              tipBackground: root.bar ? root.bar.background : Color.background
-                              accent: Color.accent
-                              weekOffset: root.weekOffset
-                              hasPrevWeekData: root.hasPrevWeekData
-                              visibleWeek: root.visibleWeek
-                              recordWeek: root.recordWeek
-                              weekTotalAsPct: root.weekTotalAsPct
-                              visibleWeekTotalMs: root.visibleWeekTotalMs
-                              axisTicks: root.axisTicks
-                              axisMaxMs: root.axisMaxMs
-                              activeDayKey: root.activeDayKey
-                              onPrevWeekRequested: root.weekOffset = Math.min(12, root.weekOffset + 1)
-                              onNextWeekRequested: root.weekOffset = Math.max(0, root.weekOffset - 1)
-                              onWeekTotalToggled: root.weekTotalAsPct = !root.weekTotalAsPct
-                              onDaySelected: function(key) { root.selectDay(key) }
+                                foreground: root.contentForeground
+                                fontFamily: root.contentFontFamily
+                                tipBackground: root.bar ? root.bar.background : Color.background
+                                accent: Color.accent
+                                weekOffset: root.weekOffset
+                                hasPrevWeekData: root.hasPrevWeekData
+                                visibleWeek: root.visibleWeek
+                                recordWeek: root.recordWeek
+                                weekTotalAsPct: root.weekTotalAsPct
+                                visibleWeekTotalMs: root.visibleWeekTotalMs
+                                axisTicks: root.axisTicks
+                                axisMaxMs: root.axisMaxMs
+                                activeDayKey: root.activeDayKey
+                                onPrevWeekRequested: root.weekOffset = Math.min(12, root.weekOffset + 1)
+                                onNextWeekRequested: root.weekOffset = Math.max(0, root.weekOffset - 1)
+                                onWeekTotalToggled: root.weekTotalAsPct = !root.weekTotalAsPct
+                                onDaySelected: function (key) {
+                                    root.selectDay(key);
+                                }
                             }
 
                             PanelSeparator {

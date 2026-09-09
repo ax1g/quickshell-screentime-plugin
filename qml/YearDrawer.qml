@@ -261,6 +261,9 @@ Item {
                     font.pixelSize: Style.font.caption
                 }
 
+                // Delegates read outer ids (idiomatic QML); silence the
+                // linter for that documented pattern.
+                // qmllint disable unqualified
                 Repeater {
                     model: 12
 
@@ -346,6 +349,7 @@ Item {
                         }
                     }
                 }
+                // qmllint enable unqualified
 
                 Item {
                     width: parent.width
@@ -382,8 +386,11 @@ Item {
                     Component {
                         id: cardsDelegate
                         InsightCard {
+                            // Outer-id read, idiomatic for delegates.
+                            // qmllint disable unqualified
                             foreground: root.foreground
                             fontFamily: root.fontFamily
+                            // qmllint enable unqualified
                         }
                     }
 
@@ -438,6 +445,9 @@ Item {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
+                        // Delegates read outer ids (idiomatic QML); silence the
+                        // linter for that documented pattern.
+                        // qmllint disable unqualified
                         Column {
                             id: leftColumn
                             width: (parent.width - Style.space(8)) / 2
@@ -459,6 +469,7 @@ Item {
                                 delegate: cardsDelegate
                             }
                         }
+                        // qmllint enable unqualified
                     }
                 }
             }
