@@ -24,7 +24,6 @@ import subprocess
 import sys
 from collections import deque
 
-
 # comm names of internal browser worker processes. These must never show up
 # as screen-time apps on their own.
 BROWSER_SUBPROCESS_COMMS = {
@@ -52,7 +51,7 @@ BROWSER_SUBPROCESS_COMMS = {
 # Browser binary basenames -> canonical screen-time app name.
 # Single source of truth: lib/browser_aliases.json (shared with Model.js).
 _ALIASES_JSON = os.path.join(
-    os.path.dirname(__file__), os.pardir, "lib", "browser_aliases.json"
+    os.path.dirname(__file__), os.pardir, "js", "browser_aliases.json"
 )
 try:
     with open(_ALIASES_JSON) as _f:
@@ -105,8 +104,7 @@ def proc_name(pid):
         pass
     # Login shells report "-bash": strip the marker so they resolve as
     # plain "bash" instead of tracking a separate "-bash" app.
-    if name.startswith("-"):
-        name = name[1:]
+    name = name.removeprefix("-")
     return name
 
 
@@ -143,9 +141,7 @@ _STEAM_ROOTS = [
     os.path.expanduser("~/.steam/steam/steamapps"),
     os.path.expanduser("~/.local/share/Steam/steamapps"),
     os.path.expanduser("~/.steam/root/steamapps"),
-    os.path.expanduser(
-        "~/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps"
-    ),
+    os.path.expanduser("~/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps"),
 ]
 
 _STEAM_CLASS_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
@@ -174,7 +170,9 @@ def _is_steam_class(class_name):
     but Service.qml still routes them here because it matches on the same
     prefix.
     """
-    return isinstance(class_name, str) and bool(_STEAM_CLASS_PREFIX_RE.match(class_name))
+    return isinstance(class_name, str) and bool(
+        _STEAM_CLASS_PREFIX_RE.match(class_name)
+    )
 
 
 def _acf_name(path):
@@ -289,13 +287,14 @@ def main():
         try:
             out = subprocess.run(
                 ["hyprctl", "activewindow", "-j"],
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=2,
             ).stdout
             info = json.loads(out)
             if not isinstance(info, dict):
-                raise AttributeError("hyprctl activewindow is not a JSON object")
+                raise TypeError("hyprctl activewindow is not a JSON object")
             terminal_pid = int(info.get("pid") or 0)
             window_class = str(info.get("class") or "")
             # Titles must be strings to be usable: a non-string title is
@@ -303,8 +302,14 @@ def main():
             # tracking keys like "123". Stay silent instead.
             raw_title = info.get("title")
             window_title = raw_title if isinstance(raw_title, str) else ""
-        except (ValueError, json.JSONDecodeError, subprocess.SubprocessError,
-                OSError, AttributeError):
+        except (
+            ValueError,
+            json.JSONDecodeError,
+            subprocess.SubprocessError,
+            OSError,
+            AttributeError,
+            TypeError,
+        ):
             terminal_pid = 0
             window_class = ""
             window_title = ""
