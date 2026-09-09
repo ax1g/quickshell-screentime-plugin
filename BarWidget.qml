@@ -112,6 +112,7 @@ BarWidget {
     function show(): void { root.open() }
     function hide(): void { root.close() }
     function toggle(): void { root.togglePanel() }
+    function resetToday(): void { if (root.service) root.service.resetToday() }
     function status(): void {
       var p = panelLoader.item
       console.log("agx.screen-time status: opened=" + (p ? p.opened : "no-panel")

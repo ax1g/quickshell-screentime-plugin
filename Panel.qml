@@ -996,6 +996,80 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
               }
             }
 
+            // Resets only today's total/apps — history for other days is
+            // untouched. A stray click can't wipe anything: the label asks
+            // to be clicked again, and reverts on its own after 3s.
+            Row {
+              id: resetCorner
+              visible: root.serviceReady && root.selectedKey === ""
+              spacing: Style.space(4)
+              anchors.right: showMoreCorner.left
+              anchors.rightMargin: Style.space(14)
+              anchors.top: parent.top
+
+              property bool confirming: false
+
+              Timer {
+                id: resetConfirmTimer
+                interval: 3000
+                repeat: false
+                onTriggered: resetCorner.confirming = false
+              }
+
+              Text {
+                text: resetCorner.confirming ? "CONFIRM RESET?" : "RESET"
+                color: resetCorner.confirming
+                  ? Color.urgent
+                  : (resetCornerMouse.containsMouse
+                    ? root.contentForeground
+                    : Qt.darker(root.contentForeground, 1.4))
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.2
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Text {
+                text: "↺"
+                color: resetCorner.confirming
+                  ? Color.urgent
+                  : (resetCornerMouse.containsMouse
+                    ? root.contentForeground
+                    : Qt.darker(root.contentForeground, 1.4))
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.title
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            MouseArea {
+              id: resetCornerMouse
+              visible: resetCorner.visible
+              enabled: resetCorner.visible
+              anchors.fill: resetCorner
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (resetCorner.confirming) {
+                  resetCorner.confirming = false
+                  resetConfirmTimer.stop()
+                  if (root.service) root.service.resetToday()
+                } else {
+                  resetCorner.confirming = true
+                  resetConfirmTimer.restart()
+                }
+              }
+              onContainsMouseChanged: {
+                // Moving away cancels an armed confirm instead of leaving it
+                // live for a later, unrelated click to land on.
+                if (!containsMouse && resetCorner.confirming) {
+                  resetCorner.confirming = false
+                  resetConfirmTimer.stop()
+                }
+              }
+            }
+
             Row {
               id: showMoreCorner
               spacing: Style.space(4)
@@ -1039,6 +1113,7 @@ color: Qt.rgba(root.contentForeground.r, root.contentForeground.g, root.contentF
               anchors.leftMargin: Style.space(14)
               anchors.right: parent.right
               anchors.rightMargin: showMoreCorner.implicitWidth + Style.space(12)
+                + (resetCorner.visible ? resetCorner.implicitWidth + Style.space(14) : 0)
               anchors.top: parent.top
               spacing: 0
 

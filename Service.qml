@@ -255,6 +255,22 @@ Item {
     root.persist()
   }
 
+  // Zeroes today's total and per-app breakdown only — every other day in
+  // history is untouched. An app that stays focused through the reset keeps
+  // running: activeStart is rebased to now so the next commit doesn't
+  // immediately re-add the time that was just cleared.
+  function resetToday() {
+    if (!root.ready) return
+    var now = Date.now()
+    root.today = Model.newDay()
+    var nd = Object.assign({}, root.days)
+    nd[root.todayKey] = root.today
+    root.days = nd
+    if (root.activeApp) root.activeStart = now
+    root.lastTick = now
+    root.persist()
+  }
+
   // ---- Persistence -------------------------------------------------------
 
   // Reassigns a fresh top-level object so the JsonAdapter's notifier fires,
