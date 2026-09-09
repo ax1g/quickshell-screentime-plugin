@@ -1,6 +1,6 @@
 import QtQuick
 import qs.Commons
-import "components/tooltip"
+import "components"
 import "../js/Model.js" as Model
 
 // Paginated Mon-Sun week bar graph with < Month Year > navigation.

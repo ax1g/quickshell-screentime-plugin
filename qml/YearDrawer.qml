@@ -2,7 +2,6 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "components"
-import "components/tooltip"
 import "../js/Model.js" as Model
 
 // Yearly overview: per-month bars plus Wrapped-style retro cards.
