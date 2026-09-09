@@ -3,9 +3,7 @@ import Quickshell.Io
 import qs.Ui
 import qs.Commons
 
-// Bar widget: today's total screen time with a popup listing per-app usage
-// and behaviour insights. The heavy lifting lives in Service.qml; this only
-// reads its state and hosts the panel.
+// Bar button: today's total; hosts the panel. Tracking lives in Service.
 BarWidget {
     id: root
     moduleName: "agx.screen-time"
@@ -16,10 +14,7 @@ BarWidget {
 
     readonly property string glyph: "󰔟"
 
-    // Vertical bar (left/right edge): the button's text label is hidden in
-    // vertical mode, so the content is drawn as stacked OpticalGlyph lines —
-    // icon first, then the duration split per token so each line fits the
-    // icon slot. Same shape as omarchy.clock's vertical stack.
+    // Vertical mode stacks glyph + duration tokens to fit icon slots.
     readonly property var verticalLines: {
         if (!root.vertical)
             return [];
@@ -33,9 +28,7 @@ BarWidget {
         return lines;
     }
 
-    // Icon-only mode: right-clicking shrinks the widget to just the glyph.
-    // The state lives in the widget's shell.json entry ("iconOnly"), so it
-    // survives restarts and follows the widget across bar slots.
+    // iconOnly persists in shell.json across restarts and slots.
     readonly property bool iconOnly: {
         var v = root.setting("iconOnly", false);
         return v === true || v === "true";
@@ -55,16 +48,11 @@ BarWidget {
             root.bar.shell.updateEntryInline(root.moduleName, entry);
     }
 
-    // The bar's open-panel indicator (underline) tracks the painted label
-    // width instead of a fraction of the slot, mirroring omarchy.clock. In
-    // icon-only mode the glyph is painted through an OpticalGlyph so its ink
-    // (not its advance box) is centred, and the mark takes that painted width
-    // so it lines up with the visible glyph rather than drifting off it.
+    // Underline tracks painted label width, like omarchy.clock.
     readonly property real openPanelIndicatorWidth: {
         if (root.iconOnly && !root.vertical && iconGlyph)
             return Math.max(1, Math.round(iconGlyph.tightWidth));
-        // Vertical mode paints stacked glyphs (button text is empty), so the
-        // mark takes one icon slot like every other vertical widget.
+        // Vertical mark takes one icon slot.
         if (root.vertical)
             return Style.bar.iconSlot;
         return button.labelWidth;
@@ -152,10 +140,7 @@ BarWidget {
         id: button
         anchors.fill: parent
         bar: root.bar
-        // One shared label at the global bar size: glyph and duration render
-        // uniformly in the bar font, exactly like clock and cpu-ram. Per-glyph
-        // sizing was tried and rejected — it split the widget into two optical
-        // sizes that matched neither the bar text nor each other.
+        // Single label at bar size: glyph + duration render uniformly.
         text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label
         labelVisible: !root.vertical && !root.iconOnly
         hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
@@ -169,10 +154,7 @@ BarWidget {
                 root.togglePanel();
         }
 
-        // Icon-only mode: the Text label is hidden (the slot still sizes off its
-        // advance width) and the glyph is painted through an OpticalGlyph, which
-        // shifts the Text so the glyph's ink is centred instead of sitting
-        // somewhere inside its advance box.
+        // OpticalGlyph centers glyph ink over the hidden label's advance.
         OpticalGlyph {
             id: iconGlyph
             visible: !root.vertical && root.iconOnly

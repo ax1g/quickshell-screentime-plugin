@@ -5,9 +5,8 @@ import "../js/Model.js" as Model
 
 import "components"
 
-// Popup for the screen-time bar widget: today's total, the per-app
-// breakdown, and a short behaviour-insights section. Read-only — the panel
-// is a mirror of the Service's live state.
+// Popup for the bar widget: day total, per-app breakdown, insights.
+// Read-only mirror of the Service's live state.
 Panel {
     id: root
     moduleName: "agx.screen-time"
@@ -16,8 +15,7 @@ Panel {
     property var hostWidget: null
     readonly property var barIdentity: hostWidget || root
 
-    // The bar tracks the widget mounted in its slot — BarWidget.qml — so the
-    // popout coordinator and panel switching must identify us by that widget.
+    // Panel switching identifies us by the bar widget, not the panel.
     readonly property var service: bar && bar.shell ? bar.shell.serviceFor("agx.screen-time") : null
     readonly property bool serviceReady: service && service.ready === true
     readonly property var today: service ? service.today : null
@@ -26,80 +24,61 @@ Panel {
     readonly property var years: service ? service.years : {}
     readonly property string todayKey: serviceReady ? service.todayKey : ""
 
-    // Day selection: clicking a week-trend bar sets selectedKey; empty = live
-    // today.  All derived data flows from activeDay / activeDayKey so the
-    // donut, legend, hero, and insights automatically reflect the selection.
+    // Empty selection = live today; everything derives from activeDay.
     property string selectedKey: ""
     readonly property var activeDay: serviceReady ? Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey) : null
     readonly property string activeDayKey: root.selectedKey || root.todayKey
     readonly property string activeDayLabel: serviceReady ? Model.formatDate(root.activeDayKey) : ""
     readonly property double dayTotal: root.activeDay ? (root.activeDay.total || 0) : 0
 
-    // All derived data is gated on service.ready: before the service has
-    // loaded its history, todayKey is "" and the Model helpers would produce
-    // garbage labels ("NaN-NaN-NaN") instead of an empty chart.
+    // Gated on service.ready: unloaded history would label NaN-NaN-NaN.
     readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
     readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
-    // One derivation for the paginated week trend: the week list plus every
-    // fact the panel used to thread separately (visible week, its max and
-    // total, the record flag, older-week data, the Sunday key anchoring
-    // "Busiest day (7d)" to the week on screen).
+    // Single derivation for the paginated week trend; offset clamps 0-12.
     readonly property var weekView: serviceReady ?
-    // Clamped like the pager buttons (0–12): a stray offset must show an
-    // empty week, never diverge from the navigation.
     Model.weekView(root.days, root.todayKey, 13, Math.max(0, Math.min(root.weekOffset, 12))) : null
-    // Sunday of the visible week: anchors "Busiest day (7d)" to the week the
-    // user is looking at instead of always the current week.
+    // Its Sunday anchors "Busiest day (7d)" to the visible week.
     readonly property string insightWeekEndKey: root.weekView ? root.weekView.weekEndKey : ""
     readonly property var insightRows: serviceReady ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey, root.insightWeekEndKey) : []
     readonly property var scrollableWeeks: root.weekView ? root.weekView.weeks : []
     readonly property double scrollableMax: Model.scrollableTrendMax(root.scrollableWeeks)
     readonly property var visibleWeek: root.weekView ? root.weekView.week : null
     readonly property double visibleWeekMax: root.weekView ? root.weekView.max : 0
-    // Y-axis for the week bar graph: baseline, midpoint and peak gridlines,
-    // derived from the same maximum the bars scale against so a bar's top
-    // always lands on the gridline its duration describes.
-    readonly property var axisTicks: Model.weekAxisTicks(root.visibleWeekMax)
+    // Ticks share the bars' scale so bar tops land on gridlines.
     readonly property double axisMaxMs: root.axisTicks.length ? root.axisTicks[root.axisTicks.length - 1] : 0
-    // Sum of the visible week's days, shown under the paginated bar graph.
     readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
-    // True while the current week beats every older week in the window:
-    // drives the gold record-week trophy beside the week total.
+    // Current week beating all older weeks earns the record trophy.
     readonly property bool recordWeek: root.weekOffset === 0 && serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
     property bool expanded: false
     property bool calendarOpen: false
     property int weekOffset: 0
-    // Whether any week before the currently visible one has data.
+    // True while an older week holds data (enables the prev pager).
     readonly property bool hasPrevWeekData: root.weekView ? root.weekView.hasPrev : false
-    // Header total toggles between absolute time and share of the full week.
+    // Header total flips between absolute time and week-share.
     property bool weekTotalAsPct: false
 
-    // Calendar view: yearly overview with navigation. currentYearOffset counts
-    // how many years back from today we are viewing; 0 = current year.
+    // currentYearOffset: years back from today; 0 = this year.
     readonly property int todayYear: serviceReady ? (Number(root.todayKey.split("-")[0]) || new Date().getFullYear()) : new Date().getFullYear()
     property int currentYearOffset: 0
     readonly property int currentYear: root.todayYear - root.currentYearOffset
     readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
-    // One derivation for the year view: the header total and the retro cards
-    // share a single merge instead of paying for two.
+    // Header total and retro cards share one year merge.
     readonly property var yearView: serviceReady ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
     readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
     readonly property var yearFacts: root.yearView ? root.yearView.facts : []
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-    // Donut always shows the grouped view; the legend expands inline.
+    // Donut shows the grouped view; the legend expands inline.
     readonly property var segments: Model.arcSegments(root.groupedApps)
     readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
     readonly property int groupedCount: root.groupedApps.length
-    // The "Other" slice color: last in the grouped palette.
     readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
 
     // Donut diameter; also sizes the donut+legend row.
     readonly property real ringSize: Style.space(116)
 
-    // Legend scroll cap: fits the 6-row grouped list fully; when expanded
-    // the full app list scrolls inside this height with a ▾ indicator.
+    // 6-row grouped list fits; the expanded list scrolls inside.
     readonly property real legendMaxHeight: Style.space(140)
 
     // Guarded so the widget renders before the bar is injected.
@@ -135,8 +114,7 @@ Panel {
     }
 
     function toggleExpanded() {
-        // Freeze the collapsed card height before growing, so the yearly
-        // overview drawer can keep show-less dimensions while expanded.
+        // Snapshot show-less height so the drawer keeps it while expanded.
         if (!root.expanded)
             keyCatcher.collapsedCardH = keyCatcher.height;
         root.expanded = !root.expanded;
@@ -151,10 +129,7 @@ Panel {
             root.selectedKey = key;
     }
 
-    // Open/close the yearly overview. Arms the drawer slide so the move
-    // animates; layout-driven repositions stay instant (see calendarDrawer).
-    // Opening the yearly view also grows the card to full height so the
-    // yearly graph never renders squeezed inside the show-less height.
+    // Slide animates on toggle only; layout moves snap. Opens expanded.
     function openCalendar(open) {
         calendarDrawer.sliding = true;
         if (open && !root.expanded) {
@@ -191,13 +166,10 @@ Panel {
                     root.toggleExpanded();
             }
 
-            // ---- Calendar side drawer (full-card overlay) -----------------------
-            // Relative to the card content area (this item), NOT panel.width —
-            // the KeyboardPanel is the full-screen overlay window.
+            // Full-card overlay; coordinates are card-relative, not panel-wide.
             readonly property real drawerWidth: width
 
-            // Height of the card in the collapsed (show less) state, captured by
-            // toggleExpanded() before expansion so the drawer keeps that size.
+            // Show-less height, captured before expanding.
             property real collapsedCardH: 0
 
             Item {
@@ -209,9 +181,7 @@ Panel {
                 z: 10
                 visible: x > -keyCatcher.drawerWidth
 
-                // True only while an open/close toggle drives the slide. Layout-driven
-                // x changes (the panel width arriving on open, later resizes) must
-                // snap instantly, otherwise the drawer flashes across the content.
+                // Layout-driven x must snap, or the drawer flashes across.
                 property bool sliding: false
 
                 Behavior on x {
@@ -222,8 +192,7 @@ Panel {
                     }
                 }
 
-                // Disarm once the drawer reaches its resting position so later
-                // layout-driven moves don't replay the slide.
+                // Disarm at rest so resizes don't replay the slide.
                 onXChanged: {
                     if (root.calendarOpen ? x >= 0 : x <= -keyCatcher.drawerWidth)
                         sliding = false;
@@ -378,7 +347,7 @@ Panel {
         }
     }
 
-    // Reset to today's live data when the panel is dismissed.
+    // Reset to live today on dismiss.
     Connections {
         target: root.controller
         function onOpenChanged() {
