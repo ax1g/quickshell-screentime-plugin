@@ -225,85 +225,19 @@ Item {
                 Repeater {
                     model: 12
 
-                    Item {
-                        id: monthRow
-                        required property int index
-
-                        width: heatGrid.width
-                        height: Style.space(12)
-
-                        readonly property bool isCurrentMonth: heatGrid.isThisYear && monthRow.index === heatGrid.nowMonth
-                        readonly property real hoursW: heatGrid.hoursW
-                        readonly property real availW: heatGrid.width - heatGrid.labelW - heatGrid.labelGap - hoursW - heatGrid.labelGap
-                        readonly property real ratio: heatGrid.maxMs > 0 ? (heatGrid.months[monthRow.index] ? heatGrid.months[monthRow.index].ms / heatGrid.maxMs : 0) : 0
-
-                        Text {
-                            text: root.monthNamesShort[monthRow.index]
-                            color: root.foreground
-                            opacity: monthRow.isCurrentMonth ? 1.0 : 0.55
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                            font.bold: monthRow.isCurrentMonth
-                            width: heatGrid.labelW
-                            elide: Text.ElideRight
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        // Empty months show label + 0h only, no track.
-                        Rectangle {
-                            visible: monthRow.ratio > 0
-                            x: heatGrid.labelW + heatGrid.labelGap
-                            width: monthRow.availW
-                            height: parent.height
-                            radius: Style.space(2)
-                            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.07)
-                        }
-
-                        Rectangle {
-                            id: monthBar
-                            x: heatGrid.labelW + heatGrid.labelGap
-                            width: Math.max(0, monthRow.availW * monthRow.ratio)
-                            height: parent.height
-                            radius: Style.space(2)
-                            color: monthRow.isCurrentMonth ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.8)
-
-                            MouseArea {
-                                id: monthBarMouse
-                                anchors.fill: parent
-                                anchors.margins: -Style.space(4)
-                                hoverEnabled: true
-                            }
-
-                            ScreenTip {
-                                foreground: root.foreground
-                                fontFamily: root.fontFamily
-                                tipBackground: root.panelBackground
-
-                                hovered: monthBarMouse.containsMouse
-                                tipText: {
-                                    var m = heatGrid.months[monthRow.index];
-                                    return root.monthNamesLong[monthRow.index] + " \u00b7 " + (m ? Model.fmt(m.ms) : "0h");
-                                }
-                            }
-                        }
-
-                        Text {
-                            text: {
-                                var m = heatGrid.months[monthRow.index];
-                                return m ? m.hours : "0h";
-                            }
-                            color: root.foreground
-                            opacity: monthRow.isCurrentMonth ? 1.0 : 0.55
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                            font.bold: monthRow.isCurrentMonth
-                            horizontalAlignment: Text.AlignRight
-                            width: monthRow.hoursW
-                            elide: Text.ElideRight
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                    MonthRow {
+                        months: heatGrid.months
+                        maxMs: heatGrid.maxMs
+                        monthShort: root.monthNamesShort
+                        monthLong: root.monthNamesLong
+                        isThisYear: heatGrid.isThisYear
+                        nowMonth: heatGrid.nowMonth
+                        gridWidth: heatGrid.width
+                        hoursW: heatGrid.hoursW
+                        foreground: root.foreground
+                        fontFamily: root.fontFamily
+                        panelBackground: root.panelBackground
+                        accent: root.accent
                     }
                 }
                 // qmllint enable unqualified
