@@ -227,7 +227,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Scrollable app list: bounded legend with a thin scrollbar; Show More
   toggles the full app list inline (renamed from Patterns).
 - Clean app names: reverse-DNS compositor IDs shortened to the last
-  segment and title-cased (`com.github.user.Codium` → `Codium`).
+  segment and lowercased (`com.github.user.Codium` → `codium`).
 - Donut slices below 3% auto-collapse into the "Other" bucket so the
   chart stays readable with many small apps.
 - Donut centre now shows the full date ("Aug 15") instead of a
