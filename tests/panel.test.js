@@ -52,15 +52,28 @@ test("year drawer hides completely via setting", () => {
   assert.match(hero, /if \(heroHeader\.calendarEnabled\)/)
 })
 
-test("insights hide via setting", () => {
-  assert.match(panel, /hideInsights/)
-  assert.match(menu, /signal insightsToggled/)
+test("daily insights hide via setting", () => {
+  assert.match(panel, /hideDailyInsights/)
+  assert.match(menu, /signal dailyInsightsToggled/)
+  assert.doesNotMatch(panel, /hideInsights[^I]/)
+})
+
+test("yearly insights hide via setting, month bars stay", () => {
+  const drawer = qml("YearDrawer.qml")
+  assert.match(panel, /hideYearInsights/)
+  assert.match(menu, /signal yearInsightsToggled/)
+  assert.match(drawer, /required property bool hideYearInsights/)
+  assert.match(
+    drawer,
+    /visible: !root\.hideYearInsights && root\.yearFacts\.length > 0/,
+  )
 })
 
 test("config menu threads prefs with explicit props and signals", () => {
   for (const sig of [
     "yearlyToggled",
-    "insightsToggled",
+    "dailyInsightsToggled",
+    "yearInsightsToggled",
     "weekWindowSelected",
     "weekTotalModeToggled",
     "easterEggsToggled",

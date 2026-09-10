@@ -18,6 +18,7 @@ Item {
     required property int oldestDataYear
     required property string calendarYearTotal
     required property var yearFacts
+    required property bool hideYearInsights
     required property var yearMonths
     required property var monthNamesShort
     required property var monthNamesLong
@@ -210,7 +211,7 @@ Item {
                 Item {
                     width: parent.width
                     height: Style.space(10) + 1 + Style.space(4)
-                    visible: root.yearFacts.length > 0
+                    visible: !root.hideYearInsights && root.yearFacts.length > 0
                     PanelSeparator {
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -221,7 +222,7 @@ Item {
 
                 Text {
                     text: "Insights " + root.currentYear
-                    visible: root.yearFacts.length > 0
+                    visible: !root.hideYearInsights && root.yearFacts.length > 0
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.title
@@ -234,7 +235,7 @@ Item {
                 Row {
                     id: yearlyInsightsGrid
                     width: parent.width
-                    visible: root.yearFacts.length > 0
+                    visible: !root.hideYearInsights && root.yearFacts.length > 0
                     spacing: Style.space(8)
 
                     property var leftCards: []

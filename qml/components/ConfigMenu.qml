@@ -15,14 +15,16 @@ Column {
     required property color accent
     required property color urgent
     required property bool hideYearly
-    required property bool hideInsights
+    required property bool hideDailyInsights
+    required property bool hideYearInsights
     required property int weekCount
     required property var weekOptions
     required property bool weekTotalAsPct
     required property bool hideEasterEggs
 
     signal yearlyToggled
-    signal insightsToggled
+    signal dailyInsightsToggled
+    signal yearInsightsToggled
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
     signal easterEggsToggled
@@ -44,13 +46,24 @@ Column {
 
     Toggle {
         width: root.width
-        label: "Insights"
+        label: "Daily insights"
         description: "Top app, vs yesterday, busiest day"
-        checked: !root.hideInsights
+        checked: !root.hideDailyInsights
         foreground: root.foreground
         accent: root.accent
         fontFamily: root.fontFamily
-        onClicked: root.insightsToggled()
+        onClicked: root.dailyInsightsToggled()
+    }
+
+    Toggle {
+        width: root.width
+        label: "Yearly insights"
+        description: "Retro cards in the yearly overview"
+        checked: !root.hideYearInsights
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.yearInsightsToggled()
     }
 
     Toggle {
@@ -159,7 +172,7 @@ Column {
         Text {
             id: resetState
             text: parent.stage === 0 ? "RESET" : parent.stage === 1 ? "SURE?" : "REALLY?"
-            color: parent.stage === 0 ? Qt.darker(root.foreground, 1.4) : root.urgent
+            color: root.urgent
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
             font.bold: true

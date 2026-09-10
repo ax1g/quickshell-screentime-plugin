@@ -29,7 +29,8 @@ Panel {
     // The `in` probe keeps this safe if the shell ever withholds settings.
     readonly property var prefs: ("settings" in root) && root.settings ? root.settings : ({})
     readonly property bool hideYearly: root.prefs.hideYearly === true
-    readonly property bool hideInsights: root.prefs.hideInsights === true
+    readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
+    readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     // Week presets; retention (95d) already covers the largest one.
     readonly property var weekOptions: [4, 8, 13]
@@ -248,6 +249,7 @@ Panel {
                     oldestDataYear: root.oldestDataYear
                     calendarYearTotal: root.calendarYearTotal
                     yearFacts: root.yearFacts
+                    hideYearInsights: root.hideYearInsights
                     yearMonths: root.yearMonths
                     monthNamesShort: root.monthNamesShort
                     monthNamesLong: root.monthNamesLong
@@ -352,13 +354,15 @@ Panel {
                         accent: Color.accent
                         urgent: Color.urgent
                         hideYearly: root.hideYearly
-                        hideInsights: root.hideInsights
+                        hideDailyInsights: root.hideDailyInsights
+                        hideYearInsights: root.hideYearInsights
                         weekCount: root.weekCount
                         weekOptions: root.weekOptions
                         weekTotalAsPct: root.weekTotalAsPct
                         hideEasterEggs: root.hideEasterEggs
                         onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
-                        onInsightsToggled: root.writeSetting("hideInsights", !root.hideInsights)
+                        onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
+                        onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
                         onWeekWindowSelected: function (count) {
                             root.selectWeekWindow(count);
                         }
@@ -484,14 +488,14 @@ Panel {
                             }
 
                             PanelSeparator {
-                                visible: !root.hideInsights
+                                visible: !root.hideDailyInsights
                                 width: parent.width
                                 foreground: root.contentForeground
                                 strength: 0.12
                             }
 
                             InsightList {
-                                visible: !root.hideInsights
+                                visible: !root.hideDailyInsights
                                 rows: root.insightRows
                                 foreground: root.contentForeground
                                 fontFamily: root.contentFontFamily

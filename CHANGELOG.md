@@ -13,7 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Panel config menu behind a gear glyph next to SHOW MORE/LESS: every pref
   persists in the widget settings across restarts.
 - Hide flags for the yearly overview (the drawer never opens and its merge
-  is skipped) and the insights section.
+  is skipped), daily insights and yearly retro cards, each independent.
 - Configurable week trend window: 4, 8 or 13 weeks. Retention (95 days)
   already covers the largest preset, so no history is ever pruned for this.
 - Triple-confirmed reset for today's data only (RESET → SURE? → REALLY?,
