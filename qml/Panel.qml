@@ -34,10 +34,13 @@ Panel {
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
     // Week presets; retention (95d) already covers the largest one.
-    readonly property var weekOptions: [4, 8, 13]
+    readonly property var weekOptions: [4, 8, 12]
     readonly property int weekCount: {
         var n = Number(root.prefs.weekCount);
-        return root.weekOptions.indexOf(n) >= 0 ? n : 13;
+        // Stored 13s predate the 12-week max; keep those users on max.
+        if (n === 13)
+            return 12;
+        return root.weekOptions.indexOf(n) >= 0 ? n : 12;
     }
     readonly property int maxWeekOffset: root.weekCount - 1
 

@@ -29,7 +29,7 @@ const hero = comp("HeroHeader.qml")
 const menu = comp("ConfigMenu.qml")
 
 test("week window is configurable, never hardcoded", () => {
-  assert.match(panel, /weekOptions: \[4, 8, 13\]/)
+  assert.match(panel, /weekOptions: \[4, 8, 12\]/)
   assert.match(
     panel,
     /Model\.weekView\(root\.days, root\.todayKey, root\.weekCount/,
@@ -41,8 +41,9 @@ test("week window is configurable, never hardcoded", () => {
   assert.doesNotMatch(trend, /weekOffset < 12/)
 })
 
-test("invalid week counts fall back to 13", () => {
-  assert.match(panel, /weekOptions\.indexOf\(n\) >= 0 \? n : 13/)
+test("invalid week counts fall back to 12, stored 13 keeps max", () => {
+  assert.match(panel, /weekOptions\.indexOf\(n\) >= 0 \? n : 12/)
+  assert.match(panel, /if \(n === 13\)\s*\n\s*return 12/)
 })
 
 test("year drawer hides completely via setting", () => {

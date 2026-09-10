@@ -35,7 +35,7 @@ Item {
     // Terminals report the window class; resolve the pty foreground instead.
     readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty", "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st", "org.omarchy.terminal"]
 
-    // Pruned past keepDays; sized for the 13-week trend plus slack.
+    // Pruned past keepDays; sized for the 12-week trend plus slack.
     readonly property int keepDays: 95
 
     // A tick later than this means the loop froze: suspend or clock jump.

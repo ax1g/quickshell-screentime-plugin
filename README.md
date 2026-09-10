@@ -6,7 +6,7 @@
 
 Know where your time goes. A lightweight service tracks focused time per app,
 shows today's total in the bar, and breaks your history into a donut chart, a
-13-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
+12-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
 local.
 
 ## Features
@@ -24,7 +24,7 @@ local.
 - Donut chart: six biggest apps + "Other", day total in the centre. Hover a
   slice or legend row to spotlight that app; Show More expands the full
   scrollable list.
-- 13-week trend: paginated Mon–Sun pages with date-range headers
+- 12-week trend: paginated Mon–Sun pages with date-range headers
   (`Aug 31 – Sep 6, 2026 · W36`); click any day to inspect it, click again
   for today. Header total flips between time and share of the week's
   168 hours.
@@ -34,7 +34,7 @@ local.
 - Usage patterns: top app, vs yesterday, and busiest day of the week you're
   looking at. Insight and retro colours follow your theme.
 - Configurable: the gear next to SHOW MORE opens prefs that persist —
-  hide the yearly overview or insights, set the week trend to 4/8/13 weeks,
+  hide the yearly overview or insights, set the week trend to 4/8/12 weeks,
   default the week total to time or % of 168h, mute the easter eggs, or
   triple-confirmed reset today (archives untouched).
 - Keyboard-first and keybind-friendly: `Esc` closes, `j`/`k` and arrows
@@ -90,7 +90,7 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
 - A session spanning midnight splits there, so each day keeps its own
   seconds.
-- Daily detail older than ~3 months (95 days, matching the 13-week trend) is
+- Daily detail older than ~3 months (95 days, covering the 12-week trend) is
   pruned, but its total folds into a per-day archive first — the current and
   previous calendar year's day totals survive as `"years"`, so the yearly
   overview keeps day counts, streaks, and peak days even though raw app

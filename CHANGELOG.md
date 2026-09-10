@@ -20,6 +20,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   best week now shows the trophy there instead of only beside a leading
   current week.
 
+### Changed
+
+- Week trend window is now 4, 8 or 12 weeks instead of 4, 8 or 13. A stored
+  13 keeps the maximum window (12); retention (95 days) already covers it.
+
 ## [1.6.0] - 2026-09-10
 
 ### Added
