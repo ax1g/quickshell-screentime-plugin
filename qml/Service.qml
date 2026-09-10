@@ -58,6 +58,20 @@ Item {
     property int resolveSpawnGen: 0
     property bool ready: false
     property bool startupPhase: true
+    // Mirrors omarchy's first-party session services (omarchy.lock,
+    // omarchy.idle) so tracking pauses during lock/screensaver without
+    // touching the compositor or spawning helpers on the hot path.
+    // startedAt timestamps only report pause durations in debug logs.
+    property bool sessionLocked: false
+    property bool screensaverActive: false
+    property double lockStartedAt: 0
+    property double screensaverStartedAt: 0
+    // Debug timing logs for lock/screensaver intervals; off by default.
+    property bool debugLogging: false
+    property var lockService: null
+    property var idleService: null
+    // Shell injects the plugin API asynchronously; re-run lookups on change.
+    onShellChanged: root.refreshShellServices()
 
     // ---- Public read API for the UI ----------------------------------------
     readonly property string barLabel: today ? Model.fmt(today.total) : ""
@@ -125,6 +139,14 @@ Item {
         var app = tl && tl.appId ? tl.appId : "";
         root.rawApp = app;
         root.resolveInFlight = false;
+        // Paused (locked or screensaver up): keep the bucket closed.
+        // Toplevel events still fire under lock; reopening here would
+        // accrue straight through the pause.
+        if (root.sessionLocked || root.screensaverActive) {
+            root.activeApp = "";
+            root.activeStart = 0;
+            return;
+        }
         if (app && !root.shouldTrack(app)) {
             root.activeApp = "";
             root.activeStart = 0;
@@ -153,6 +175,13 @@ Item {
 
     // Refreshes terminals whose foreground changed mid-focus.
     function applyResolvedApp(name) {
+        // Paused: drop the result so an in-flight resolver landing mid-lock
+        // cannot reopen a bucket. Unlock re-resolves via switchActive().
+        if (root.sessionLocked || root.screensaverActive) {
+            root.resolveInFlight = false;
+            root.resolveForApp = "";
+            return;
+        }
         var patch = State.applyResolvedApp(root, name, root.resolveForApp, root.todayKey, root.suspendGapMs, root.lastTick);
         // Always clear, even on no-op, so refresh isn't watchdog-gated.
         root.resolveInFlight = false;
@@ -371,6 +400,204 @@ Item {
             if (err)
                 console.warn("agx.screen-time: resolver stderr:", err);
             root.applyResolvedApp(resolverOut.text.trim());
+        }
+    }
+
+    // ---- Session pause (lock / screensaver) ----------------------------------
+    // Lock state comes from omarchy.lock at the source instead of polling
+    // loginctl, so lock/unlock needs no extra process spawning. The shell's
+    // service registry fills asynchronously; lookups retry until both
+    // services resolve, transitions are event-driven afterward.
+    function refreshShellServices() {
+        if (!root.shell)
+            return;
+        root.lockService = root.shell.serviceFor("omarchy.lock");
+        root.idleService = root.shell.serviceFor("omarchy.idle");
+        if (root.lockService) {
+            root.setSessionLocked(root.lockService.locked);
+            // Event-driven source wins once reachable; stop the fallback
+            // watcher so it can't fight it or leak a bash loop.
+            sessionStateWatcher.running = false;
+        }
+        if (root.idleService)
+            root.setScreensaverActive(root.idleService.screensaverStartedThisCycle || root.idleService.screensaverWindowCount > 0);
+        if (root.lockService && root.idleService) {
+            serviceLookupTimer.stop();
+            root.serviceLookupWarned = false;
+        }
+    }
+
+    function setSessionLocked(locked) {
+        locked = locked === true;
+        if (locked === root.sessionLocked)
+            return;
+        root.sessionLocked = locked;
+        if (locked) {
+            root.lockStartedAt = Date.now();
+            root.cancelResume();
+            // Kill in-flight terminal resolves; their results would reopen
+            // a bucket through the pause (see applyResolvedApp).
+            root.resolveInFlight = false;
+            root.resolveForApp = "";
+            if (root.debugLogging)
+                console.warn("agx.screen-time: lock started");
+            var now = Date.now();
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.persist();
+        } else {
+            var endedAt = Date.now();
+            var duration = root.lockStartedAt ? endedAt - root.lockStartedAt : 0;
+            if (root.debugLogging)
+                console.warn("agx.screen-time: lock ended, duration=" + duration + "ms");
+            root.lockStartedAt = 0;
+            // Deferred: with 10s state sources an "unpaused" reading can be
+            // stale (screensaver flag clearing just before lock engages).
+            // applyResume re-validates both flags before reopening.
+            root.scheduleResume();
+        }
+    }
+
+    function setScreensaverActive(active) {
+        active = active === true;
+        if (active === root.screensaverActive)
+            return;
+        root.screensaverActive = active;
+        if (active) {
+            root.screensaverStartedAt = Date.now();
+            root.cancelResume();
+            if (root.debugLogging)
+                console.warn("agx.screen-time: screensaver started");
+            var now = Date.now();
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.persist();
+        } else {
+            var endedAt = Date.now();
+            var duration = root.screensaverStartedAt ? endedAt - root.screensaverStartedAt : 0;
+            if (root.debugLogging)
+                console.warn("agx.screen-time: screensaver ended, duration=" + duration + "ms");
+            root.screensaverStartedAt = 0;
+            if (!root.sessionLocked)
+                root.scheduleResume();
+        }
+    }
+
+    // Unpauses schedule a resume instead of reopening immediately, so a
+    // stale reading from a ~10s state source can't briefly reopen a bucket.
+    property bool resumePending: false
+    Timer {
+        id: resumeTimer
+        interval: 2000
+        repeat: false
+        onTriggered: root.applyResume()
+    }
+    function scheduleResume() {
+        root.resumePending = true;
+        resumeTimer.restart();
+    }
+    function cancelResume() {
+        root.resumePending = false;
+        resumeTimer.stop();
+    }
+    function applyResume() {
+        if (root.sessionLocked || root.screensaverActive) {
+            root.resumePending = false;
+            return;
+        }
+        if (!root.resumePending)
+            return;
+        root.resumePending = false;
+        // Rebase to the resume instant: the pause may have ended up to two
+        // seconds ago, and reopening must not bill from the stale lastTick.
+        var now = Date.now();
+        root.lastTick = now;
+        root.switchActive();
+    }
+
+    property bool serviceLookupWarned: false
+
+    Timer {
+        id: serviceLookupTimer
+        interval: 250
+        repeat: true
+        running: root.ready && (!root.lockService || !root.idleService)
+        property int attempts: 0
+        onTriggered: {
+            root.refreshShellServices();
+            attempts++;
+            if (attempts >= 40 && !root.serviceLookupWarned) {
+                // Sandboxed serviceFor may never resolve these (scoped to a
+                // plugin's own service). Warn once instead of failing silent.
+                root.serviceLookupWarned = true;
+                console.warn("agx.screen-time: omarchy.lock/omarchy.idle services unavailable after 10s; " + "falling back to a persistent lock watcher (~10s pause accuracy)");
+            }
+        }
+    }
+
+    // Fallback when sandboxed lookups can't reach lock/idle services: one
+    // persistent watcher checking lock every 10s, printing only on change.
+    // Stops automatically if event-driven lookups ever succeed.
+    Process {
+        id: sessionStateWatcher
+        environment: root.procEnv
+        command: ["bash", "-c", "ppid=$PPID; prev=''; while :; do " + "kill -0 $ppid 2>/dev/null || exit 0; " + "cur=$(omarchy-shell lock isLocked 2>/dev/null); " + "if [ -n \"$cur\" ] && [ \"$cur\" != \"$prev\" ]; then printf '%s\\n' \"$cur\"; prev=\"$cur\"; fi; " + "sleep 10; done"]
+        stdout: SplitParser {
+            onRead: function (line) {
+                root.setSessionLocked(String(line).trim() === "true");
+            }
+        }
+    }
+
+    // Restarts the watcher if it exits while lock service stays unreachable.
+    Timer {
+        id: watcherSupervisorTimer
+        interval: 5000
+        repeat: true
+        running: root.ready && !root.lockService
+        onTriggered: {
+            if (!root.lockService && !sessionStateWatcher.running)
+                sessionStateWatcher.running = true;
+        }
+    }
+
+    // Screensaver fallback is an in-process toplevel scan (no spawning),
+    // running only while the idle service is unreachable.
+    Timer {
+        id: screensaverScanTimer
+        interval: 10000
+        repeat: true
+        running: root.ready && !root.idleService
+        onTriggered: root.setScreensaverActive(root.screensaverWindowVisible())
+    }
+
+    // omarchy launches the screensaver as "org.omarchy.screensaver", so a
+    // toplevel scan is a reliable sandbox-visible proxy for "screensaver up".
+    function screensaverWindowVisible() {
+        var toplevels = ToplevelManager.toplevels;
+        if (!toplevels || !toplevels.length)
+            return false;
+        for (var i = 0; i < toplevels.length; i++) {
+            var t = toplevels[i];
+            if (t && t.appId && String(t.appId).toLowerCase() === "org.omarchy.screensaver")
+                return true;
+        }
+        return false;
+    }
+
+    // Event-driven sources, used whenever the sandboxed lookups succeed.
+    Connections {
+        target: root.lockService
+        function onLockedChanged() {
+            root.setSessionLocked(root.lockService.locked);
+        }
+    }
+
+    Connections {
+        target: root.idleService
+        function onScreensaverStartedThisCycleChanged() {
+            root.setScreensaverActive(root.idleService.screensaverStartedThisCycle);
+        }
+        function onScreensaverWindowCountChanged() {
+            root.setScreensaverActive(root.idleService.screensaverWindowCount > 0);
         }
     }
 
