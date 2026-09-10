@@ -9,6 +9,8 @@ import "../../js/Model.js" as Model
 Item {
     id: row
     required property var modelData
+    // Repeater auto-supplies by name (like modelData); swatchColor reads it.
+    required property int index
     required property bool expanded
     required property int groupedCount
     required property var sliceColors
