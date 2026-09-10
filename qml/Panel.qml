@@ -313,13 +313,13 @@ Panel {
                 }
 
                 // Fixed header; the menu scrolls beneath it on short panels.
+                // Full-bleed like the main panel and year drawer: no side
+                // margins, components carry their own insets.
                 Item {
                     id: configHeader
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.leftMargin: Style.space(12)
-                    anchors.rightMargin: Style.space(12)
                     // Flush top like the year hero; breathing room lives below.
                     height: Math.max(configHeroIcon.implicitHeight, configHeroLabels.implicitHeight, configBack.implicitHeight) + Style.space(6)
 
@@ -380,8 +380,6 @@ Panel {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.top: configHeader.bottom
-                    anchors.leftMargin: Style.space(12)
-                    anchors.rightMargin: Style.space(12)
                     contentWidth: width
                     contentHeight: configColumn.implicitHeight
                     clip: true
