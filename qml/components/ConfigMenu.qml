@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // Panel config menu: prefs, week window, today reset.
 // Values thread in from BarWidget settings; Panel writes back on signals.
@@ -16,95 +17,68 @@ Column {
     required property bool hideYearly
     required property bool hideInsights
     required property int weekCount
+    required property var weekOptions
     required property bool weekTotalAsPct
     required property bool hideEasterEggs
 
     signal yearlyToggled
     signal insightsToggled
-    signal prevWeekWindowRequested
-    signal nextWeekWindowRequested
+    signal weekWindowSelected(int count)
     signal weekTotalModeToggled
     signal easterEggsToggled
     signal resetRequested
 
     width: parent.width
-    spacing: Style.space(6)
+    spacing: Style.space(8)
 
-    function activate(kind) {
-        if (kind === "yearly")
-            root.yearlyToggled();
-        else if (kind === "insights")
-            root.insightsToggled();
-        else if (kind === "weektotal")
-            root.weekTotalModeToggled();
-        else if (kind === "easter")
-            root.easterEggsToggled();
+    Toggle {
+        width: root.width
+        label: "Yearly overview"
+        description: "Month bars and yearly retro cards"
+        checked: !root.hideYearly
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.yearlyToggled()
     }
 
-    Repeater {
-        model: [
-            {
-                kind: "yearly",
-                label: "Yearly overview",
-                shown: !root.hideYearly
-            },
-            {
-                kind: "insights",
-                label: "Insights",
-                shown: !root.hideInsights
-            },
-            {
-                kind: "weektotal",
-                label: "Week total as %",
-                shown: root.weekTotalAsPct
-            },
-            {
-                kind: "easter",
-                label: "Easter eggs",
-                shown: !root.hideEasterEggs
-            }
-        ]
-
-        Item {
-            required property var modelData
-            width: root.width
-            height: Math.max(toggleLabel.implicitHeight, toggleState.implicitHeight)
-
-            Text {
-                id: toggleLabel
-                text: modelData.label
-                color: root.foreground
-                opacity: 0.6
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                id: toggleState
-                text: modelData.shown ? "ON" : "OFF"
-                color: modelData.shown ? root.accent : Qt.darker(root.foreground, 1.4)
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.activate(modelData.kind)
-            }
-        }
+    Toggle {
+        width: root.width
+        label: "Insights"
+        description: "Top app, vs yesterday, busiest day"
+        checked: !root.hideInsights
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.insightsToggled()
     }
 
-    // Week window stepper; retention already covers up to 13 weeks.
+    Toggle {
+        width: root.width
+        label: "Week total as %"
+        description: "Header shows share of 168 hours"
+        checked: root.weekTotalAsPct
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.weekTotalModeToggled()
+    }
+
+    Toggle {
+        width: root.width
+        label: "Easter eggs"
+        description: "Hourglass flip and hover sparkles"
+        checked: !root.hideEasterEggs
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.fontFamily
+        onClicked: root.easterEggsToggled()
+    }
+
+    // Week window option boxes; retention already covers the largest one.
     Item {
         width: root.width
-        height: Math.max(weekLabel.implicitHeight, weekValue.implicitHeight)
+        height: Math.max(weekLabel.implicitHeight, weekBoxes.implicitHeight) + Style.space(8)
 
         Text {
             id: weekLabel
@@ -118,37 +92,41 @@ Column {
         }
 
         Row {
-            id: weekStepper
-            spacing: Style.space(8)
+            id: weekBoxes
+            spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
 
-            PagerArrow {
-                glyph: "\uf053"
-                active: root.weekCount > 4
-                foreground: root.foreground
-                fontFamily: root.fontFamily
-                fontSize: Style.font.bodySmall
-                onClicked: root.prevWeekWindowRequested()
-            }
+            Repeater {
+                model: root.weekOptions
 
-            Text {
-                id: weekValue
-                text: root.weekCount + " wk"
-                color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
-            }
+                Rectangle {
+                    required property int modelData
+                    readonly property bool chosen: modelData === root.weekCount
+                    width: Style.space(40)
+                    height: Style.space(24)
+                    radius: Style.space(4)
+                    color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
 
-            PagerArrow {
-                glyph: "\uf054"
-                active: root.weekCount < 13
-                foreground: root.foreground
-                fontFamily: root.fontFamily
-                fontSize: Style.font.bodySmall
-                onClicked: root.nextWeekWindowRequested()
+                    Text {
+                        text: modelData
+                        color: chosen ? root.accent : root.foreground
+                        opacity: chosen ? 1.0 : 0.6
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: chosen
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.weekWindowSelected(modelData)
+                    }
+                }
             }
         }
     }
@@ -156,7 +134,7 @@ Column {
     // 3-click reset: arm, confirm, execute. Mouse-leave or 3s disarms.
     Item {
         width: root.width
-        height: Math.max(resetLabel.implicitHeight, resetState.implicitHeight)
+        height: Math.max(resetLabel.implicitHeight, resetState.implicitHeight) + Style.space(8)
 
         property int stage: 0
 

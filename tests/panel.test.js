@@ -61,8 +61,7 @@ test("config menu threads prefs with explicit props and signals", () => {
   for (const sig of [
     "yearlyToggled",
     "insightsToggled",
-    "prevWeekWindowRequested",
-    "nextWeekWindowRequested",
+    "weekWindowSelected",
     "weekTotalModeToggled",
     "easterEggsToggled",
     "resetRequested",
@@ -70,8 +69,16 @@ test("config menu threads prefs with explicit props and signals", () => {
     assert.match(menu, new RegExp("signal " + sig))
   }
   assert.match(menu, /required property int weekCount/)
+  assert.match(menu, /required property var weekOptions/)
   assert.match(panel, /hostWidget\.setSetting/)
   assert.match(bar, /function setSetting\(key, value\)/)
+})
+
+test("toggles and week boxes use the shell kit", () => {
+  assert.match(menu, /Toggle \{/)
+  assert.match(menu, /model: root\.weekOptions/)
+  assert.match(menu, /root\.weekWindowSelected\(modelData\)/)
+  assert.match(panel, /function selectWeekWindow\(count\)/)
 })
 
 test("resetToday zeroes today only, archives untouched", () => {

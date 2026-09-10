@@ -44,11 +44,9 @@ Panel {
             root.hostWidget.setSetting(key, value);
     }
 
-    function stepWeekWindow(dir) {
-        var i = root.weekOptions.indexOf(root.weekCount);
-        var next = root.weekOptions[Math.max(0, Math.min(root.weekOptions.length - 1, i + dir))];
-        if (next !== root.weekCount)
-            root.writeSetting("weekCount", next);
+    function selectWeekWindow(count) {
+        if (root.weekOptions.indexOf(count) >= 0 && count !== root.weekCount)
+            root.writeSetting("weekCount", count);
     }
 
     // Empty selection = live today; everything derives from activeDay.
@@ -356,12 +354,14 @@ Panel {
                         hideYearly: root.hideYearly
                         hideInsights: root.hideInsights
                         weekCount: root.weekCount
+                        weekOptions: root.weekOptions
                         weekTotalAsPct: root.weekTotalAsPct
                         hideEasterEggs: root.hideEasterEggs
                         onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                         onInsightsToggled: root.writeSetting("hideInsights", !root.hideInsights)
-                        onPrevWeekWindowRequested: root.stepWeekWindow(-1)
-                        onNextWeekWindowRequested: root.stepWeekWindow(1)
+                        onWeekWindowSelected: function (count) {
+                            root.selectWeekWindow(count);
+                        }
                         onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                         onEasterEggsToggled: root.writeSetting("hideEasterEggs", !root.hideEasterEggs)
                         onResetRequested: {
