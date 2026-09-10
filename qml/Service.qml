@@ -208,6 +208,24 @@ Item {
         root.persist();
     }
 
+    // Zeroes today only: live day plus its history mirror. Archives
+    // (months/years) are untouched; the focused app keeps running with
+    // activeStart rebased so the next commit bills from now, not from
+    // before the reset.
+    function resetToday() {
+        if (!root.ready)
+            return;
+        var now = Date.now();
+        root.today = Model.newDay();
+        var nd = Object.assign({}, root.days);
+        nd[root.todayKey] = root.today;
+        root.days = nd;
+        if (root.activeApp)
+            root.activeStart = now;
+        root.lastTick = now;
+        root.persist();
+    }
+
     // ---- Persistence -------------------------------------------------------
 
     // Fold today into a fresh mirror object so the adapter notifier fires.

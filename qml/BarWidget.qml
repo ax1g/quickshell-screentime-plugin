@@ -28,24 +28,31 @@ BarWidget {
         return lines;
     }
 
-    // iconOnly persists in shell.json across restarts and slots.
-    readonly property bool iconOnly: {
-        var v = root.setting("iconOnly", false);
+    // Widget prefs persist in shell.json across restarts and slots.
+    // Reads coerce to bool; writes go through setSetting to keep keys.
+    function settingBool(key, fallback) {
+        var v = root.setting(key, fallback);
         return v === true || v === "true";
     }
 
-    function toggleIconOnly() {
-        var next = !root.iconOnly;
+    readonly property bool iconOnly: root.settingBool("iconOnly", false)
+
+    // All config-menu prefs funnel here so no key is ever dropped.
+    function setSetting(key, value) {
         var entry = {
             id: root.moduleName
         };
-        for (var key in root.settings)
-            if (key !== "id")
-                entry[key] = root.settings[key];
-        entry.iconOnly = next;
+        for (var k in root.settings)
+            if (k !== "id")
+                entry[k] = root.settings[k];
+        entry[key] = value;
         root.settings = entry;
         if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
             root.bar.shell.updateEntryInline(root.moduleName, entry);
+    }
+
+    function toggleIconOnly() {
+        root.setSetting("iconOnly", !root.iconOnly);
     }
 
     // Underline tracks painted label width, like omarchy.clock.
@@ -129,6 +136,10 @@ BarWidget {
         }
         function toggle(): void {
             root.togglePanel();
+        }
+        function resetToday(): void {
+            if (root.service)
+                root.service.resetToday();
         }
         function status(): void {
             var p = panelLoader.item;

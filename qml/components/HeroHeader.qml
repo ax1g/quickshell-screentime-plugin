@@ -2,7 +2,7 @@ import QtQuick
 import qs.Commons
 import "../../js/Model.js" as Model
 
-// Day total + SHOW MORE/LESS toggle.
+// Day total + SHOW MORE/LESS toggle + config gear.
 
 Item {
     id: heroHeader
@@ -11,12 +11,16 @@ Item {
     required property bool serviceReady
     required property bool expanded
     required property bool calendarOpen
+    required property bool calendarEnabled
+    required property bool easterEggs
+    required property bool configOpen
     required property double dayTotal
     required property string activeDayKey
     required property string activeDayLabel
 
     signal expandToggled
     signal calendarToggled
+    signal configToggled
 
     width: parent.width
     height: implicitHeight
@@ -29,7 +33,7 @@ Item {
         id: hourTick
         interval: heroHeader.serviceReady ? Model.msUntilNextHour(Date.now()) : 60000
         repeat: false
-        running: heroHeader.serviceReady
+        running: heroHeader.serviceReady && heroHeader.easterEggs
 
         onTriggered: {
             var h = new Date().getHours();
@@ -71,9 +75,12 @@ Item {
             anchors.fill: parent
             anchors.margins: -Style.space(6)
             hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: heroHeader.calendarToggled()
-            onContainsMouseChanged: if (containsMouse)
+            cursorShape: heroHeader.calendarEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: {
+                if (heroHeader.calendarEnabled)
+                    heroHeader.calendarToggled();
+            }
+            onContainsMouseChanged: if (containsMouse && heroHeader.easterEggs)
                 sparkles.launch(heroIconMouse.mouseX, heroIconMouse.mouseY)
         }
     }
@@ -110,6 +117,27 @@ Item {
             }
         }
         // qmllint enable unqualified
+    }
+
+    // Config gear; opens the prefs slide-over drawer.
+    Text {
+        id: configGear
+        text: "\uf013"
+        color: configGearMouse.containsMouse || heroHeader.configOpen ? heroHeader.foreground : Qt.darker(heroHeader.foreground, 1.4)
+        font.family: heroHeader.fontFamily
+        font.pixelSize: Style.font.title
+        anchors.right: showMoreCorner.left
+        anchors.rightMargin: Style.space(10)
+        anchors.top: parent.top
+    }
+
+    MouseArea {
+        id: configGearMouse
+        anchors.fill: configGear
+        anchors.margins: -Style.space(4)
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: heroHeader.configToggled()
     }
 
     Row {
@@ -150,7 +178,7 @@ Item {
         anchors.left: heroIcon.right
         anchors.leftMargin: Style.space(14)
         anchors.right: parent.right
-        anchors.rightMargin: showMoreCorner.implicitWidth + Style.space(12)
+        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + Style.space(24)
         anchors.top: parent.top
         spacing: 0
 

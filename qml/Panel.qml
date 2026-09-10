@@ -24,6 +24,33 @@ Panel {
     readonly property var years: service ? service.years : {}
     readonly property string todayKey: serviceReady ? service.todayKey : ""
 
+    // Config-menu prefs (BarWidget settings, pushed via injectPanel).
+    // Missing keys behave as today, so old installs need no migration.
+    // The `in` probe keeps this safe if the shell ever withholds settings.
+    readonly property var prefs: ("settings" in root) && root.settings ? root.settings : ({})
+    readonly property bool hideYearly: root.prefs.hideYearly === true
+    readonly property bool hideInsights: root.prefs.hideInsights === true
+    readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
+    // Week presets; retention (95d) already covers the largest one.
+    readonly property var weekOptions: [4, 8, 13]
+    readonly property int weekCount: {
+        var n = Number(root.prefs.weekCount);
+        return root.weekOptions.indexOf(n) >= 0 ? n : 13;
+    }
+    readonly property int maxWeekOffset: root.weekCount - 1
+
+    function writeSetting(key, value) {
+        if (root.hostWidget && typeof root.hostWidget.setSetting === "function")
+            root.hostWidget.setSetting(key, value);
+    }
+
+    function stepWeekWindow(dir) {
+        var i = root.weekOptions.indexOf(root.weekCount);
+        var next = root.weekOptions[Math.max(0, Math.min(root.weekOptions.length - 1, i + dir))];
+        if (next !== root.weekCount)
+            root.writeSetting("weekCount", next);
+    }
+
     // Empty selection = live today; everything derives from activeDay.
     property string selectedKey: ""
     readonly property var activeDay: serviceReady ? Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey) : null
@@ -34,9 +61,8 @@ Panel {
     // Gated on service.ready: unloaded history would label NaN-NaN-NaN.
     readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
     readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
-    // Single derivation for the paginated week trend; offset clamps 0-12.
-    readonly property var weekView: serviceReady ?
-    Model.weekView(root.days, root.todayKey, 13, Math.max(0, Math.min(root.weekOffset, 12))) : null
+    // Single derivation for the paginated week trend; offset clamps to pages.
+    readonly property var weekView: serviceReady ? Model.weekView(root.days, root.todayKey, root.weekCount, Math.max(0, Math.min(root.weekOffset, root.maxWeekOffset))) : null
     // Its Sunday anchors "Busiest day (7d)" to the visible week.
     readonly property string insightWeekEndKey: root.weekView ? root.weekView.weekEndKey : ""
     readonly property var insightRows: serviceReady ? Model.insights(root.activeDay, root.days, root.todayKey, root.activeDayKey, root.insightWeekEndKey) : []
@@ -52,21 +78,25 @@ Panel {
     readonly property bool recordWeek: root.weekOffset === 0 && serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
     property bool expanded: false
     property bool calendarOpen: false
+    property bool configOpen: false
     property int weekOffset: 0
     // True while an older week holds data (enables the prev pager).
     readonly property bool hasPrevWeekData: root.weekView ? root.weekView.hasPrev : false
-    // Header total flips between absolute time and week-share.
-    property bool weekTotalAsPct: false
+    // Week total mode persists; toggling writes the setting through.
+    property bool weekTotalAsPct: root.prefs.weekTotalAsPct === true
+    onMaxWeekOffsetChanged: root.weekOffset = Math.min(root.weekOffset, root.maxWeekOffset)
 
     // currentYearOffset: years back from today; 0 = this year.
     readonly property int todayYear: serviceReady ? (Number(root.todayKey.split("-")[0]) || new Date().getFullYear()) : new Date().getFullYear()
     property int currentYearOffset: 0
     readonly property int currentYear: root.todayYear - root.currentYearOffset
     readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
-    // Header total and retro cards share one year merge.
-    readonly property var yearView: serviceReady ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
+    // Header total, month bars and retro cards share one year merge.
+    // Skipped entirely while hidden; the drawer cannot open either.
+    readonly property var yearView: serviceReady && !root.hideYearly ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
     readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
     readonly property var yearFacts: root.yearView ? root.yearView.facts : []
+    readonly property var yearMonths: root.yearView ? root.yearView.months : []
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
@@ -133,11 +163,22 @@ Panel {
     // Slide animates on toggle only; layout moves snap. Opens expanded.
     function openCalendar(open) {
         calendarDrawer.sliding = true;
+        // The two drawers never overlap: opening one closes the other.
+        if (open)
+            root.configOpen = false;
         if (open && !root.expanded) {
             keyCatcher.collapsedCardH = keyCatcher.height;
             root.expanded = true;
         }
         root.calendarOpen = open;
+    }
+
+    // Config slides from the right; same chrome contract as the calendar.
+    function openConfig(open) {
+        configDrawer.sliding = true;
+        if (open)
+            root.openCalendar(false);
+        root.configOpen = open;
     }
 
     KeyboardPanel {
@@ -218,6 +259,107 @@ Panel {
                 }
             }
 
+            // Config drawer: same slide contract, mirrored from the right.
+            Item {
+                id: configDrawer
+                width: keyCatcher.drawerWidth
+                height: keyCatcher.height
+                anchors.top: parent.top
+                x: root.configOpen ? 0 : keyCatcher.drawerWidth
+                z: 11
+                visible: x < keyCatcher.drawerWidth
+
+                property bool sliding: false
+
+                Behavior on x {
+                    enabled: configDrawer.sliding
+                    NumberAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                // Disarm at rest so resizes don't replay the slide.
+                onXChanged: {
+                    if (root.configOpen ? x <= 0 : x >= keyCatcher.drawerWidth)
+                        sliding = false;
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: root.bar ? root.bar.background : Color.background
+                    radius: Style.space(6)
+                }
+
+                // Swallow hover/clicks so they don't reach the panel beneath.
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: function (mouse) {
+                        mouse.accepted = true;
+                    }
+                }
+
+                Column {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.leftMargin: Style.space(12)
+                    anchors.rightMargin: Style.space(12)
+                    anchors.topMargin: Style.space(10)
+                    spacing: Style.space(10)
+
+                    Item {
+                        width: parent.width
+                        height: Math.max(configTitle.implicitHeight, configBack.implicitHeight)
+
+                        Text {
+                            id: configTitle
+                            text: "CONFIGURE"
+                            color: root.contentForeground
+                            opacity: 0.6
+                            font.family: root.contentFontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: true
+                            font.letterSpacing: 1.2
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        BackButton {
+                            id: configBack
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            foreground: root.contentForeground
+                            fontFamily: root.contentFontFamily
+                            onClicked: root.openConfig(false)
+                        }
+                    }
+
+                    ConfigMenu {
+                        foreground: root.contentForeground
+                        fontFamily: root.contentFontFamily
+                        accent: Color.accent
+                        urgent: Color.urgent
+                        hideYearly: root.hideYearly
+                        hideInsights: root.hideInsights
+                        weekCount: root.weekCount
+                        weekTotalAsPct: root.weekTotalAsPct
+                        hideEasterEggs: root.hideEasterEggs
+                        onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
+                        onInsightsToggled: root.writeSetting("hideInsights", !root.hideInsights)
+                        onPrevWeekWindowRequested: root.stepWeekWindow(-1)
+                        onNextWeekWindowRequested: root.stepWeekWindow(1)
+                        onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
+                        onEasterEggsToggled: root.writeSetting("hideEasterEggs", !root.hideEasterEggs)
+                        onResetRequested: {
+                            if (root.service)
+                                root.service.resetToday();
+                        }
+                    }
+                }
+            }
+
             // ---- Main content (full width, drawer slides over it) --------------
             Flickable {
                 id: panelScroll
@@ -239,11 +381,15 @@ Panel {
                         serviceReady: root.serviceReady
                         expanded: root.expanded
                         calendarOpen: root.calendarOpen
+                        calendarEnabled: !root.hideYearly
+                        easterEggs: !root.hideEasterEggs
+                        configOpen: root.configOpen
                         dayTotal: root.dayTotal
                         activeDayKey: root.activeDayKey
                         activeDayLabel: root.activeDayLabel
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
+                        onConfigToggled: root.openConfig(!root.configOpen)
                     }
 
                     // ---- Per-app donut + legend ------------------------------------
@@ -308,6 +454,7 @@ Panel {
                                 tipBackground: root.bar ? root.bar.background : Color.background
                                 accent: Color.accent
                                 weekOffset: root.weekOffset
+                                maxOffset: root.maxWeekOffset
                                 hasPrevWeekData: root.hasPrevWeekData
                                 visibleWeek: root.visibleWeek
                                 recordWeek: root.recordWeek
@@ -316,21 +463,23 @@ Panel {
                                 axisTicks: root.axisTicks
                                 axisMaxMs: root.axisMaxMs
                                 activeDayKey: root.activeDayKey
-                                onPrevWeekRequested: root.weekOffset = Math.min(12, root.weekOffset + 1)
+                                onPrevWeekRequested: root.weekOffset = Math.min(root.maxWeekOffset, root.weekOffset + 1)
                                 onNextWeekRequested: root.weekOffset = Math.max(0, root.weekOffset - 1)
-                                onWeekTotalToggled: root.weekTotalAsPct = !root.weekTotalAsPct
+                                onWeekTotalToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                                 onDaySelected: function (key) {
                                     root.selectDay(key);
                                 }
                             }
 
                             PanelSeparator {
+                                visible: !root.hideInsights
                                 width: parent.width
                                 foreground: root.contentForeground
                                 strength: 0.12
                             }
 
                             InsightList {
+                                visible: !root.hideInsights
                                 rows: root.insightRows
                                 foreground: root.contentForeground
                                 fontFamily: root.contentFontFamily
@@ -344,7 +493,7 @@ Panel {
         }
     }
 
-    // Reset to live today on dismiss.
+    // Reset to live today on dismiss (week-total mode persists).
     Connections {
         target: root.controller
         function onOpenChanged() {
@@ -353,7 +502,7 @@ Panel {
                 root.openCalendar(false);
                 root.weekOffset = 0;
                 root.currentYearOffset = 0;
-                root.weekTotalAsPct = false;
+                root.openConfig(false);
                 donutChart.clearHover();
             }
         }

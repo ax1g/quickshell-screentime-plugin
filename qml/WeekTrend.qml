@@ -3,7 +3,7 @@ import qs.Commons
 import "components"
 import "../js/Model.js" as Model
 
-// Paginated Mon-Sun page; offset 0 = current week.
+// Paginated Mon-Sun page; offset 0 = current week, maxOffset = oldest page.
 Column {
     id: root
     required property color foreground
@@ -11,6 +11,7 @@ Column {
     required property color tipBackground
     required property color accent
     required property int weekOffset
+    required property int maxOffset
     required property bool hasPrevWeekData
     required property var visibleWeek
     required property bool recordWeek
@@ -28,7 +29,7 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    // Arrows fade at the 13-week edges.
+    // Prev arrow fades at the oldest page.
     Item {
         width: parent.width
         implicitHeight: Math.max(navRow.implicitHeight, weekTotalLabel.implicitHeight)
@@ -41,7 +42,7 @@ Column {
 
             PagerArrow {
                 glyph: "\uf053"
-                active: root.weekOffset < 12 && root.hasPrevWeekData
+                active: root.weekOffset < root.maxOffset && root.hasPrevWeekData
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
