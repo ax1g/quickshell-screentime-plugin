@@ -52,26 +52,31 @@ Column {
             {
                 kind: "yearly",
                 label: "Yearly overview",
+                sub: "Month bars and yearly retro cards",
                 shown: !root.hideYearly
             },
             {
                 kind: "daily",
                 label: "Daily insights",
+                sub: "Top app, vs yesterday, busiest day",
                 shown: !root.hideDailyInsights
             },
             {
                 kind: "retro",
                 label: "Yearly insights",
+                sub: "Retro cards in the yearly overview",
                 shown: !root.hideYearInsights
             },
             {
                 kind: "weektotal",
                 label: "Week total as %",
+                sub: "Header shows share of 168 hours",
                 shown: root.weekTotalAsPct
             },
             {
                 kind: "easter",
                 label: "Easter eggs",
+                sub: "Hourglass flip and hover sparkles",
                 shown: !root.hideEasterEggs
             }
         ]
@@ -79,20 +84,35 @@ Column {
         Item {
             required property var modelData
             width: root.width
-            height: Math.max(toggleLabel.implicitHeight, toggleSwitch.implicitHeight) + Style.space(4)
+            height: Math.max(toggleLabels.implicitHeight, toggleSwitch.implicitHeight) + Style.space(4)
 
-            Text {
-                id: toggleLabel
-                text: modelData.label
-                color: root.foreground
-                opacity: 0.6
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
+            Column {
+                id: toggleLabels
                 anchors.left: parent.left
                 anchors.right: toggleSwitch.left
                 anchors.rightMargin: Style.space(8)
                 anchors.verticalCenter: parent.verticalCenter
-                elide: Text.ElideRight
+                spacing: 0
+
+                Text {
+                    text: modelData.label
+                    color: root.foreground
+                    opacity: 0.6
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    width: parent.width
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    text: modelData.sub
+                    color: root.foreground
+                    opacity: 0.4
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    width: parent.width
+                    elide: Text.ElideRight
+                }
             }
 
             ToggleSwitch {
