@@ -6,6 +6,46 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-10
+
+### Added
+
+- Panel config menu behind a gear glyph next to SHOW MORE/LESS: every pref
+  persists in the widget settings across restarts.
+- Hide flags for the yearly overview (the drawer never opens and its merge
+  is skipped) and the insights section.
+- Configurable week trend window: 4, 8 or 13 weeks. Retention (95 days)
+  already covers the largest preset, so no history is ever pruned for this.
+- Triple-confirmed reset for today's data only (RESET → SURE? → REALLY?,
+  auto-disarms after 3s or on mouse-leave). Archives are untouched, and the
+  focused app keeps running with its timer rebased so cleared time can't
+  come back. Also reachable via `quickshell ipc call agx.screen-time
+  resetToday`.
+- Persisted week-total mode (time vs share of 168h) and an easter-eggs
+  toggle (hourglass flip + hover sparkles).
+
+## [1.5.1] - 2026-09-10
+
+### Fixed
+
+- Tracking now pauses while the session is locked or the screensaver is up,
+  and resumes on return (fixes #10, via PR #12). Lock/screensaver closes the
+  active bucket; focus events and in-flight terminal resolves can't reopen
+  it mid-pause, and resume is deferred ~2s and re-validated so a stale
+  reading can't briefly restart accrual. Event-driven via `omarchy.lock` /
+  `omarchy.idle` where the shell exposes them, with a persistent lock
+  watcher (+ supervisor) and an in-process screensaver scan as fallback on
+  sandboxed shells.
+- CI workflow pinned to least-privilege `contents: read`, clearing the
+  missing-permissions code-scanning alerts.
+
+### Changed
+
+- Internal layout: `lib/` → `js/`, `scripts/` → `python/`, QML split into
+  `qml/` + `qml/components/` with no behavior change; the year header and
+  month bars share one merge instead of two, and the docs describe the new
+  layout.
+
 ## [1.5.0] - 2026-09-07
 
 ### Added
