@@ -21,6 +21,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Busiest Week Trophy follows the viewed week: paging back to the all-time
   best week now shows the trophy there instead of only beside a leading
   current week.
+- Settings writes never drop stored keys: toggles made before the shell
+  delivers settings (or while its API is unreachable) queue up and flush
+  over the delivered entry instead of replacing it with a partial one.
 
 ### Changed
 

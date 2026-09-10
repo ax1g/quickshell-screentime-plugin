@@ -100,6 +100,21 @@ test("config menu threads prefs with explicit props and signals", () => {
   assert.match(bar, /function setSetting\(key, value\)/)
 })
 
+test("settings writes never drop stored keys", () => {
+  // Early writes (before delivery, or while the shell API is unreachable)
+  // accumulate in pendingWrites and merge into every built entry, so the
+  // shell never receives a partial entry that would lose the user's config.
+  assert.match(bar, /property var pendingWrites/)
+  assert.match(bar, /property bool settingsReady: false/)
+  assert.match(bar, /for \(var p in pending\)/)
+  assert.match(bar, /function flushSettings\(\)/)
+  assert.match(bar, /root\.flushSettings\(\)/)
+  // Own optimistic writes must not fake delivery.
+  assert.match(bar, /property bool writingSettings/)
+  assert.match(bar, /if \(!root\.writingSettings\)/)
+  assert.match(bar, /updateEntryInline\(root\.moduleName, entry\)/)
+})
+
 test("toggles are mini shell switches in panel-styled rows", () => {
   assert.match(menu, /ToggleSwitch \{/)
   assert.match(menu, /trackHeight: 18/)

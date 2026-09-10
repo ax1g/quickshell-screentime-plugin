@@ -37,18 +37,45 @@ BarWidget {
 
     readonly property bool iconOnly: root.settingBool("iconOnly", false)
 
+    // Session cache of keys written before the shell delivers settings
+    // (or while its API is unreachable). Merged into every built entry
+    // and flushed on delivery, so a fast toggle can never replace the
+    // stored entry with a partial one and lose the user's config.
+    property var pendingWrites: ({})
+    // True once the shell has delivered settings at least once. Own
+    // optimistic writes set writingSettings so they never fake delivery.
+    property bool settingsReady: false
+    property bool writingSettings: false
+
     // All config-menu prefs funnel here so no key is ever dropped.
     function setSetting(key, value) {
+        var pending = Object.assign({}, root.pendingWrites);
+        pending[key] = value;
+        root.pendingWrites = pending;
         var entry = {
             id: root.moduleName
         };
-        for (var k in root.settings)
+        var base = root.settings && typeof root.settings === "object" ? root.settings : {};
+        for (var k in base)
             if (k !== "id")
-                entry[k] = root.settings[k];
-        entry[key] = value;
+                entry[k] = base[k];
+        for (var p in pending)
+            entry[p] = pending[p];
+        root.writingSettings = true;
         root.settings = entry;
-        if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+        root.writingSettings = false;
+        if (root.settingsReady && root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function") {
+            root.pendingWrites = {};
             root.bar.shell.updateEntryInline(root.moduleName, entry);
+        }
+    }
+
+    // Re-issue early writes over the delivered base so they persist.
+    function flushSettings() {
+        var pending = root.pendingWrites;
+        root.pendingWrites = {};
+        for (var k in pending)
+            root.setSetting(k, pending[k]);
     }
 
     function toggleIconOnly() {
@@ -107,7 +134,15 @@ BarWidget {
     implicitHeight: button.implicitHeight
 
     onBarChanged: injectPanel()
-    onSettingsChanged: injectPanel()
+    onSettingsChanged: {
+        // Own optimistic writes must not count as delivery: only the
+        // shell's arrival marks ready and flushes early writes.
+        if (!root.writingSettings) {
+            root.settingsReady = true;
+            root.flushSettings();
+        }
+        root.injectPanel();
+    }
 
     Loader {
         id: panelLoader
