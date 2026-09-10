@@ -342,7 +342,18 @@ Column {
         property int stage: 0
 
         Timer {
-            id: resetRr: parent.verticalCenter
+            id: resetRevertTimer
+            interval: 3000
+            repeat: false
+            onTriggered: resetRow.stage = 0
+        }
+
+        Column {
+            id: resetLabels
+            anchors.left: parent.left
+            anchors.right: resetBox.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
             Text {
