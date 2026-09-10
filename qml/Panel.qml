@@ -50,6 +50,18 @@ Panel {
             root.writeSetting("weekCount", count);
     }
 
+    // Record-trophy swatches; gold is the default so old installs keep it.
+    readonly property var recordColorOptions: ["#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
+    readonly property string recordColor: {
+        var c = String(root.prefs.recordColor || "");
+        return root.recordColorOptions.indexOf(c) >= 0 ? c : "#FFD700";
+    }
+
+    function selectRecordColor(color) {
+        if (root.recordColorOptions.indexOf(color) >= 0 && color !== root.recordColor)
+            root.writeSetting("recordColor", color);
+    }
+
     // Empty selection = live today; everything derives from activeDay.
     property string selectedKey: ""
     readonly property var activeDay: serviceReady ? Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey) : null
@@ -393,11 +405,16 @@ Panel {
                             weekOptions: root.weekOptions
                             weekTotalAsPct: root.weekTotalAsPct
                             hideEasterEggs: root.hideEasterEggs
+                            recordColor: root.recordColor
+                            recordColorOptions: root.recordColorOptions
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
                             onWeekWindowSelected: function (count) {
                                 root.selectWeekWindow(count);
+                            }
+                            onRecordColorSelected: function (color) {
+                                root.selectRecordColor(color);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                             onEasterEggsToggled: root.writeSetting("hideEasterEggs", !root.hideEasterEggs)
@@ -513,6 +530,7 @@ Panel {
                                 axisTicks: root.axisTicks
                                 axisMaxMs: root.axisMaxMs
                                 activeDayKey: root.activeDayKey
+                                recordColor: root.recordColor
                                 onPrevWeekRequested: root.weekOffset = Math.min(root.maxWeekOffset, root.weekOffset + 1)
                                 onNextWeekRequested: root.weekOffset = Math.max(0, root.weekOffset - 1)
                                 onWeekTotalToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)

@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Record-trophy color setting: the week-trend trophy stays gold by default
+  and offers four extra swatches in the config menu, persisted across
+  restarts.
+
 ### Fixed
 
 - Future month lumps no longer inflate the year total and month bars: a lump

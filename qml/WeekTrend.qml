@@ -20,6 +20,7 @@ Column {
     required property var axisTicks
     required property double axisMaxMs
     required property string activeDayKey
+    required property color recordColor
 
     signal prevWeekRequested
     signal nextWeekRequested
@@ -71,11 +72,11 @@ Column {
             }
         }
 
-        // Gold glyph while the current week leads on record.
+        // Gold by default; configurable via the recordColor setting.
         Text {
             visible: root.recordWeek
             text: "\uF091"
-            color: "#FFD700"
+            color: root.recordColor
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
             anchors.right: weekTotalLabel.left

@@ -22,6 +22,8 @@ Column {
     required property var weekOptions
     required property bool weekTotalAsPct
     required property bool hideEasterEggs
+    required property string recordColor
+    required property var recordColorOptions
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -29,6 +31,7 @@ Column {
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
     signal easterEggsToggled
+    signal recordColorSelected(string color)
     signal resetRequested
 
     width: parent.width
@@ -185,6 +188,52 @@ Column {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.weekWindowSelected(modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // Record-trophy color swatches; gold first (= default).
+    Item {
+        width: root.width
+        height: Math.max(trophyLabel.implicitHeight, trophySwatches.implicitHeight) + Style.space(8)
+
+        Text {
+            id: trophyLabel
+            text: "Record trophy"
+            color: root.foreground
+            opacity: 0.6
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Row {
+            id: trophySwatches
+            spacing: Style.space(6)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+
+            Repeater {
+                model: root.recordColorOptions
+
+                Rectangle {
+                    required property string modelData
+                    readonly property bool chosen: modelData === root.recordColor
+                    width: Style.space(24)
+                    height: Style.space(24)
+                    radius: Style.space(12)
+                    color: modelData
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: chosen ? 2 : 1
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.recordColorSelected(modelData)
                     }
                 }
             }

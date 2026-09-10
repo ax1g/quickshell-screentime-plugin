@@ -77,12 +77,17 @@ test("config menu threads prefs with explicit props and signals", () => {
     "weekWindowSelected",
     "weekTotalModeToggled",
     "easterEggsToggled",
+    "recordColorSelected",
     "resetRequested",
   ]) {
     assert.match(menu, new RegExp("signal " + sig))
   }
   assert.match(menu, /required property int weekCount/)
   assert.match(menu, /required property var weekOptions/)
+  assert.match(menu, /required property string recordColor/)
+  assert.match(menu, /required property var recordColorOptions/)
+  assert.match(menu, /model: root\.recordColorOptions/)
+  assert.match(menu, /root\.recordColorSelected\(modelData\)/)
   assert.match(panel, /hostWidget\.setSetting/)
   assert.match(bar, /function setSetting\(key, value\)/)
 })
@@ -121,4 +126,15 @@ test("config lives in its own slide-over drawer", () => {
 test("week total mode persists instead of resetting on dismiss", () => {
   assert.match(panel, /writeSetting\("weekTotalAsPct", !root\.weekTotalAsPct\)/)
   assert.doesNotMatch(panel, /root\.weekTotalAsPct = false/)
+})
+
+test("record trophy color defaults to gold and persists via setting", () => {
+  assert.match(panel, /recordColorOptions: \["#FFD700"/)
+  assert.match(panel, /root\.prefs\.recordColor/)
+  assert.match(panel, /function selectRecordColor\(color\)/)
+  assert.match(panel, /writeSetting\("recordColor", color\)/)
+  assert.match(panel, /recordColor: root\.recordColor/)
+  assert.match(trend, /required property color recordColor/)
+  assert.match(trend, /color: root\.recordColor/)
+  assert.doesNotMatch(trend, /color: "#FFD700"/)
 })
