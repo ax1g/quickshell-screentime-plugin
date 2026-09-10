@@ -232,9 +232,9 @@ Column {
                 Rectangle {
                     required property string modelData
                     readonly property bool chosen: modelData === root.recordColor
-                    width: Style.space(24)
-                    height: Style.space(24)
-                    radius: Style.space(12)
+                    width: Style.space(16)
+                    height: Style.space(16)
+                    radius: Style.space(8)
                     color: modelData
                     border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
                     border.width: chosen ? 2 : 1
