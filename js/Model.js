@@ -848,7 +848,7 @@ function weekView(days, todayKey, weekCount, offset) {
     week: week,
     max: max,
     totalMs: weekTotal(wdays),
-    // The trophy follows the viewed week at any page: unique best across
+    // The Busiest Week Trophy follows the viewed week at any page: unique best across
     // the whole loaded window, not just "current week beats older weeks".
     isRecord: offset === bestWeekOffset(weeks),
     hasPrev: hasPrev,

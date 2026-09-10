@@ -21,6 +21,7 @@ Column {
     required property double axisMaxMs
     required property string activeDayKey
     required property color recordColor
+    required property bool showRecordTrophy
 
     signal prevWeekRequested
     signal nextWeekRequested
@@ -72,9 +73,10 @@ Column {
             }
         }
 
-        // Gold by default; configurable via the recordColor setting.
+        // Busiest Week Trophy: gold by default, configurable and
+        // hideable via the settings.
         Text {
-            visible: root.recordWeek
+            visible: root.recordWeek && root.showRecordTrophy
             text: "\uF091"
             color: root.recordColor
             font.family: root.fontFamily
@@ -97,7 +99,7 @@ Column {
                 tipBackground: root.tipBackground
 
                 hovered: recordTrophyMouse.containsMouse
-                tipText: "Busiest week on record — new high!"
+                tipText: "Busiest Week Trophy — your best week on record"
             }
         }
 

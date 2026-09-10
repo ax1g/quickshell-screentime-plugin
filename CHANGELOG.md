@@ -8,16 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Record-trophy color setting: the week-trend trophy stays gold by default
-  and offers four extra swatches in the config menu, persisted across
-  restarts.
+- Busiest Week Trophy settings: color swatches (gold by default) and a
+  toggle to hide the trophy, both persisted across restarts.
 
 ### Fixed
 
 - Future month lumps no longer inflate the year total and month bars: a lump
   beyond the current month (e.g. from a clock jump forward and back) is
   excluded like future days, so the header, bars and retro cards agree.
-- Record-week trophy follows the viewed week: paging back to the all-time
+- Busiest Week Trophy follows the viewed week: paging back to the all-time
   best week now shows the trophy there instead of only beside a leading
   current week.
 

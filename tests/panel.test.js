@@ -76,6 +76,7 @@ test("config menu threads prefs with explicit props and signals", () => {
     "yearInsightsToggled",
     "weekWindowSelected",
     "weekTotalModeToggled",
+    "trophyToggled",
     "easterEggsToggled",
     "recordColorSelected",
     "resetRequested",
@@ -84,6 +85,7 @@ test("config menu threads prefs with explicit props and signals", () => {
   }
   assert.match(menu, /required property int weekCount/)
   assert.match(menu, /required property var weekOptions/)
+  assert.match(menu, /required property bool hideRecordTrophy/)
   assert.match(menu, /required property string recordColor/)
   assert.match(menu, /required property var recordColorOptions/)
   assert.match(menu, /model: root\.recordColorOptions/)
@@ -123,11 +125,27 @@ test("config lives in its own slide-over drawer", () => {
   assert.match(panel, /if \(open\)\s+root\.openCalendar\(false\)/)
 })
 
-test("record trophy follows the best week at any page", () => {
+test("busiest week trophy follows the best week at any page", () => {
   assert.match(panel, /readonly property bool recordWeek/)
   assert.match(panel, /root\.weekView \? root\.weekView\.isRecord/)
   assert.doesNotMatch(panel, /weekOffset === 0 && serviceReady/)
-  assert.match(trend, /visible: root\.recordWeek/)
+  assert.match(trend, /visible: root\.recordWeek && root\.showRecordTrophy/)
+})
+
+test("busiest week trophy hides via setting", () => {
+  assert.match(
+    panel,
+    /hideRecordTrophy: root\.prefs\.hideRecordTrophy === true/,
+  )
+  assert.match(
+    panel,
+    /writeSetting\("hideRecordTrophy", !root\.hideRecordTrophy\)/,
+  )
+  assert.match(panel, /showRecordTrophy: !root\.hideRecordTrophy/)
+  assert.match(menu, /signal trophyToggled/)
+  assert.match(menu, /shown: !root\.hideRecordTrophy/)
+  assert.match(menu, /label: "Busiest Week Trophy"/)
+  assert.match(trend, /required property bool showRecordTrophy/)
 })
 
 test("week total mode persists instead of resetting on dismiss", () => {
@@ -135,7 +153,7 @@ test("week total mode persists instead of resetting on dismiss", () => {
   assert.doesNotMatch(panel, /root\.weekTotalAsPct = false/)
 })
 
-test("record trophy color defaults to gold and persists via setting", () => {
+test("busiest week trophy color defaults to gold and persists via setting", () => {
   assert.match(panel, /recordColorOptions: \["#FFD700"/)
   assert.match(panel, /root\.prefs\.recordColor/)
   assert.match(panel, /function selectRecordColor\(color\)/)

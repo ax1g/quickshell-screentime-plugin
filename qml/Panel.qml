@@ -32,6 +32,7 @@ Panel {
     readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
     readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
+    readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
     // Week presets; retention (95d) already covers the largest one.
     readonly property var weekOptions: [4, 8, 13]
     readonly property int weekCount: {
@@ -50,7 +51,7 @@ Panel {
             root.writeSetting("weekCount", count);
     }
 
-    // Record-trophy swatches; gold is the default so old installs keep it.
+    // Busiest Week Trophy swatches; gold is the default so old installs keep it.
     readonly property var recordColorOptions: ["#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
     readonly property string recordColor: {
         var c = String(root.prefs.recordColor || "");
@@ -85,8 +86,8 @@ Panel {
     readonly property var axisTicks: Model.weekAxisTicks(root.visibleWeekMax)
     readonly property double axisMaxMs: root.axisTicks.length ? root.axisTicks[root.axisTicks.length - 1] : 0
     readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
-    // The trophy follows the viewed week at any page: it marks the unique
-    // best week on record, not just a leading current week.
+    // The Busiest Week Trophy follows the viewed week at any page: it
+    // marks the unique best week on record, not just a leading current week.
     readonly property bool recordWeek: serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
     property bool expanded: false
     property bool calendarOpen: false
@@ -404,6 +405,7 @@ Panel {
                             weekOptions: root.weekOptions
                             weekTotalAsPct: root.weekTotalAsPct
                             hideEasterEggs: root.hideEasterEggs
+                            hideRecordTrophy: root.hideRecordTrophy
                             recordColor: root.recordColor
                             recordColorOptions: root.recordColorOptions
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
@@ -416,6 +418,7 @@ Panel {
                                 root.selectRecordColor(color);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
+                            onTrophyToggled: root.writeSetting("hideRecordTrophy", !root.hideRecordTrophy)
                             onEasterEggsToggled: root.writeSetting("hideEasterEggs", !root.hideEasterEggs)
                             onResetRequested: {
                                 if (root.service)
@@ -524,6 +527,7 @@ Panel {
                                 hasPrevWeekData: root.hasPrevWeekData
                                 visibleWeek: root.visibleWeek
                                 recordWeek: root.recordWeek
+                                showRecordTrophy: !root.hideRecordTrophy
                                 weekTotalAsPct: root.weekTotalAsPct
                                 visibleWeekTotalMs: root.visibleWeekTotalMs
                                 axisTicks: root.axisTicks

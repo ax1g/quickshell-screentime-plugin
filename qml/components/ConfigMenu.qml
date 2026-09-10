@@ -22,6 +22,7 @@ Column {
     required property var weekOptions
     required property bool weekTotalAsPct
     required property bool hideEasterEggs
+    required property bool hideRecordTrophy
     required property string recordColor
     required property var recordColorOptions
 
@@ -30,6 +31,7 @@ Column {
     signal yearInsightsToggled
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
+    signal trophyToggled
     signal easterEggsToggled
     signal recordColorSelected(string color)
     signal resetRequested
@@ -46,6 +48,8 @@ Column {
             root.yearInsightsToggled();
         else if (kind === "weektotal")
             root.weekTotalModeToggled();
+        else if (kind === "trophy")
+            root.trophyToggled();
         else if (kind === "easter")
             root.easterEggsToggled();
     }
@@ -75,6 +79,12 @@ Column {
                 label: "Show week total as %",
                 sub: "Share of the full week (168 hours), not hours",
                 shown: root.weekTotalAsPct
+            },
+            {
+                kind: "trophy",
+                label: "Busiest Week Trophy",
+                sub: "Trophy for your best week on record",
+                shown: !root.hideRecordTrophy
             },
             {
                 kind: "easter",
@@ -194,14 +204,14 @@ Column {
         }
     }
 
-    // Record-trophy color swatches; gold first (= default).
+    // Busiest Week Trophy color swatches; gold first (= default).
     Item {
         width: root.width
         height: Math.max(trophyLabel.implicitHeight, trophySwatches.implicitHeight) + Style.space(8)
 
         Text {
             id: trophyLabel
-            text: "Best-week trophy"
+            text: "Busiest Week Trophy color"
             color: root.foreground
             opacity: 0.6
             font.family: root.fontFamily
