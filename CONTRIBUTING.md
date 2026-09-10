@@ -49,25 +49,26 @@ All tests must pass before submitting a PR. CI runs these checks automatically.
 ## Project structure
 
 ```
-qml/
-  BarWidget.qml       Bar widget (today's total, popup host)
-  Service.qml         Long-running background service (timers, persistence)
-  Panel.qml           Popup shell: state, derivations, drawer slide chrome
-  WeekTrend.qml       Paginated Mon-Sun bar chart with pager
-  YearDrawer.qml      Yearly overview: month bars + retro masonry
-  MonthRow.qml        One year-overview month row
-  components/         Leaves: DonutChart, AppLegend, LegendRow, HeroHeader,
-                      Sparkle, InsightCard, InsightList, PagerArrow,
-                      BackButton, CardColumn, ScreenTip, ConfigMenu
-js/
-  Model.js          Pure JS helpers (formatting, aggregation, donut math)
-  State.js          Pure JS state machine (bucket lifecycle, suspend, midnight)
-  browser_aliases.json
-python/
-  resolve_app.py    Terminal foreground process resolver
-tests/              Unit tests (Node.js + Python)
-lint/               qmllint import stubs (vendored shell + Quickshell API)
-docs/assets/        README images
+.
+├── qml/
+│   ├── BarWidget.qml       Bar widget (today's total, popup host)
+│   ├── Service.qml         Long-running background service (timers, persistence)
+│   ├── Panel.qml           Popup shell: state, derivations, drawer slide chrome
+│   ├── WeekTrend.qml       Paginated Mon-Sun bar chart with pager
+│   ├── YearDrawer.qml      Yearly overview: month bars + retro masonry
+│   ├── MonthRow.qml        One year-overview month row
+│   └── components/         Leaves: DonutChart, AppLegend, LegendRow, HeroHeader,
+│                           Sparkle, InsightCard, InsightList, PagerArrow,
+│                           BackButton, CardColumn, ScreenTip, ConfigMenu
+├── js/
+│   ├── Model.js            Pure JS helpers (formatting, aggregation, donut math)
+│   ├── State.js            Pure JS state machine (bucket lifecycle, suspend, midnight)
+│   └── browser_aliases.json
+├── python/
+│   └── resolve_app.py      Terminal foreground process resolver
+├── tests/                  Unit tests (Node.js + Python)
+├── lint/                   qmllint import stubs (vendored shell + Quickshell API)
+└── docs/assets/            Historical changelog images
 ```
 
 ### Architecture

@@ -11,17 +11,36 @@ Fully local (one JSON file), terminal-aware, keyboard-first.
 
 ## Layout
 
-| Path                 | What lives there                                      |
-| -------------------- | ----------------------------------------------------- |
-| `qml/`               | Shell entry points + section views (`Panel`, `WeekTrend`, `YearDrawer`, `MonthRow`, `Service`, `BarWidget`) |
-| `qml/components/`    | Leaves: one concern per file, explicit `required` props + signals |
-| `js/`                | Pure logic (`Model.js` display math, `State.js` transitions, `browser_aliases.json`) |
-| `python/`            | Terminal/Steam foreground resolver                    |
-| `tests/`             | Node suites (`model`, `state`, `service`, `panel`) + Python `unittest` |
-| `lint/`              | `qmllint` import stubs (vendored shell + Quickshell API). Never hand-edit vendored files; see `lint/README.md` |
+```
+.
+├── qml/                    # Shell entry points + section views
+│   ├── BarWidget.qml       # Bar button + panel host
+│   ├── Service.qml         # Side effects: timers, disk, processes
+│   ├── Panel.qml           # Popup shell: state, derivations, drawers
+│   ├── WeekTrend.qml       # Paginated Mon-Sun bar chart
+│   ├── YearDrawer.qml      # Yearly overview + retro cards
+│   ├── MonthRow.qml        # One year-overview month row
+│   └── components/         # Leaves: one concern per file
+│       ├── AppLegend.qml / DonutChart.qml / LegendRow.qml
+│       ├── HeroHeader.qml / Sparkle.qml
+│       ├── InsightList.qml / InsightCard.qml
+│       ├── WeekDayBar.qml / WeekTick.qml / PagerArrow.qml
+│       └── BackButton.qml / CardColumn.qml / ScreenTip.qml / ConfigMenu.qml
+├── js/                     # Pure logic, Node- and QML-importable
+│   ├── Model.js            # Display math (formatting, donut, trends, years)
+│   ├── State.js            # Transitions (buckets, suspend, midnight)
+│   └── browser_aliases.json
+├── python/                 # Terminal/Steam foreground resolver
+│   └── resolve_app.py
+├── tests/                  # model, state, service, panel (node) + resolver (unittest)
+├── lint/                   # qmllint import stubs (see lint/README.md)
+├── docs/assets/            # Historical changelog images
+└── manifest.json           # Plugin id, version, entry points
+```
 
-`Service.qml` owns side effects (timers, disk, processes). `State.js` owns
-transitions as pure functions. Views are read-only mirrors of the service.
+Never hand-edit vendored files under `lint/`. `Service.qml` owns side
+effects; `State.js` owns transitions as pure functions; views are
+read-only mirrors of the service.
 
 ## Commands
 
