@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Future month lumps no longer inflate the year total and month bars: a lump
+  beyond the current month (e.g. from a clock jump forward and back) is
+  excluded like future days, so the header, bars and retro cards agree.
+
 ## [1.6.0] - 2026-09-10
 
 ### Added
