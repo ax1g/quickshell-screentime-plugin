@@ -250,7 +250,13 @@ function applyResolvedApp(
   if (state.resolveSpawnGen !== state.resolveGeneration) return null
   if (state.rawApp !== resolveForApp) return null
   if (!name) name = state.rawApp
-  name = modelFor(state).canonicalApp(name)
+  var model = modelFor(state)
+  // User aliases ride along on the service state; older injected models
+  // in tests only know canonicalApp, so fall back to it there.
+  name =
+    model && typeof model.resolveAppName === "function"
+      ? model.resolveAppName(name, state.appAliases)
+      : model.canonicalApp(name)
   if (name === state.activeApp) return null
   var now = Date.now()
   var closed = closeActiveBucket(

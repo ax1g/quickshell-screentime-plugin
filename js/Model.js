@@ -73,6 +73,103 @@ function displayName(app) {
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
 }
 
+// User tracking prefs: ignored apps and custom aliases. Both accept the
+// raw pref shapes (array or comma string; object or "from=to" string) so
+// QML can store plain strings in shell.json and normalize on read.
+function parseIgnoredApps(value) {
+  var raw = []
+  if (Array.isArray(value)) raw = value
+  else if (typeof value === "string") raw = value.split(",")
+  var list = []
+  for (var i = 0; i < raw.length; i++) {
+    var app = String(raw[i] || "")
+      .trim()
+      .toLowerCase()
+    if (app && list.indexOf(app) === -1) list.push(app)
+  }
+  return list
+}
+
+// True when name matches the ignore list as raw, canonical or display
+// name, so "zen-bin" is caught by an entry for "zen" and vice versa.
+function isIgnoredApp(name, ignoredList) {
+  if (!name || !ignoredList || ignoredList.length === 0) return false
+  var candidates = [
+    String(name).trim().toLowerCase(),
+    String(canonicalApp(name)).toLowerCase(),
+    String(displayName(name)).toLowerCase(),
+  ]
+  for (var i = 0; i < candidates.length; i++) {
+    if (candidates[i] && ignoredList.indexOf(candidates[i]) !== -1) return true
+  }
+  return false
+}
+
+function parseAppAliases(value) {
+  var out = {}
+  function put(k, v) {
+    var key = String(k === undefined || k === null ? "" : k)
+      .trim()
+      .toLowerCase()
+    var val = String(v === undefined || v === null ? "" : v).trim()
+    if (key && val) out[key] = val
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    for (var k in value) {
+      if (Object.prototype.hasOwnProperty.call(value, k)) put(k, value[k])
+    }
+    return out
+  }
+  if (typeof value === "string") {
+    var pairs = value.split(",")
+    for (var i = 0; i < pairs.length; i++) {
+      var eq = String(pairs[i]).indexOf("=")
+      if (eq === -1) continue
+      put(pairs[i].slice(0, eq), pairs[i].slice(eq + 1))
+    }
+  }
+  return out
+}
+
+function aliasApp(name, aliases) {
+  if (!name || !aliases) return name
+  var key = String(name).trim().toLowerCase()
+  if (Object.prototype.hasOwnProperty.call(aliases, key)) return aliases[key]
+  return name
+}
+
+// User alias first, then the built-in canonical fold, so a custom rename
+// is never silently re-folded back into a browser bucket.
+function resolveAppName(name, aliases) {
+  if (!name) return ""
+  return canonicalApp(aliasApp(name, aliases))
+}
+
+// Strip ignored apps from a stored day for display; the total recomputes
+// so the donut, legend and insights agree on the filtered day. The input
+// returns by identity when nothing is ignored.
+function filterIgnoredDay(day, ignoredList) {
+  if (!day || !ignoredList || ignoredList.length === 0) return day
+  var apps = day.apps && typeof day.apps === "object" ? day.apps : {}
+  var clean = {}
+  var total = 0
+  var dropped = false
+  for (var app in apps) {
+    if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
+    if (isIgnoredApp(app, ignoredList)) {
+      dropped = true
+      continue
+    }
+    var ms = Number(apps[app]) || 0
+    if (ms > 0) {
+      clean[app] = ms
+      total += ms
+    }
+  }
+  if (!dropped) return day
+  return { total: total, apps: clean }
+}
+
 // Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
@@ -1410,6 +1507,12 @@ if (typeof module !== "undefined" && module && module.exports) {
     qmlBrowserAliases: qmlBrowserAliases,
     canonicalApp: canonicalApp,
     displayName: displayName,
+    parseIgnoredApps: parseIgnoredApps,
+    isIgnoredApp: isIgnoredApp,
+    parseAppAliases: parseAppAliases,
+    aliasApp: aliasApp,
+    resolveAppName: resolveAppName,
+    filterIgnoredDay: filterIgnoredDay,
     sanitizeHistory: sanitizeHistory,
     sanitizeDay: sanitizeDay,
     numMs: numMs,

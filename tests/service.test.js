@@ -111,3 +111,13 @@ test("resume after pause is deferred and re-validated", () => {
 test("warns once instead of failing silently when services never appear", () => {
   assert.match(service, /services unavailable after 10s/)
 })
+
+test("tracking prefs filter ignored apps and rename via aliases", () => {
+  assert.match(service, /property var ignoredApps: \[\]/)
+  assert.match(service, /property var appAliases: \(\{\}\)/)
+  assert.match(service, /function setTrackingPrefs\(ignored, aliases\)/)
+  assert.match(service, /Model\.parseIgnoredApps\(ignored\)/)
+  assert.match(service, /Model\.parseAppAliases\(aliases\)/)
+  assert.match(service, /Model\.isIgnoredApp\(appId, root\.ignoredApps\)/)
+  assert.match(service, /Model\.resolveAppName\(app, root\.appAliases\)/)
+})

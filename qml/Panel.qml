@@ -79,9 +79,24 @@ Panel {
             root.writeSetting("heroColor", color);
     }
 
+    // User tracking prefs: normalized once here, pushed to the service
+    // (which owns accrual) and applied to history views below.
+    readonly property var ignoredList: Model.parseIgnoredApps(root.prefs.ignoredApps)
+    readonly property var appAliases: Model.parseAppAliases(root.prefs.appAliases)
+
+    function pushTrackingPrefs() {
+        if (root.service && typeof root.service.setTrackingPrefs === "function")
+            root.service.setTrackingPrefs(root.ignoredList, root.appAliases);
+    }
+    onServiceChanged: root.pushTrackingPrefs()
+    onIgnoredListChanged: root.pushTrackingPrefs()
+    onAppAliasesChanged: root.pushTrackingPrefs()
+
     // Empty selection = live today; everything derives from activeDay.
+    // Ignored apps are stripped for display so the donut, legend and
+    // insights agree with what tracking now records.
     property string selectedKey: ""
-    readonly property var activeDay: serviceReady ? Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey) : null
+    readonly property var activeDay: serviceReady ? Model.filterIgnoredDay(Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey), root.ignoredList) : null
     readonly property string activeDayKey: root.selectedKey || root.todayKey
     readonly property string activeDayLabel: serviceReady ? Model.formatDate(root.activeDayKey) : ""
     readonly property double dayTotal: root.activeDay ? (root.activeDay.total || 0) : 0
@@ -428,6 +443,8 @@ Panel {
                             recordColorOptions: root.recordColorOptions
                             heroColor: root.heroColor
                             heroColorOptions: root.heroColorOptions
+                            ignoredText: Array.isArray(root.prefs.ignoredApps) ? root.prefs.ignoredApps.join(", ") : String(root.prefs.ignoredApps || "")
+                            aliasesText: String(root.prefs.appAliases || "")
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
@@ -439,6 +456,12 @@ Panel {
                             }
                             onHeroColorSelected: function (color) {
                                 root.selectHeroColor(color);
+                            }
+                            onIgnoredEdited: function (text) {
+                                root.writeSetting("ignoredApps", text);
+                            }
+                            onAliasesEdited: function (text) {
+                                root.writeSetting("appAliases", text);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                             onTrophyToggled: root.writeSetting("hideRecordTrophy", !root.hideRecordTrophy)

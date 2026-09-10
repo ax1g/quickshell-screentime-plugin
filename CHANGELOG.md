@@ -12,6 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   toggle to hide the trophy, both persisted across restarts.
 - Hero icon color: swatches (or Auto for the theme foreground) recolor the
   hourglass, the yearly hero and the settings glyph together.
+- Ignored apps: comma-separated names that are never tracked and are hidden
+  from history views (matches raw, canonical and display names).
+- Custom app names: comma-separated from=to renames applied before the
+  built-in browser fold.
 
 ### Fixed
 

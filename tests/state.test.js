@@ -879,3 +879,30 @@ test("suspend gap during close prevents stale time from landing in any day", () 
   // No stale data leaked into days
   assert.equal(Object.keys(closed.days).length, 0)
 })
+
+test("applyResolvedApp renames through user aliases", () => {
+  const state = {
+    resolveInFlight: true,
+    rawApp: "foot",
+    resolveForApp: "foot",
+    resolveSpawnGen: 1,
+    resolveGeneration: 1,
+    appAliases: { opencode: "work" },
+    activeApp: "",
+    activeStart: 0,
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: 0,
+  }
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
+  assert.ok(result)
+  assert.equal(result.activeApp, "work")
+})

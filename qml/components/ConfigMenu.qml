@@ -27,6 +27,8 @@ Column {
     required property var recordColorOptions
     required property string heroColor
     required property var heroColorOptions
+    required property string ignoredText
+    required property string aliasesText
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -37,6 +39,8 @@ Column {
     signal easterEggsToggled
     signal recordColorSelected(string color)
     signal heroColorSelected(string color)
+    signal ignoredEdited(string text)
+    signal aliasesEdited(string text)
     signal resetRequested
 
     width: parent.width
@@ -327,6 +331,105 @@ Column {
                     }
                 }
             }
+        }
+    }
+
+    // Ignored apps: comma-separated names that are never tracked and are
+    // hidden from history views. Matching is case-insensitive and covers
+    // raw, canonical and display names. Commits on Enter or focus loss.
+    Column {
+        width: root.width
+        spacing: Style.space(4)
+
+        Text {
+            text: "Ignored apps"
+            color: root.foreground
+            opacity: 0.6
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            width: parent.width
+            elide: Text.ElideRight
+        }
+
+        Rectangle {
+            width: parent.width
+            height: ignoredInput.implicitHeight + Style.space(12)
+            radius: Style.space(4)
+            color: "transparent"
+            border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+            border.width: 1
+
+            TextInput {
+                id: ignoredInput
+                anchors.fill: parent
+                anchors.margins: Style.space(6)
+                text: root.ignoredText
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                selectByMouse: true
+                clip: true
+                onEditingFinished: root.ignoredEdited(text)
+            }
+        }
+
+        Text {
+            text: "Never tracked, e.g. launcher, portal"
+            color: root.foreground
+            opacity: 0.4
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            width: parent.width
+            elide: Text.ElideRight
+        }
+    }
+
+    // Custom aliases: comma-separated from=to renames applied before the
+    // built-in browser fold, so terminals and odd ids get your own names.
+    Column {
+        width: root.width
+        spacing: Style.space(4)
+
+        Text {
+            text: "App names"
+            color: root.foreground
+            opacity: 0.6
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            width: parent.width
+            elide: Text.ElideRight
+        }
+
+        Rectangle {
+            width: parent.width
+            height: aliasesInput.implicitHeight + Style.space(12)
+            radius: Style.space(4)
+            color: "transparent"
+            border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+            border.width: 1
+
+            TextInput {
+                id: aliasesInput
+                anchors.fill: parent
+                anchors.margins: Style.space(6)
+                text: root.aliasesText
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                selectByMouse: true
+                clip: true
+                onEditingFinished: root.aliasesEdited(text)
+            }
+        }
+
+        Text {
+            text: "Rename apps, e.g. foot=terminal, code=work"
+            color: root.foreground
+            opacity: 0.4
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            width: parent.width
+            elide: Text.ElideRight
         }
     }
 

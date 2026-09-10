@@ -1604,3 +1604,53 @@ test("yearView is empty for a year with no data", () => {
   assert.equal(view.totalLabel, "0h")
   assert.deepEqual(view.facts, [])
 })
+
+test("parseIgnoredApps accepts arrays and comma strings, lowercased deduped", () => {
+  assert.deepEqual(Model.parseIgnoredApps(["Zen", " zen ", "", "foot"]), [
+    "zen",
+    "foot",
+  ])
+  assert.deepEqual(Model.parseIgnoredApps("Zen, foot,, "), ["zen", "foot"])
+  assert.deepEqual(Model.parseIgnoredApps(undefined), [])
+  assert.deepEqual(Model.parseIgnoredApps(42), [])
+})
+
+test("isIgnoredApp matches raw, canonical and display names", () => {
+  assert.equal(Model.isIgnoredApp("zen-bin", ["zen"]), true)
+  assert.equal(Model.isIgnoredApp("com.github.user.Codium", ["codium"]), true)
+  assert.equal(Model.isIgnoredApp("foot", ["foot"]), true)
+  assert.equal(Model.isIgnoredApp("foot", ["kitty"]), false)
+  assert.equal(Model.isIgnoredApp("foot", []), false)
+  assert.equal(Model.isIgnoredApp("", ["foot"]), false)
+})
+
+test("parseAppAliases accepts objects and from=to strings", () => {
+  assert.deepEqual(Model.parseAppAliases({ Foot: "terminal " }), {
+    foot: "terminal",
+  })
+  assert.deepEqual(Model.parseAppAliases("foot=terminal, code=work"), {
+    foot: "terminal",
+    code: "work",
+  })
+  assert.deepEqual(Model.parseAppAliases("noequals, a="), {})
+  assert.deepEqual(Model.parseAppAliases(undefined), {})
+})
+
+test("resolveAppName applies the alias before the canonical fold", () => {
+  assert.equal(Model.resolveAppName("foot", { foot: "terminal" }), "terminal")
+  assert.equal(Model.resolveAppName("zen-bin", {}), "zen")
+  assert.equal(Model.resolveAppName("", {}), "")
+})
+
+test("filterIgnoredDay strips ignored apps and recomputes the total", () => {
+  const day = { total: 70000, apps: { zen: 60000, foot: 10000 } }
+  assert.equal(Model.filterIgnoredDay(day, []), day)
+  assert.deepEqual(Model.filterIgnoredDay(day, ["foot"]), {
+    total: 60000,
+    apps: { zen: 60000 },
+  })
+  assert.deepEqual(Model.filterIgnoredDay(day, ["zen", "foot"]), {
+    total: 0,
+    apps: {},
+  })
+})

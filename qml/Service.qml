@@ -124,6 +124,16 @@ Item {
         return appId && appId.toLowerCase().indexOf("steam_app_") === 0;
     }
 
+    // User tracking prefs pushed from the panel (settings live in the bar
+    // widget; the service itself has no settings handle). Normalized on
+    // write so readers compare lowercase keys only.
+    property var ignoredApps: []
+    property var appAliases: ({})
+    function setTrackingPrefs(ignored, aliases) {
+        root.ignoredApps = Model.parseIgnoredApps(ignored);
+        root.appAliases = Model.parseAppAliases(aliases);
+    }
+
     // Screensaver/portal windows open no bucket.
     function shouldTrack(appId) {
         if (!appId)
@@ -132,6 +142,8 @@ Item {
         if (id === "org.omarchy.screensaver")
             return false;
         if (id.indexOf("xdg-desktop-portal") === 0)
+            return false;
+        if (Model.isIgnoredApp(appId, root.ignoredApps))
             return false;
         return true;
     }
@@ -162,7 +174,7 @@ Item {
             root.activeStart = 0;
             root.beginResolve();
         } else {
-            root.activeApp = Model.canonicalApp(app);
+            root.activeApp = Model.resolveAppName(app, root.appAliases);
             root.activeStart = app ? now : 0;
         }
     }
