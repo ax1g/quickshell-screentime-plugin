@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // Panel config menu: prefs, week window, today reset.
 // Values thread in from BarWidget settings; Panel writes back on signals.
@@ -78,7 +79,7 @@ Column {
         Item {
             required property var modelData
             width: root.width
-            height: Math.max(toggleLabel.implicitHeight, toggleState.implicitHeight) + Style.space(4)
+            height: Math.max(toggleLabel.implicitHeight, toggleSwitch.implicitHeight) + Style.space(4)
 
             Text {
                 id: toggleLabel
@@ -88,21 +89,21 @@ Column {
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 anchors.left: parent.left
-                anchors.right: toggleState.left
+                anchors.right: toggleSwitch.left
                 anchors.rightMargin: Style.space(8)
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideRight
             }
 
-            Text {
-                id: toggleState
-                text: modelData.shown ? "ON" : "OFF"
-                color: modelData.shown ? root.accent : Qt.darker(root.foreground, 1.4)
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
+            ToggleSwitch {
+                id: toggleSwitch
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
+                trackHeight: 18
+                checked: modelData.shown
+                foreground: root.foreground
+                accent: root.accent
+                onToggled: root.activate(modelData.kind)
             }
 
             MouseArea {
