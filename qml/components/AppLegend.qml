@@ -1,6 +1,5 @@
 import QtQuick
 import qs.Commons
-import "../../js/Model.js" as Model
 
 // Swatch rows for the donut; fixed height keeps the panel size stable.
 Item {

@@ -1,0 +1,9 @@
+module Quickshell.Io
+FileView 1.0 FileView.qml
+FileViewAdapter 1.0 FileViewAdapter.qml
+JsonAdapter 1.0 JsonAdapter.qml
+Process 1.0 Process.qml
+StdioCollector 1.0 StdioCollector.qml
+SplitParser 1.0 SplitParser.qml
+IpcHandler 1.0 IpcHandler.qml
+singleton FileViewError 1.0 FileViewError.qml

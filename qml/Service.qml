@@ -22,6 +22,11 @@ Item {
     readonly property string home: Quickshell.env("HOME")
     readonly property string dataDir: home + "/.config/omarchy/screen-time"
     readonly property string historyPath: dataDir + "/history.json"
+    // Shared process env (HOME for ~ expansion). Typed var so the
+    // Map-vs-Hash literal inference stays in one audited place.
+    readonly property var procEnv: ({
+            "HOME": home
+        })
     readonly property string resolverPath: {
         var u = Qt.resolvedUrl("../python/resolve_app.py").toString();
         return u.startsWith("file://") ? u.slice(7) : u;
@@ -332,22 +337,27 @@ Item {
             saveRetryTimer.restart();
         }
 
+        // FileViewAdapter is C++-only in Quickshell: complete at runtime,
+        // incomplete to the linter. Muted here, nowhere else.
+        // qmllint disable unresolved-type
         JsonAdapter {
             id: historyAdapter
             property var days: ({})
             property var months: ({})
             property var years: ({})
         }
+        // qmllint enable unresolved-type
     }
 
+    // QProcess::ExitStatus never loads into lint; handlers take no args.
+    // qmllint disable signal-handler-parameters
     Process {
         id: ensureDirProc
-        environment: ({
-                "HOME": root.home
-            })
+        environment: root.procEnv
         command: ["bash", "-c", "mkdir -p \"$HOME/.config/omarchy/screen-time\"; f=\"$HOME/.config/omarchy/screen-time/history.json\"; [[ -f \"$f\" ]] || printf '{}\\n' > \"$f\""]
         onExited: historyFile.reload()
     }
+    // qmllint enable signal-handler-parameters
 
     // Polls for missed focus events; real switches are event-driven.
     Timer {
@@ -365,11 +375,10 @@ Item {
 
     // Move aside only non-empty files that fail to parse.
     property bool backupAttempted: false
+    // qmllint disable signal-handler-parameters
     Process {
         id: backupProc
-        environment: ({
-                "HOME": root.home
-            })
+        environment: root.procEnv
         command: ["bash", "-c", "command -v python3 >/dev/null 2>&1 || exit 0; f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
         onExited: {
             // Unblock writes; queued state persists on the next tick.
@@ -377,6 +386,7 @@ Item {
             root.persist();
         }
     }
+    // qmllint enable signal-handler-parameters
 
     // Foreground can change without compositor notice; re-resolve live.
     Timer {
@@ -402,6 +412,7 @@ Item {
 
     // Empty stdout falls back to rawApp; stderr is logged so breakage is visible.
     // sh wrapper: missing python3 still exits 0 instead of stalling to watchdog.
+    // qmllint disable signal-handler-parameters
     Process {
         id: resolverProc
         command: ["sh", "-c", "command -v python3 >/dev/null 2>&1 && exec python3 \"$1\" || exit 0", "sh", root.resolverPath]
@@ -420,6 +431,7 @@ Item {
             root.applyResolvedApp(resolverOut.text.trim());
         }
     }
+    // qmllint enable signal-handler-parameters
 
     // ---- Session pause (lock / screensaver) ----------------------------------
     // Lock state comes from omarchy.lock at the source instead of polling

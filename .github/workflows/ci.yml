@@ -5,9 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: jobs only read the repo. Clears the
+# actions/missing-workflow-permissions code-scanning alerts.
+permissions:
+  contents: read
+
 jobs:
   js:
-    name: Model.js checks + tests
+    name: JS syntax + format + tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,39 +20,49 @@ jobs:
         with:
           node-version: 20
       - name: Syntax check
-        run: node --check lib/Model.js && node --check lib/State.js
+        run: node --check js/Model.js && node --check js/State.js
+      - name: "Format check (prettier, no semicolons)"
+        run: npx -y prettier@3.9.6 --no-semi --check js/ tests/
       - name: Unit tests
-        run: node --test tests/model.test.js tests/state.test.js
+        run: node --test tests/model.test.js tests/state.test.js tests/service.test.js tests/panel.test.js
 
   python:
-    name: resolve_app.py checks + tests
+    name: Python lint + format + tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Compile check
-        run: python3 -m py_compile scripts/resolve_app.py tests/test_resolve_app.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install "ruff==0.16.6"
+      - name: Lint
+        run: ruff check python/ tests/
+      - name: Format check
+        run: ruff format --check python/ tests/
       - name: Unit tests
         run: python3 -m unittest discover -s tests
 
   qml:
-    name: QML syntax check (best-effort)
+    name: QML lint + format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # qmllint lives in qt6-declarative-tools; the omarchy imports are not
-      # resolvable on a bare runner, so this step reports only genuine syntax
-      # errors (import noise is filtered) and never fails the build.
-      - name: Install qmllint
+      # Both tools live in qt6-declarative-dev-tools (NOT
+      # qt6-declarative-tools) and land in /usr/lib/qt6/bin, off PATH.
+      # Shell/framework imports resolve via lint/ (see lint/README.md),
+      # and .qmllint.ini fails on any remaining warning (MaxWarnings=0).
+      - name: Install Qt declarative tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq qt6-declarative-tools >/dev/null 2>&1 || true
+          sudo apt-get install -y -qq qt6-declarative-dev-tools
+          echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
       - name: Lint QML files
+        run: qmllint -I lint qml/*.qml qml/components/*.qml
+      - name: Format check
         run: |
-          for f in BarWidget.qml Panel.qml Service.qml; do
-            if command -v qmllint >/dev/null 2>&1; then
-              echo "== $f =="
-              qmllint "$f" 2>&1 | grep -Ev "warning: .*(not found|Missing|required)" || true
-            else
-              echo "qmllint unavailable; skipping $f"
-            fi
+          fail=0
+          for f in qml/*.qml qml/components/*.qml; do
+            qmlformat "$f" | cmp -s - "$f" || { echo "needs formatting: $f (run: qmlformat -i $f)"; fail=1; }
           done
+          exit $fail
