@@ -40,33 +40,6 @@ Item {
     return u.startsWith("file://") ? u.slice(7) : u
   }
 
-  // The session lock (omarchy.lock) draws an exclusive surface over
-  // whatever was focused before it, but does not change the compositor's
-  // active toplevel — without this check, a lock left up all night keeps
-  // accruing time to whatever app happened to be focused underneath it.
-  //
-  // omarchy.lock itself may be disabled: a reskin plugin (manifest
-  // `"omarchy": {"clonedFrom": "omarchy.lock"}`, e.g. lock-explorer) takes
-  // over as the one enabled lock service. Both expose the same `locked`
-  // contract, so fall back to whichever plugin claims that lineage.
-  function resolveLockService() {
-    var direct = root.shell ? root.shell.firstPartyServiceFor("omarchy.lock") : null
-    if (direct) return direct
-    var registry = root.shell ? root.shell.pluginRegistry : null
-    var plugins = registry ? registry.installedPlugins : null
-    if (!plugins) return null
-    for (var id in plugins) {
-      var meta = plugins[id] && plugins[id].omarchy
-      if (meta && meta.clonedFrom === "omarchy.lock") {
-        var svc = root.shell.serviceFor(id)
-        if (svc) return svc
-      }
-    }
-    return null
-  }
-  readonly property var lockService: root.resolveLockService()
-  readonly property bool locked: !!(root.lockService && root.lockService.locked)
-
   // Terminals report themselves as their windowing appId, but screen time
   // should reflect what is actually running inside them (opencode, btop…).
   // When the active toplevel is one of these, Service resolves the pty's
@@ -186,18 +159,6 @@ Item {
       root, root.activeApp, root.activeStart, now,
       root.todayKey, root.suspendGapMs, root.lastTick))
     root.persist()
-
-    // A locked screen closes out whatever was running (above) and opens
-    // nothing new, regardless of what the compositor still reports as
-    // focused. Tracking resumes from the moment of unlock, via the
-    // lockService Connections below re-calling switchActive().
-    if (root.locked) {
-      root.rawApp = ""
-      root.resolveInFlight = false
-      root.activeApp = ""
-      root.activeStart = 0
-      return
-    }
 
     var tl = ToplevelManager.activeToplevel
     var app = tl && tl.appId ? tl.appId : ""
