@@ -125,10 +125,10 @@ Item {
         text: "\uf013"
         color: configGearMouse.containsMouse || heroHeader.configOpen ? heroHeader.foreground : Qt.darker(heroHeader.foreground, 1.4)
         font.family: heroHeader.fontFamily
-        font.pixelSize: Style.font.title
+        font.pixelSize: Style.font.caption
         anchors.right: showMoreCorner.left
-        anchors.rightMargin: Style.space(10)
-        anchors.top: parent.top
+        anchors.rightMargin: Style.space(8)
+        anchors.verticalCenter: showMoreCorner.verticalCenter
     }
 
     MouseArea {

@@ -311,7 +311,18 @@ Panel {
 
                     Item {
                         width: parent.width
-                        height: Math.max(configTitle.implicitHeight, configBack.implicitHeight)
+                        // Extra height is breathing room below the header.
+                        height: Math.max(configTitle.implicitHeight, configBack.implicitHeight) + Style.space(6)
+
+                        Text {
+                            id: configGearEcho
+                            text: "\uf013"
+                            color: Qt.darker(root.contentForeground, 1.4)
+                            font.family: root.contentFontFamily
+                            font.pixelSize: Style.font.caption
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
 
                         Text {
                             id: configTitle
@@ -322,7 +333,8 @@ Panel {
                             font.pixelSize: Style.font.caption
                             font.bold: true
                             font.letterSpacing: 1.2
-                            anchors.left: parent.left
+                            anchors.left: configGearEcho.right
+                            anchors.leftMargin: Style.space(6)
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
