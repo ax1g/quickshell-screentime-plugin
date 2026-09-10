@@ -87,8 +87,9 @@ test("config menu threads prefs with explicit props and signals", () => {
   assert.match(bar, /function setSetting\(key, value\)/)
 })
 
-test("toggles and week boxes use the shell kit", () => {
-  assert.match(menu, /Toggle \{/)
+test("toggles speak panel dialect, week boxes pick the window", () => {
+  assert.match(menu, /root\.activate\(modelData\.kind\)/)
+  assert.match(menu, /modelData\.shown \? "ON" : "OFF"/)
   assert.match(menu, /model: root\.weekOptions/)
   assert.match(menu, /root\.weekWindowSelected\(modelData\)/)
   assert.match(panel, /function selectWeekWindow\(count\)/)

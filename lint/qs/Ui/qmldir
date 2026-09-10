@@ -7,4 +7,3 @@ OpticalGlyph 1.0 OpticalGlyph.qml
 PanelSeparator 1.0 PanelSeparator.qml
 PanelKeyCatcher 1.0 PanelKeyCatcher.qml
 KeyboardPanel 1.0 KeyboardPanel.qml
-Toggle 1.0 Toggle.qml

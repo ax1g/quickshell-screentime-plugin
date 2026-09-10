@@ -1,10 +1,10 @@
 import QtQuick
 import qs.Commons
-import qs.Ui
 
 // Panel config menu: prefs, week window, today reset.
 // Values thread in from BarWidget settings; Panel writes back on signals.
 // Lives in the config slide-over drawer, which owns the title.
+// Rows mirror InsightList metrics: dim bodySmall labels, bold values right.
 // Outer-id reads are idiomatic in delegates; muted for the linter.
 // qmllint disable unqualified
 
@@ -33,59 +33,85 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    Toggle {
-        width: root.width
-        label: "Yearly overview"
-        description: "Month bars and yearly retro cards"
-        checked: !root.hideYearly
-        foreground: root.foreground
-        accent: root.accent
-        fontFamily: root.fontFamily
-        onClicked: root.yearlyToggled()
+    function activate(kind) {
+        if (kind === "yearly")
+            root.yearlyToggled();
+        else if (kind === "daily")
+            root.dailyInsightsToggled();
+        else if (kind === "retro")
+            root.yearInsightsToggled();
+        else if (kind === "weektotal")
+            root.weekTotalModeToggled();
+        else if (kind === "easter")
+            root.easterEggsToggled();
     }
 
-    Toggle {
-        width: root.width
-        label: "Daily insights"
-        description: "Top app, vs yesterday, busiest day"
-        checked: !root.hideDailyInsights
-        foreground: root.foreground
-        accent: root.accent
-        fontFamily: root.fontFamily
-        onClicked: root.dailyInsightsToggled()
-    }
+    Repeater {
+        model: [
+            {
+                kind: "yearly",
+                label: "Yearly overview",
+                shown: !root.hideYearly
+            },
+            {
+                kind: "daily",
+                label: "Daily insights",
+                shown: !root.hideDailyInsights
+            },
+            {
+                kind: "retro",
+                label: "Yearly insights",
+                shown: !root.hideYearInsights
+            },
+            {
+                kind: "weektotal",
+                label: "Week total as %",
+                shown: root.weekTotalAsPct
+            },
+            {
+                kind: "easter",
+                label: "Easter eggs",
+                shown: !root.hideEasterEggs
+            }
+        ]
 
-    Toggle {
-        width: root.width
-        label: "Yearly insights"
-        description: "Retro cards in the yearly overview"
-        checked: !root.hideYearInsights
-        foreground: root.foreground
-        accent: root.accent
-        fontFamily: root.fontFamily
-        onClicked: root.yearInsightsToggled()
-    }
+        Item {
+            required property var modelData
+            width: root.width
+            height: Math.max(toggleLabel.implicitHeight, toggleState.implicitHeight) + Style.space(4)
 
-    Toggle {
-        width: root.width
-        label: "Week total as %"
-        description: "Header shows share of 168 hours"
-        checked: root.weekTotalAsPct
-        foreground: root.foreground
-        accent: root.accent
-        fontFamily: root.fontFamily
-        onClicked: root.weekTotalModeToggled()
-    }
+            Text {
+                id: toggleLabel
+                text: modelData.label
+                color: root.foreground
+                opacity: 0.6
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                anchors.left: parent.left
+                anchors.right: toggleState.left
+                anchors.rightMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                elide: Text.ElideRight
+            }
 
-    Toggle {
-        width: root.width
-        label: "Easter eggs"
-        description: "Hourglass flip and hover sparkles"
-        checked: !root.hideEasterEggs
-        foreground: root.foreground
-        accent: root.accent
-        fontFamily: root.fontFamily
-        onClicked: root.easterEggsToggled()
+            Text {
+                id: toggleState
+                text: modelData.shown ? "ON" : "OFF"
+                color: modelData.shown ? root.accent : Qt.darker(root.foreground, 1.4)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                font.bold: true
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.activate(modelData.kind)
+            }
+        }
     }
 
     // Week window option boxes; retention already covers the largest one.

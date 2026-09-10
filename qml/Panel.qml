@@ -310,36 +310,54 @@ Panel {
                     anchors.rightMargin: Style.space(12)
                     anchors.topMargin: Style.space(10)
                     // Extra height is breathing room below the header.
-                    height: Math.max(configTitle.implicitHeight, configBack.implicitHeight) + Style.space(6)
+                    height: Math.max(configHeroIcon.implicitHeight, configHeroLabels.implicitHeight, configBack.implicitHeight) + Style.space(6)
 
                     Text {
-                        id: configGearEcho
+                        id: configHeroIcon
                         text: "\uf013"
-                        color: Qt.darker(root.contentForeground, 1.4)
+                        color: Qt.darker(root.contentForeground, 1.2)
                         font.family: root.contentFontFamily
-                        font.pixelSize: Style.font.caption
+                        font.pixelSize: Style.fontPx(2.4)
                         anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: -Style.space(4)
                     }
 
-                    Text {
-                        id: configTitle
-                        text: "CONFIGURE"
-                        color: root.contentForeground
-                        opacity: 0.6
-                        font.family: root.contentFontFamily
-                        font.pixelSize: Style.font.caption
-                        font.bold: true
-                        font.letterSpacing: 1.2
-                        anchors.left: configGearEcho.right
-                        anchors.leftMargin: Style.space(6)
-                        anchors.verticalCenter: parent.verticalCenter
+                    Column {
+                        id: configHeroLabels
+                        anchors.left: configHeroIcon.right
+                        anchors.leftMargin: Style.space(14)
+                        anchors.right: parent.right
+                        anchors.rightMargin: configBack.implicitWidth + Style.space(12)
+                        anchors.top: parent.top
+                        spacing: 0
+
+                        Text {
+                            text: "Configure"
+                            color: root.contentForeground
+                            font.family: root.contentFontFamily
+                            font.pixelSize: Style.fontPx(1.5)
+                            font.bold: true
+                            font.letterSpacing: 1.4
+                            elide: Text.ElideRight
+                            width: parent.width
+                        }
+
+                        Text {
+                            text: "Widget preferences"
+                            color: Qt.darker(root.contentForeground, 1.4)
+                            font.family: root.contentFontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: true
+                            elide: Text.ElideRight
+                            width: parent.width
+                        }
                     }
 
                     BackButton {
                         id: configBack
                         anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.top: parent.top
                         foreground: root.contentForeground
                         fontFamily: root.contentFontFamily
                         onClicked: root.openConfig(false)
