@@ -300,77 +300,95 @@ Panel {
                     }
                 }
 
-                Column {
+                // Fixed header; the menu scrolls beneath it on short panels.
+                Item {
+                    id: configHeader
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.leftMargin: Style.space(12)
                     anchors.rightMargin: Style.space(12)
                     anchors.topMargin: Style.space(10)
-                    spacing: Style.space(10)
+                    // Extra height is breathing room below the header.
+                    height: Math.max(configTitle.implicitHeight, configBack.implicitHeight) + Style.space(6)
 
-                    Item {
-                        width: parent.width
-                        // Extra height is breathing room below the header.
-                        height: Math.max(configTitle.implicitHeight, configBack.implicitHeight) + Style.space(6)
-
-                        Text {
-                            id: configGearEcho
-                            text: "\uf013"
-                            color: Qt.darker(root.contentForeground, 1.4)
-                            font.family: root.contentFontFamily
-                            font.pixelSize: Style.font.caption
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            id: configTitle
-                            text: "CONFIGURE"
-                            color: root.contentForeground
-                            opacity: 0.6
-                            font.family: root.contentFontFamily
-                            font.pixelSize: Style.font.caption
-                            font.bold: true
-                            font.letterSpacing: 1.2
-                            anchors.left: configGearEcho.right
-                            anchors.leftMargin: Style.space(6)
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        BackButton {
-                            id: configBack
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            onClicked: root.openConfig(false)
-                        }
+                    Text {
+                        id: configGearEcho
+                        text: "\uf013"
+                        color: Qt.darker(root.contentForeground, 1.4)
+                        font.family: root.contentFontFamily
+                        font.pixelSize: Style.font.caption
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
                     }
 
-                    ConfigMenu {
+                    Text {
+                        id: configTitle
+                        text: "CONFIGURE"
+                        color: root.contentForeground
+                        opacity: 0.6
+                        font.family: root.contentFontFamily
+                        font.pixelSize: Style.font.caption
+                        font.bold: true
+                        font.letterSpacing: 1.2
+                        anchors.left: configGearEcho.right
+                        anchors.leftMargin: Style.space(6)
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    BackButton {
+                        id: configBack
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
                         foreground: root.contentForeground
                         fontFamily: root.contentFontFamily
-                        accent: Color.accent
-                        urgent: Color.urgent
-                        hideYearly: root.hideYearly
-                        hideDailyInsights: root.hideDailyInsights
-                        hideYearInsights: root.hideYearInsights
-                        weekCount: root.weekCount
-                        weekOptions: root.weekOptions
-                        weekTotalAsPct: root.weekTotalAsPct
-                        hideEasterEggs: root.hideEasterEggs
-                        onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
-                        onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
-                        onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
-                        onWeekWindowSelected: function (count) {
-                            root.selectWeekWindow(count);
-                        }
-                        onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
-                        onEasterEggsToggled: root.writeSetting("hideEasterEggs", !root.hideEasterEggs)
-                        onResetRequested: {
-                            if (root.service)
-                                root.service.resetToday();
+                        onClicked: root.openConfig(false)
+                    }
+                }
+
+                Flickable {
+                    id: configScroll
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.top: configHeader.bottom
+                    anchors.leftMargin: Style.space(12)
+                    anchors.rightMargin: Style.space(12)
+                    contentWidth: width
+                    contentHeight: configColumn.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+
+                    Column {
+                        id: configColumn
+                        width: configScroll.width
+                        spacing: Style.space(10)
+
+                        ConfigMenu {
+                            foreground: root.contentForeground
+                            fontFamily: root.contentFontFamily
+                            accent: Color.accent
+                            urgent: Color.urgent
+                            hideYearly: root.hideYearly
+                            hideDailyInsights: root.hideDailyInsights
+                            hideYearInsights: root.hideYearInsights
+                            weekCount: root.weekCount
+                            weekOptions: root.weekOptions
+                            weekTotalAsPct: root.weekTotalAsPct
+                            hideEasterEggs: root.hideEasterEggs
+                            onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
+                            onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
+                            onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
+                            onWeekWindowSelected: function (count) {
+                                root.selectWeekWindow(count);
+                            }
+                            onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
+                            onEasterEggsToggled: root.writeSetting("hideEasterEggs", !root.hideEasterEggs)
+                            onResetRequested: {
+                                if (root.service)
+                                    root.service.resetToday();
+                            }
                         }
                     }
                 }

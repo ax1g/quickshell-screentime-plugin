@@ -107,6 +107,7 @@ test("resetToday zeroes today only, archives untouched", () => {
 
 test("config lives in its own slide-over drawer", () => {
   assert.match(panel, /id: configDrawer/)
+  assert.match(panel, /id: configScroll/)
   assert.match(panel, /function openConfig\(open\)/)
   assert.match(panel, /x: root\.configOpen \? 0 : keyCatcher\.drawerWidth/)
   assert.match(panel, /onConfigToggled: root\.openConfig\(!root\.configOpen\)/)
