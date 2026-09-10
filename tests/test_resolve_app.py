@@ -22,7 +22,7 @@ sys.path.insert(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "python"),
 )
 
-import resolve_app as r  # noqa: E402
+import resolve_app as r
 
 
 class CanonicalizationTests(unittest.TestCase):
@@ -213,8 +213,7 @@ class SteamTitleTests(unittest.TestCase):
         path = os.path.join(directory, f"appmanifest_{appid}.acf")
         with open(path, "w") as f:
             f.write(
-                '"AppState"\n{\n\t"appid"\t\t"%s"\n'
-                '\t"name"\t\t"%s"\n}\n' % (appid, name)
+                f'"AppState"\n{{\n\t"appid"\t\t"{appid}"\n\t"name"\t\t"{name}"\n}}\n'
             )
         return path
 
@@ -307,13 +306,15 @@ class MainTests(unittest.TestCase):
             run_mock = mock.Mock(side_effect=run_error)
         else:
             run_mock = mock.Mock(return_value=mock.Mock(stdout=run_result))
-        with mock.patch.object(r.subprocess, "run", run_mock):
-            with mock.patch.object(r.sys, "argv", ["resolve_app.py"]):
-                buf = io.StringIO()
-                with redirect_stdout(buf):
-                    with self.assertRaises(SystemExit) as cm:
-                        r.main()
-                return cm.exception.code, buf.getvalue()
+        buf = io.StringIO()
+        with (
+            mock.patch.object(r.subprocess, "run", run_mock),
+            mock.patch.object(r.sys, "argv", ["resolve_app.py"]),
+            redirect_stdout(buf),
+            self.assertRaises(SystemExit) as cm,
+        ):
+            r.main()
+        return cm.exception.code, buf.getvalue()
 
     def test_main_missing_hyprctl_exits_quietly(self):
         code, out = self._run_main_no_args(run_error=FileNotFoundError("hyprctl"))

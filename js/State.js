@@ -3,16 +3,19 @@
 
 // Model is imported by QML's import mechanism (global scope). For Node.js
 // testing, require it explicitly. The guard avoids shadowing the QML global.
-var Model = (typeof module !== "undefined" && module && module.exports)
-  ? require("./Model.js")
-  : (typeof Model !== "undefined" ? Model : null)
+var Model =
+  typeof module !== "undefined" && module && module.exports
+    ? require("./Model.js")
+    : typeof Model !== "undefined"
+      ? Model
+      : null
 
 function modelFor(state) {
   return state && state.stateModel ? state.stateModel : Model
 }
 
 function isSuspendGap(now, lastTick, suspendGapMs) {
-  return lastTick > 0 && (now - lastTick) > suspendGapMs
+  return lastTick > 0 && now - lastTick > suspendGapMs
 }
 
 function accumulateBucket(today, app, dur) {
@@ -33,13 +36,24 @@ function dayMinus(full, base) {
   for (var app in fa) {
     if (!Object.prototype.hasOwnProperty.call(fa, app)) continue
     var rest = (Number(fa[app]) || 0) - (Number(ba[app]) || 0)
-    if (rest > 0) { apps[app] = rest; total += rest }
+    if (rest > 0) {
+      apps[app] = rest
+      total += rest
+    }
   }
   return { total: total, apps: apps }
 }
 
 // Close the open bucket onto its start day; suspend gaps drop it.
-function closeActiveBucket(state, activeApp, activeStart, now, todayKey, suspendGapMs, lastTick) {
+function closeActiveBucket(
+  state,
+  activeApp,
+  activeStart,
+  now,
+  todayKey,
+  suspendGapMs,
+  lastTick,
+) {
   if (!activeApp || !activeStart) return state
   if (isSuspendGap(now, lastTick, suspendGapMs)) {
     return {
@@ -48,7 +62,7 @@ function closeActiveBucket(state, activeApp, activeStart, now, todayKey, suspend
       todayKey: state.todayKey,
       activeApp: "",
       activeStart: 0,
-      lastTick: now
+      lastTick: now,
     }
   }
   var dur = Math.max(0, now - activeStart)
@@ -63,13 +77,17 @@ function closeActiveBucket(state, activeApp, activeStart, now, todayKey, suspend
       todayKey: state.todayKey,
       activeApp: "",
       activeStart: 0,
-      lastTick: state.lastTick
+      lastTick: state.lastTick,
     }
   }
   // Bucket spans midnight: split at midnight like commitElapsed — the
   // pre-midnight portion lands on the start day, the rest on today.
   var dt = new Date(now)
-  var midnightMs = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime()
+  var midnightMs = new Date(
+    dt.getFullYear(),
+    dt.getMonth(),
+    dt.getDate(),
+  ).getTime()
   var yesterdayDur = Math.max(0, Math.min(dur, midnightMs - activeStart))
   var todayDur = dur - yesterdayDur
   var d = Object.assign({}, state.days)
@@ -78,17 +96,28 @@ function closeActiveBucket(state, activeApp, activeStart, now, todayKey, suspend
     d[startDay] = accumulateBucket(day, activeApp, yesterdayDur)
   }
   return {
-    today: todayDur > 0 ? accumulateBucket(state.today, activeApp, todayDur) : state.today,
+    today:
+      todayDur > 0
+        ? accumulateBucket(state.today, activeApp, todayDur)
+        : state.today,
     days: d,
     todayKey: state.todayKey,
     activeApp: "",
     activeStart: 0,
-    lastTick: state.lastTick
+    lastTick: state.lastTick,
   }
 }
 
 // Fold in-flight time in but keep the bucket open.
-function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapMs, lastTick) {
+function commitElapsed(
+  state,
+  activeApp,
+  activeStart,
+  now,
+  todayKey,
+  suspendGapMs,
+  lastTick,
+) {
   if (!activeApp || !activeStart) return state
   if (isSuspendGap(now, lastTick, suspendGapMs)) {
     return {
@@ -97,7 +126,7 @@ function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapM
       todayKey: state.todayKey,
       activeApp: activeApp,
       activeStart: now,
-      lastTick: state.lastTick
+      lastTick: state.lastTick,
     }
   }
   var dur = Math.max(0, now - activeStart)
@@ -114,12 +143,16 @@ function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapM
       todayKey: state.todayKey,
       activeApp: activeApp,
       activeStart: now,
-      lastTick: state.lastTick
+      lastTick: state.lastTick,
     }
   }
   // Midnight split: yesterday's share to history, fresh bucket from midnight.
   var dt = new Date(now)
-  var midnightMs = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime()
+  var midnightMs = new Date(
+    dt.getFullYear(),
+    dt.getMonth(),
+    dt.getDate(),
+  ).getTime()
   var yesterdayDur = Math.max(0, midnightMs - activeStart)
   var d = Object.assign({}, state.days)
   if (yesterdayDur > 0) {
@@ -132,7 +165,7 @@ function commitElapsed(state, activeApp, activeStart, now, todayKey, suspendGapM
     todayKey: state.todayKey,
     activeApp: activeApp,
     activeStart: midnightMs,
-    lastTick: state.lastTick
+    lastTick: state.lastTick,
   }
 }
 
@@ -141,14 +174,15 @@ function rolloverIfNeeded(state, newKey) {
   if (newKey === state.todayKey) return null
   var model = modelFor(state)
   var prev = state.days[newKey]
-  var newToday = prev && typeof prev === "object"
-    ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}) }
-    : model.newDay()
+  var newToday =
+    prev && typeof prev === "object"
+      ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}) }
+      : model.newDay()
   return {
     todayKey: newKey,
     today: newToday,
     activeApp: state.activeApp,
-    activeStart: 0
+    activeStart: 0,
   }
 }
 
@@ -158,8 +192,13 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   var app = state.activeApp
   // Close against the NEW day so the split attributes each portion exactly.
   var closed = closeActiveBucket(
-    state, state.activeApp, state.activeStart, now,
-    newKey, suspendGapMs, lastTick
+    state,
+    state.activeApp,
+    state.activeStart,
+    now,
+    newKey,
+    suspendGapMs,
+    lastTick,
   )
   var patch = rolloverIfNeeded(closed, newKey)
   patch.activeApp = app
@@ -167,11 +206,15 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   // Carry the split-off yesterday portion along or lose it.
   var d = Object.assign({}, closed.days)
   // Flush unmirrored data first, computed pre-growth to avoid double count.
-  var delta = dayMinus(state.today, state.days ? state.days[state.todayKey] : null)
+  var delta = dayMinus(
+    state.today,
+    state.days ? state.days[state.todayKey] : null,
+  )
   if (delta.total > 0) {
-    var old = d[state.todayKey] && typeof d[state.todayKey] === "object"
-      ? d[state.todayKey]
-      : { total: 0, apps: {} }
+    var old =
+      d[state.todayKey] && typeof d[state.todayKey] === "object"
+        ? d[state.todayKey]
+        : { total: 0, apps: {} }
     var apps = Object.assign({}, old.apps)
     var total = old.total || 0
     for (var dk in delta.apps) {
@@ -183,8 +226,9 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   }
   patch.days = d
   // Fold post-midnight growth into the carried day.
-  var grown = (closed.today ? closed.today.total : 0)
-    - (state.today ? state.today.total : 0)
+  var grown =
+    (closed.today ? closed.today.total : 0) -
+    (state.today ? state.today.total : 0)
   if (grown > 0 && app) patch.today = accumulateBucket(patch.today, app, grown)
   // closeActiveBucket decides lastTick (wake time on a gap, untouched
   // otherwise); the rollover carry must not lose that decision.
@@ -193,7 +237,14 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
 }
 
 // Apply a terminal resolve; null when stale or unchanged.
-function applyResolvedApp(state, name, resolveForApp, todayKey, suspendGapMs, lastTick) {
+function applyResolvedApp(
+  state,
+  name,
+  resolveForApp,
+  todayKey,
+  suspendGapMs,
+  lastTick,
+) {
   if (!state.resolveInFlight) return null
   // Same-terminal switches keep rawApp; only the generation token proves freshness.
   if (state.resolveSpawnGen !== state.resolveGeneration) return null
@@ -203,8 +254,13 @@ function applyResolvedApp(state, name, resolveForApp, todayKey, suspendGapMs, la
   if (name === state.activeApp) return null
   var now = Date.now()
   var closed = closeActiveBucket(
-    state, state.activeApp, state.activeStart, now,
-    todayKey, suspendGapMs, lastTick
+    state,
+    state.activeApp,
+    state.activeStart,
+    now,
+    todayKey,
+    suspendGapMs,
+    lastTick,
   )
   return {
     resolveInFlight: false,
@@ -212,7 +268,7 @@ function applyResolvedApp(state, name, resolveForApp, todayKey, suspendGapMs, la
     activeStart: name ? now : 0,
     today: closed.today,
     days: closed.days,
-    lastTick: closed.lastTick
+    lastTick: closed.lastTick,
   }
 }
 
@@ -225,6 +281,6 @@ if (typeof module !== "undefined" && module && module.exports) {
     commitElapsed: commitElapsed,
     rolloverIfNeeded: rolloverIfNeeded,
     advanceRollover: advanceRollover,
-    applyResolvedApp: applyResolvedApp
+    applyResolvedApp: applyResolvedApp,
   }
 }

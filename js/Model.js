@@ -20,23 +20,37 @@ var BROWSER_ALIASES = (function () {
 // tests/model.test.js fails if this lags a change.
 function qmlBrowserAliases() {
   return {
-    "zen-bin": "zen", "zen_browser": "zen", "zen": "zen", "firefox": "firefox",
-    "librewolf": "librewolf", "waterfox": "waterfox", "tor-browser": "tor-browser",
-    "mullvad-browser": "mullvad-browser", "google-chrome": "google-chrome",
-    "chrome": "google-chrome", "chromium": "chromium", "brave": "brave",
-    "brave-browser": "brave", "vivaldi": "vivaldi", "microsoft-edge": "microsoft-edge",
-    "edge": "microsoft-edge"
+    "zen-bin": "zen",
+    zen_browser: "zen",
+    zen: "zen",
+    firefox: "firefox",
+    librewolf: "librewolf",
+    waterfox: "waterfox",
+    "tor-browser": "tor-browser",
+    "mullvad-browser": "mullvad-browser",
+    "google-chrome": "google-chrome",
+    chrome: "google-chrome",
+    chromium: "chromium",
+    brave: "brave",
+    "brave-browser": "brave",
+    vivaldi: "vivaldi",
+    "microsoft-edge": "microsoft-edge",
+    edge: "microsoft-edge",
   }
 }
 
-var CHROMIUM_WEB_APP_RE = /^((?:chrome|chromium|brave|msedge|vivaldi)-([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?))(__.*-(?:Default|Profile_[0-9]+))?$/i
+var CHROMIUM_WEB_APP_RE =
+  /^((?:chrome|chromium|brave|msedge|vivaldi)-([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?))(__.*-(?:Default|Profile_[0-9]+))?$/i
 
 // Map any app name to its canonical tracking key. Unknown names pass
 // through unchanged so non-browser apps keep their own identity.
 function canonicalApp(name) {
   if (!name) return ""
   var key = String(name)
-  if (BROWSER_ALIASES && Object.prototype.hasOwnProperty.call(BROWSER_ALIASES, key))
+  if (
+    BROWSER_ALIASES &&
+    Object.prototype.hasOwnProperty.call(BROWSER_ALIASES, key)
+  )
     return BROWSER_ALIASES[key]
   var webApp = key.match(CHROMIUM_WEB_APP_RE)
   if (webApp && webApp[3]) return webApp[1]
@@ -53,8 +67,7 @@ function displayName(app) {
   var webApp = s.match(CHROMIUM_WEB_APP_RE)
   if (webApp) return webApp[2].toLowerCase()
 
-  if (!/^(?:[a-z][a-z0-9-]*\.){2,}[a-z0-9_-]+$/i.test(s))
-    return s.toLowerCase()
+  if (!/^(?:[a-z][a-z0-9-]*\.){2,}[a-z0-9_-]+$/i.test(s)) return s.toLowerCase()
   var last = s.split(".").pop()
   if (!last) return s.toLowerCase()
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
@@ -78,7 +91,7 @@ function sanitizeHistory(days, months, years) {
   return {
     days: rebuilt ? out : cleanDays,
     months: isPlainObject(months) ? months : {},
-    years: sanitizeYears(years)
+    years: sanitizeYears(years),
   }
 }
 
@@ -109,7 +122,10 @@ function sanitizeYears(years) {
   var out = {}
   for (var yk in years) {
     if (!Object.prototype.hasOwnProperty.call(years, yk)) continue
-    if (!isPlainObject(years[yk])) { rebuilt = true; continue }
+    if (!isPlainObject(years[yk])) {
+      rebuilt = true
+      continue
+    }
     var day = {}
     var dayChanged = false
     for (var dk in years[yk]) {
@@ -134,7 +150,13 @@ function dayFor(days, today, key, todayKey) {
 
 // Local-time calendar key, e.g. "2026-08-13".
 function dayKey(date) {
-  return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate())
+  return (
+    date.getFullYear() +
+    "-" +
+    pad2(date.getMonth() + 1) +
+    "-" +
+    pad2(date.getDate())
+  )
 }
 
 function newDay() {
@@ -186,9 +208,15 @@ function appList(today) {
     if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
     var ms = Number(apps[app]) || 0
     if (ms < 60000) continue
-    out.push({ app: app, ms: ms, pct: total > 0 ? Math.round(100 * ms / total) : 0 })
+    out.push({
+      app: app,
+      ms: ms,
+      pct: total > 0 ? Math.round((100 * ms) / total) : 0,
+    })
   }
-  out.sort(function (a, b) { return b.ms - a.ms })
+  out.sort(function (a, b) {
+    return b.ms - a.ms
+  })
   return out
 }
 
@@ -208,7 +236,7 @@ function groupedApps(apps, maxSlices, minPct) {
   var head = []
   var tailMs = 0
   for (var i = 0; i < list.length; i++) {
-    var pct = total > 0 ? (Number(list[i].ms) || 0) / total * 100 : 0
+    var pct = total > 0 ? ((Number(list[i].ms) || 0) / total) * 100 : 0
     if (head.length < max - 1 && pct >= floor) {
       head.push(list[i])
     } else {
@@ -216,7 +244,11 @@ function groupedApps(apps, maxSlices, minPct) {
     }
   }
   if (tailMs > 0) {
-    var other = { app: "Other", ms: tailMs, pct: total > 0 ? Math.round(100 * tailMs / total) : 0 }
+    var other = {
+      app: "Other",
+      ms: tailMs,
+      pct: total > 0 ? Math.round((100 * tailMs) / total) : 0,
+    }
     head.push(other)
   }
   return head
@@ -238,8 +270,20 @@ function prevKey(key) {
 }
 
 var WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-var MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+var MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+]
 
 // Full date label for a dayKey, e.g. "Aug 15".
 function formatDate(key) {
@@ -313,8 +357,15 @@ function weekTrend(days, todayKey) {
     out.push({
       key: key,
       ms: totalFor(days, key),
-      label: WEEKDAY_NAMES[new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getDay()],
-      isToday: key === todayKey
+      label:
+        WEEKDAY_NAMES[
+          new Date(
+            Number(parts[0]),
+            Number(parts[1]) - 1,
+            Number(parts[2]),
+          ).getDay()
+        ],
+      isToday: key === todayKey,
     })
   }
   return out
@@ -368,37 +419,56 @@ function insights(day, days, todayKey, activeKey, weekEndKey) {
   var apps = appList(day)
   var topApp = apps.length ? apps[0] : null
   var topLabel = topApp
-    ? displayName(topApp.app) + " \u00b7 " + "(" + topApp.pct + "%)" + " \u00b7 " + fmt(topApp.ms)
+    ? displayName(topApp.app) +
+      " \u00b7 " +
+      "(" +
+      topApp.pct +
+      "%)" +
+      " \u00b7 " +
+      fmt(topApp.ms)
     : "\u2014"
   // Rows carry kind + dir so the panel renders meaning without parsing
   // label text: kind is "top" | "delta" | "busiest", dir is
   // "up" | "down" | "flat" for deltas and null otherwise.
-  var list = [{
-    label: isToday ? "Top app" : "Top app " + weekdayLabel(key),
-    value: topLabel,
-    kind: "top",
-    dir: null
-  }]
+  var list = [
+    {
+      label: isToday ? "Top app" : "Top app " + weekdayLabel(key),
+      value: topLabel,
+      kind: "top",
+      dir: null,
+    },
+  ]
 
   var compareKey = prevKey(key)
   var compareTotal = totalFor(days, compareKey)
   var delta = total - compareTotal
-  var compareLabel = compareTotal > 0
-    ? fmtDelta(delta)
-    : "\u2014"
+  var compareLabel = compareTotal > 0 ? fmtDelta(delta) : "\u2014"
   var vsLabel = isToday ? "vs Yesterday" : "vs " + weekdayLabel(compareKey)
   list.push({
     label: vsLabel,
     value: compareLabel,
     kind: "delta",
-    dir: compareTotal > 0 ? (delta > 0 ? "up" : delta < 0 ? "down" : "flat") : null
+    dir:
+      compareTotal > 0
+        ? delta > 0
+          ? "up"
+          : delta < 0
+            ? "down"
+            : "flat"
+        : null,
   })
 
   var busiest = busiestWeekDay(days, weekEndKey || todayKey)
-  var busiestLabel = busiest.total > 0
-    ? weekdayLabel(busiest.key) + " \u00b7 " + fmt(busiest.total)
-    : "\u2014"
-  list.push({ label: "Busiest day (7d)", value: busiestLabel, kind: "busiest", dir: null })
+  var busiestLabel =
+    busiest.total > 0
+      ? weekdayLabel(busiest.key) + " \u00b7 " + fmt(busiest.total)
+      : "\u2014"
+  list.push({
+    label: "Busiest day (7d)",
+    value: busiestLabel,
+    kind: "busiest",
+    dir: null,
+  })
 
   return list
 }
@@ -407,7 +477,9 @@ function insights(day, days, todayKey, activeKey, weekEndKey) {
 
 // #rrggbb -> { h: 0-360, s: 0-100, l: 0-100 }.
 function hexToHsl(hex) {
-  var m = /^#?([0-9a-fA-F]{6})$/.exec(String(hex || "").replace(/^\s+|\s+$/g, ""))
+  var m = /^#?([0-9a-fA-F]{6})$/.exec(
+    String(hex || "").replace(/^\s+|\s+$/g, ""),
+  )
   if (!m) return { h: 0, s: 0, l: 60 }
   var n = parseInt(m[1], 16)
   var r = ((n >> 16) & 255) / 255
@@ -435,17 +507,30 @@ function hslToHex(h, s, l) {
   s /= 100
   l /= 100
   var c = (1 - Math.abs(2 * l - 1)) * s
-  var x = c * (1 - Math.abs((h / 60) % 2 - 1))
+  var x = c * (1 - Math.abs(((h / 60) % 2) - 1))
   var m = l - c / 2
   var r = 0
   var g = 0
   var b = 0
-  if (h < 60) { r = c; g = x }
-  else if (h < 120) { r = x; g = c }
-  else if (h < 180) { g = c; b = x }
-  else if (h < 240) { g = x; b = c }
-  else if (h < 300) { r = x; b = c }
-  else { r = c; b = x }
+  if (h < 60) {
+    r = c
+    g = x
+  } else if (h < 120) {
+    r = x
+    g = c
+  } else if (h < 180) {
+    g = c
+    b = x
+  } else if (h < 240) {
+    g = x
+    b = c
+  } else if (h < 300) {
+    r = x
+    b = c
+  } else {
+    r = c
+    b = x
+  }
   function ch(v) {
     var t = Math.max(0, Math.min(255, Math.round((v + m) * 255)))
     return (t < 16 ? "0" : "") + t.toString(16)
@@ -482,7 +567,7 @@ function insightColors(accentHex, urgentHex) {
     star: hslToHex(base.h, base.s, base.l),
     up: hslToHex(upHsl.h, upHsl.s, upHsl.l),
     down: hslToHex(155, vivid, level),
-    busiest: hslToHex(base.h + 80, vivid, level)
+    busiest: hslToHex(base.h + 80, vivid, level),
   }
 }
 
@@ -505,7 +590,7 @@ function arcSegments(apps) {
       ms: list[j].ms,
       pct: list[j].pct,
       startAngle: angle,
-      sweepAngle: sweep
+      sweepAngle: sweep,
     })
     angle += frac * 360
   }
@@ -539,7 +624,9 @@ function isoWeekNumber(key) {
   target.setDate(target.getDate() - ((d.getDay() + 6) % 7) + 3)
   // The Thursday of the week containing Jan 4 is always in ISO week 1.
   var firstThursday = new Date(target.getFullYear(), 0, 4)
-  firstThursday.setDate(firstThursday.getDate() - ((firstThursday.getDay() + 6) % 7) + 3)
+  firstThursday.setDate(
+    firstThursday.getDate() - ((firstThursday.getDay() + 6) % 7) + 3,
+  )
   return 1 + Math.round((target - firstThursday) / (7 * 86400000))
 }
 
@@ -557,7 +644,7 @@ function firstDataYear(days, months, years) {
   for (var mk in months) {
     if (Object.prototype.hasOwnProperty.call(months, mk)) scan(mk)
   }
-  for (var yk in (years || {})) {
+  for (var yk in years || {}) {
     if (Object.prototype.hasOwnProperty.call(years, yk)) scan(yk)
   }
   return min || new Date().getFullYear()
@@ -569,7 +656,9 @@ function firstDataYear(days, months, years) {
 function msUntilNextHour(nowMs) {
   var d = new Date(Number(nowMs))
   if (isNaN(d.getTime())) return 60000
-  return (3600 - d.getMinutes() * 60 - d.getSeconds()) * 1000 - d.getMilliseconds()
+  return (
+    (3600 - d.getMinutes() * 60 - d.getSeconds()) * 1000 - d.getMilliseconds()
+  )
 }
 
 // Mon-Sun weeks, newest first: { month, days: [{ key, ms, label, flags }] }.
@@ -584,7 +673,11 @@ function monSunWeeks(days, todayKey, weekCount) {
     var monthCounts = {}
     for (var di = 0; di < 7; di++) {
       var dParts = String(monStart).split("-")
-      var dObj = new Date(Number(dParts[0]), Number(dParts[1]) - 1, Number(dParts[2]) + di)
+      var dObj = new Date(
+        Number(dParts[0]),
+        Number(dParts[1]) - 1,
+        Number(dParts[2]) + di,
+      )
       var dk = dayKey(dObj)
       var isFuture = dk > todayKey
       var ms = isFuture ? 0 : totalFor(days, dk)
@@ -598,7 +691,7 @@ function monSunWeeks(days, todayKey, weekCount) {
         label: WEEKDAY_NAMES[dObj.getDay()],
         isEmpty: ms <= 0 && !isFuture,
         isFuture: isFuture,
-        isToday: dk === todayKey
+        isToday: dk === todayKey,
       })
     }
     var month = ""
@@ -612,7 +705,11 @@ function monSunWeeks(days, todayKey, weekCount) {
     weeks.push({ month: month, days: weekDays })
     // Next week: go back 7 days from this Monday.
     var mParts = String(monStart).split("-")
-    var mObj = new Date(Number(mParts[0]), Number(mParts[1]) - 1, Number(mParts[2]) - 7)
+    var mObj = new Date(
+      Number(mParts[0]),
+      Number(mParts[1]) - 1,
+      Number(mParts[2]) - 7,
+    )
     monStart = dayKey(mObj)
   }
   return weeks
@@ -638,13 +735,38 @@ function weekRangeLabel(week) {
   if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) return ""
   var range = ""
   if (sy === ey && sm === em) {
-    range = MONTH_NAMES[sm] + " " + sDate.getDate() + " – " + eDate.getDate() + ", " + sy
+    range =
+      MONTH_NAMES[sm] +
+      " " +
+      sDate.getDate() +
+      " – " +
+      eDate.getDate() +
+      ", " +
+      sy
   } else if (sy === ey) {
-    range = MONTH_NAMES[sm] + " " + sDate.getDate() + " – "
-      + MONTH_NAMES[em] + " " + eDate.getDate() + ", " + sy
+    range =
+      MONTH_NAMES[sm] +
+      " " +
+      sDate.getDate() +
+      " – " +
+      MONTH_NAMES[em] +
+      " " +
+      eDate.getDate() +
+      ", " +
+      sy
   } else {
-    range = MONTH_NAMES[sm] + " " + sDate.getDate() + ", " + sy + " – "
-      + MONTH_NAMES[em] + " " + eDate.getDate() + ", " + ey
+    range =
+      MONTH_NAMES[sm] +
+      " " +
+      sDate.getDate() +
+      ", " +
+      sy +
+      " – " +
+      MONTH_NAMES[em] +
+      " " +
+      eDate.getDate() +
+      ", " +
+      ey
   }
   // Every day in a Mon–Sun week shares the ISO week number; Thursday is the
   // ISO reference day, with Monday as fallback.
@@ -673,8 +795,13 @@ function scrollableTrendMax(weeks) {
 function weekView(days, todayKey, weekCount, offset) {
   var weeks = monSunWeeks(days, todayKey, weekCount)
   var empty = {
-    weeks: weeks, week: null, max: 0, totalMs: 0,
-    isRecord: false, hasPrev: false, weekEndKey: ""
+    weeks: weeks,
+    week: null,
+    max: 0,
+    totalMs: 0,
+    isRecord: false,
+    hasPrev: false,
+    weekEndKey: "",
   }
   if (offset < 0 || offset >= weeks.length) return empty
   var week = weeks[offset]
@@ -689,7 +816,10 @@ function weekView(days, todayKey, weekCount, offset) {
   for (i = offset + 1; i < weeks.length; i++) {
     var prev = weeks[i] && weeks[i].days ? weeks[i].days : []
     for (var j = 0; j < prev.length; j++) {
-      if ((Number(prev[j].ms) || 0) > 0) { hasPrev = true; break }
+      if ((Number(prev[j].ms) || 0) > 0) {
+        hasPrev = true
+        break
+      }
     }
     if (hasPrev) break
   }
@@ -700,7 +830,7 @@ function weekView(days, todayKey, weekCount, offset) {
     totalMs: weekTotal(wdays),
     isRecord: isRecordWeek(weeks, offset),
     hasPrev: hasPrev,
-    weekEndKey: wdays.length === 7 ? String(wdays[6].key || "") : ""
+    weekEndKey: wdays.length === 7 ? String(wdays[6].key || "") : "",
   }
 }
 
@@ -790,7 +920,7 @@ function yearSummary(days, months, years, year, todayKey) {
       month: m,
       label: MONTH_NAMES[m],
       ms: merged.monthMs[m],
-      hours: Math.round(merged.monthMs[m] / 3600000) + "h"
+      hours: Math.round(merged.monthMs[m] / 3600000) + "h",
     })
     total += merged.monthMs[m]
   }
@@ -832,7 +962,7 @@ function yearHours(year) {
 
 // Whole percent with one decimal, trailing ".0" trimmed: "4.1%", "8.9%".
 function pctStr(ms, divisorMs) {
-  var v = Math.round(Number(ms) / divisorMs * 1000) / 10
+  var v = Math.round((Number(ms) / divisorMs) * 1000) / 10
   return String(v).replace(/\.0$/, "") + "%"
 }
 
@@ -852,8 +982,7 @@ function yearDayTotals(years, days, year, todayKey) {
 // Number of active days (at or above minMs) in a dayTotals list.
 function activeDayCount(dayTotals, minMs) {
   var n = 0
-  for (var i = 0; i < dayTotals.length; i++)
-    if (dayTotals[i].ms >= minMs) n++
+  for (var i = 0; i < dayTotals.length; i++) if (dayTotals[i].ms >= minMs) n++
   return n
 }
 
@@ -868,7 +997,7 @@ function streakStats(dayTotals) {
   var prevMs = null
   for (var i = 0; i < dayTotals.length; i++) {
     var t = dayMsUtc(dayTotals[i].date)
-    run = (prevMs !== null && t - prevMs === 86400000) ? run + 1 : 1
+    run = prevMs !== null && t - prevMs === 86400000 ? run + 1 : 1
     if (run > longest) {
       longest = run
       longestEnd = String(dayTotals[i].date)
@@ -881,7 +1010,7 @@ function streakStats(dayTotals) {
     longest: longest,
     longestEnd: longestEnd,
     current: current,
-    lastActive: lastActive
+    lastActive: lastActive,
   }
 }
 
@@ -892,8 +1021,12 @@ function longestBreak(dayTotals) {
   if (!dayTotals || dayTotals.length < 2) return null
   var best = null
   for (var i = 1; i < dayTotals.length; i++) {
-    var gap = Math.round((dayMsUtc(String(dayTotals[i].date))
-      - dayMsUtc(String(dayTotals[i - 1].date))) / 86400000) - 1
+    var gap =
+      Math.round(
+        (dayMsUtc(String(dayTotals[i].date)) -
+          dayMsUtc(String(dayTotals[i - 1].date))) /
+          86400000,
+      ) - 1
     if (gap >= 2 && (!best || gap > best.days))
       best = { days: gap, end: String(dayTotals[i].date) }
   }
@@ -905,8 +1038,18 @@ function longestBreak(dayTotals) {
 function mondayKey(key) {
   var p = String(key).split("-")
   var dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]))
-  var mon = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() - ((dt.getDay() + 6) % 7))
-  return mon.getFullYear() + "-" + pad2(mon.getMonth() + 1) + "-" + pad2(mon.getDate())
+  var mon = new Date(
+    dt.getFullYear(),
+    dt.getMonth(),
+    dt.getDate() - ((dt.getDay() + 6) % 7),
+  )
+  return (
+    mon.getFullYear() +
+    "-" +
+    pad2(mon.getMonth() + 1) +
+    "-" +
+    pad2(mon.getDate())
+  )
 }
 
 // Peak Mon–Sun week: { start, end, ms } with Monday/Sunday keys. Days group
@@ -929,8 +1072,13 @@ function busiestSpan(dayTotals) {
       var end = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + 6)
       best = {
         start: k,
-        end: end.getFullYear() + "-" + pad2(end.getMonth() + 1) + "-" + pad2(end.getDate()),
-        ms: sums[k]
+        end:
+          end.getFullYear() +
+          "-" +
+          pad2(end.getMonth() + 1) +
+          "-" +
+          pad2(end.getDate()),
+        ms: sums[k],
       }
     }
   }
@@ -943,13 +1091,18 @@ function weekdayPattern(dayTotals, totalMs) {
   var wdSum = 0
   for (var i = 0; i < dayTotals.length; i++) {
     var p = String(dayTotals[i].date).split("-")
-    var day = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2]))).getUTCDay()
+    var day = new Date(
+      Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])),
+    ).getUTCDay()
     sums[day] += dayTotals[i].ms
     if (day >= 1 && day <= 5) wdSum += dayTotals[i].ms
   }
   var topI = 0
   for (var w = 1; w < 7; w++) if (sums[w] > sums[topI]) topI = w
-  return { top: WEEKDAY_NAMES[topI], weekdayPct: Math.round(wdSum / totalMs * 100) }
+  return {
+    top: WEEKDAY_NAMES[topI],
+    weekdayPct: Math.round((wdSum / totalMs) * 100),
+  }
 }
 
 // Honest "active on N of D days" denominator: the calendar span from the
@@ -957,9 +1110,14 @@ function weekdayPattern(dayTotals, totalMs) {
 function trackedDays(dayTotals, year, todayKey) {
   var thisYear = todayKey ? Number(String(todayKey).split("-")[0]) : NaN
   if (Number(year) !== thisYear)
-    return Math.round((Date.UTC(Number(year) + 1, 0, 1) - Date.UTC(Number(year), 0, 1)) / 86400000)
+    return Math.round(
+      (Date.UTC(Number(year) + 1, 0, 1) - Date.UTC(Number(year), 0, 1)) /
+        86400000,
+    )
   var first = String(dayTotals[0].date)
-  return Math.round((dayMsUtc(String(todayKey)) - dayMsUtc(first)) / 86400000) + 1
+  return (
+    Math.round((dayMsUtc(String(todayKey)) - dayMsUtc(first)) / 86400000) + 1
+  )
 }
 
 // Rolls days dropped by the retention window into the per-day archive. Only
@@ -1000,13 +1158,16 @@ function applyRetention(days, years, todayKey, keepDays, year) {
   if (kept === days) return { days: days, years: years, pruned: false }
   var pruned = {}
   for (var k in days) {
-    if (Object.prototype.hasOwnProperty.call(days, k)
-      && !Object.prototype.hasOwnProperty.call(kept, k)) pruned[k] = days[k]
+    if (
+      Object.prototype.hasOwnProperty.call(days, k) &&
+      !Object.prototype.hasOwnProperty.call(kept, k)
+    )
+      pruned[k] = days[k]
   }
   return {
     days: kept,
     years: pruneArchive(rollupArchive(years, pruned), year),
-    pruned: true
+    pruned: true,
   }
 }
 
@@ -1017,7 +1178,11 @@ function yearFacts(days, months, years, year, todayKey, accentHex) {
   // must not treat "2026" as a different year from 2026.
   year = Number(year)
   return yearFactsFromSummary(
-    yearSummary(days, months, years, year, todayKey), year, todayKey, accentHex)
+    yearSummary(days, months, years, year, todayKey),
+    year,
+    todayKey,
+    accentHex,
+  )
 }
 
 // Retro cards from an already-merged yearSummary. Lets readers that
@@ -1037,7 +1202,9 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     if (mArr[i].ms <= 0) continue
     top.push(mArr[i])
   }
-  top.sort(function (a, b) { return b.ms - a.ms })
+  top.sort(function (a, b) {
+    return b.ms - a.ms
+  })
 
   // The current month needs two tracked weeks to qualify as recharge.
   var tk = String(todayKey || "").split("-")
@@ -1045,8 +1212,11 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
   var tkMonth = Number(tk[1]) - 1
   var pool = []
   for (var q = 0; q < top.length; q++) {
-    if (year !== tkYear || top[q].month !== tkMonth
-      || monthCoverage(dayTotals, year, top[q].month) >= MIN_RECHARGE_DAYS)
+    if (
+      year !== tkYear ||
+      top[q].month !== tkMonth ||
+      monthCoverage(dayTotals, year, top[q].month) >= MIN_RECHARGE_DAYS
+    )
       pool.push(top[q])
   }
   if (pool.length === 0) pool = top
@@ -1058,20 +1228,23 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
   out.push({
     glyph: "\uF017",
     label: "SCREEN SHARE",
-    value: totalH + "h on screens \u00b7 "
-      + pctStr(total, yearHours(year) * 3600000) + " of " + year,
-    sub: "The year's best-selling series. Greenlit for another season."
+    value:
+      totalH +
+      "h on screens \u00b7 " +
+      pctStr(total, yearHours(year) * 3600000) +
+      " of " +
+      year,
+    sub: "The year's best-selling series. Greenlit for another season.",
   })
 
   if (top.length > 0) {
     var rank = []
-    for (var r = 0; r < top.length && r < 3; r++)
-      rank.push(top[r].label)
+    for (var r = 0; r < top.length && r < 3; r++) rank.push(top[r].label)
     out.push({
       glyph: "\uF0E7",
       label: "TOP MONTHS",
       value: rank.join(" \u25CF "),
-      sub: "Your heavy-hitting months, ranked."
+      sub: "Your heavy-hitting months, ranked.",
     })
   }
 
@@ -1079,8 +1252,12 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     out.push({
       glyph: "\uF06C",
       label: "RECHARGE MONTH",
-      value: quietest.label + " \u00b7 " + Math.round(quietest.ms / 3600000) + "h, the screen's break",
-      sub: "Even pixels take a vacation."
+      value:
+        quietest.label +
+        " \u00b7 " +
+        Math.round(quietest.ms / 3600000) +
+        "h, the screen's break",
+      sub: "Even pixels take a vacation.",
     })
   }
 
@@ -1099,7 +1276,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
       glyph: "\uF0F3",
       label: "DAY COUNT",
       value: "Active on " + active + " of " + span + " tracked days",
-      sub: "Day-one energy that keeps showing up."
+      sub: "Day-one energy that keeps showing up.",
     })
 
     if (streaks.longest > 1) {
@@ -1108,7 +1285,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
         glyph: "\uF06D",
         label: "LONGEST STREAK",
         value: streaks.longest + " days in a row",
-        sub: "Your lock-in stretch peaked in " + MONTH_NAMES[endM] + "."
+        sub: "Your lock-in stretch peaked in " + MONTH_NAMES[endM] + ".",
       })
     }
 
@@ -1123,9 +1300,14 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     out.push({
       glyph: "\uF2D0",
       label: "PEAK DAY",
-      value: MONTH_NAMES[Number(pp[1]) - 1] + " " + Number(pp[2])
-        + " \u00b7 " + fmt(peakMs) + ", the year's high",
-      sub: "A new personal record. Nothing above it."
+      value:
+        MONTH_NAMES[Number(pp[1]) - 1] +
+        " " +
+        Number(pp[2]) +
+        " \u00b7 " +
+        fmt(peakMs) +
+        ", the year's high",
+      sub: "A new personal record. Nothing above it.",
     })
 
     var brk = longestBreak(dayTotals)
@@ -1135,7 +1317,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
         glyph: "\uF04C",
         label: "LONGEST BREAK",
         value: brk.days + " days offline",
-        sub: "Back on screens in " + MONTH_NAMES[endM] + ". Nature is healing."
+        sub: "Back on screens in " + MONTH_NAMES[endM] + ". Nature is healing.",
       })
     }
 
@@ -1144,14 +1326,15 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
       var sp = String(span.start).split("-")
       var ep = String(span.end).split("-")
       var spanLabel = MONTH_NAMES[Number(sp[1]) - 1] + " " + Number(sp[2])
-      spanLabel += Number(sp[1]) === Number(ep[1])
-        ? "\u2013" + Number(ep[2])
-        : " \u2013 " + MONTH_NAMES[Number(ep[1]) - 1] + " " + Number(ep[2])
+      spanLabel +=
+        Number(sp[1]) === Number(ep[1])
+          ? "\u2013" + Number(ep[2])
+          : " \u2013 " + MONTH_NAMES[Number(ep[1]) - 1] + " " + Number(ep[2])
       out.push({
         glyph: "\uF091",
         label: "BUSIEST WEEK",
         value: spanLabel + " \u00b7 " + fmt(span.ms) + ", your peak week",
-        sub: "Rest was not on the schedule."
+        sub: "Rest was not on the schedule.",
       })
     }
 
@@ -1160,7 +1343,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
         glyph: "\uF2F1",
         label: "AVERAGE SCREEN DAY",
         value: fmt(Math.round(daySum / active)) + " per active day",
-        sub: "A solid daily shift, no overtime attitude."
+        sub: "A solid daily shift, no overtime attitude.",
       })
 
       var wd = weekdayPattern(dayTotals, daySum)
@@ -1168,7 +1351,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
         glyph: "\uF073",
         label: "WEEKDAY RHYTHM",
         value: wd.top + " leads \u00b7 " + wd.weekdayPct + "% weekdays",
-        sub: "Midweek is your sweet spot."
+        sub: "Midweek is your sweet spot.",
       })
     }
   }
@@ -1179,7 +1362,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
   return out
 }
 
-// Header total and retro cards share one merge.
+// Header total, month bars and retro cards share one merge.
 function yearView(days, months, years, year, todayKey, accentHex) {
   year = Number(year)
   var summary = yearSummary(days, months, years, year, todayKey)
