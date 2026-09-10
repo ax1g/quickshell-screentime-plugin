@@ -133,6 +133,9 @@ Column {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 trackHeight: 18
+                // The row owns the click; this also drops the cursor-ring
+                // padding so the track aligns flush with the other controls.
+                interactive: false
                 checked: modelData.shown
                 foreground: root.foreground
                 accent: root.accent

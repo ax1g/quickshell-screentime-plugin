@@ -98,6 +98,9 @@ test("config menu threads prefs with explicit props and signals", () => {
 test("toggles are mini shell switches in panel-styled rows", () => {
   assert.match(menu, /ToggleSwitch \{/)
   assert.match(menu, /trackHeight: 18/)
+  // The row owns the click (and the switch drops its cursor-ring pad,
+  // so the track aligns flush with the boxes and swatches).
+  assert.match(menu, /interactive: false/)
   assert.match(menu, /onToggled: root\.activate\(modelData\.kind\)/)
   assert.match(menu, /model: root\.weekOptions/)
   assert.match(menu, /root\.weekWindowSelected\(modelData\)/)
