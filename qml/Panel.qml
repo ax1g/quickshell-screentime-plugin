@@ -337,7 +337,6 @@ Panel {
                             font.family: root.contentFontFamily
                             font.pixelSize: Style.fontPx(1.5)
                             font.bold: true
-                            font.letterSpacing: 1.4
                             elide: Text.ElideRight
                             width: parent.width
                         }
