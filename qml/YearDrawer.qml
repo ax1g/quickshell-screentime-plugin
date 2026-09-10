@@ -2,10 +2,10 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "components"
-import "../js/Model.js" as Model
 
 // Yearly overview: per-month bars plus Wrapped-style retro cards.
 // Drawer slide chrome lives in Panel; this is the scrolling content.
+// Month bars come from Panel's shared yearView merge via yearMonths.
 Item {
     id: root
     anchors.fill: parent
@@ -13,16 +13,12 @@ Item {
     required property string fontFamily
     required property color panelBackground
     required property color accent
-    required property bool serviceReady
-    required property var days
-    required property var months
-    required property var years
-    required property string todayKey
     required property int currentYear
     required property int currentYearOffset
     required property int oldestDataYear
     required property string calendarYearTotal
     required property var yearFacts
+    required property var yearMonths
     required property var monthNamesShort
     required property var monthNamesLong
 
@@ -165,7 +161,7 @@ Item {
                 topPadding: Style.space(10)
                 bottomPadding: Style.space(2)
 
-                readonly property var months: root.serviceReady ? Model.monthlyTotals(root.days, root.months, root.currentYear, root.years, root.todayKey) : []
+                readonly property var months: root.yearMonths
                 readonly property real maxMs: {
                     var max = 0;
                     for (var i = 0; i < months.length; i++) {

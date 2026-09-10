@@ -28,9 +28,11 @@ Item {
     width: ringSize
     height: ringSize
 
-    // Slice color at the given alpha.
+    // Slice color at the given alpha; falls back to accent on bad hex.
     function sliceColor(index, alpha) {
         var hex = String(sliceColors[index] || accent).replace(/[#\s]/g, "");
+        if (!/^[0-9a-fA-F]{6}$/.test(hex))
+            return Qt.rgba(accent.r, accent.g, accent.b, alpha);
         var r = parseInt(hex.substr(0, 2), 16) / 255;
         var g = parseInt(hex.substr(2, 2), 16) / 255;
         var b = parseInt(hex.substr(4, 2), 16) / 255;

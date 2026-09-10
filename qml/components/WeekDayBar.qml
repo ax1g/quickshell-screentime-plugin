@@ -1,6 +1,5 @@
 import QtQuick
 import qs.Commons
-import "../../js/Model.js" as Model
 
 // One week-chart day column: bar + weekday label.
 // Outer reads are layout-parent geometry; muted file-wide like Service.
@@ -17,7 +16,8 @@ Item {
 
     signal selected(string key)
 
-    width: (parent.width - parent.spacing * 6) / 7
+    // Parent Row spacing is 0; one seventh of its width per day.
+    width: parent.width / 7
     height: Style.space(80)
 
     property bool isActive: modelData.key === day.activeDayKey
@@ -27,20 +27,20 @@ Item {
     property real barPx: hasData ? Math.max(3, Style.space(64) * Number(modelData.ms) / day.axisMaxMs) : 0
 
     Rectangle {
-        width: parent.width * 0.5
+        width: day.width * 0.5
         radius: Style.space(2)
-        color: (parent.isFuture || parent.isEmpty) ? Qt.rgba(day.foreground.r, day.foreground.g, day.foreground.b, 0.10) : (parent.isActive ? day.accent : (barMouse.containsMouse ? Qt.lighter(day.foreground, 1.4) : Qt.rgba(day.foreground.r, day.foreground.g, day.foreground.b, 0.9)))
+        color: (day.isFuture || day.isEmpty) ? Qt.rgba(day.foreground.r, day.foreground.g, day.foreground.b, 0.10) : (day.isActive ? day.accent : (barMouse.containsMouse ? Qt.lighter(day.foreground, 1.4) : Qt.rgba(day.foreground.r, day.foreground.g, day.foreground.b, 0.9)))
         opacity: 1.0
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Style.space(14)
-        height: parent.barPx
+        height: day.barPx
 
         MouseArea {
             id: barMouse
             anchors.fill: parent
             hoverEnabled: true
-            enabled: !parent.parent.isFuture && !parent.parent.isEmpty
+            enabled: !day.isFuture && !day.isEmpty
             cursorShape: Qt.PointingHandCursor
             onClicked: day.selected(day.modelData.key)
         }
@@ -49,11 +49,11 @@ Item {
     Text {
         text: day.modelData.label
         color: day.foreground
-        opacity: (parent.isActive || (!parent.isFuture && day.modelData.ms > 0)) ? 1.0 : 0.45
+        opacity: (day.isActive || (!day.isFuture && day.modelData.ms > 0)) ? 1.0 : 0.45
         font.family: day.fontFamily
         font.pixelSize: Style.font.caption
-        font.bold: parent.isActive
-        width: parent.width
+        font.bold: day.isActive
+        width: day.width
         horizontalAlignment: Text.AlignHCenter
         anchors.bottom: parent.bottom
     }

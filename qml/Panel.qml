@@ -204,16 +204,12 @@ Panel {
                     fontFamily: root.contentFontFamily
                     panelBackground: root.bar ? root.bar.background : Color.background
                     accent: Color.accent
-                    serviceReady: root.serviceReady
-                    days: root.days
-                    months: root.months
-                    years: root.years
-                    todayKey: root.todayKey
                     currentYear: root.currentYear
                     currentYearOffset: root.currentYearOffset
                     oldestDataYear: root.oldestDataYear
                     calendarYearTotal: root.calendarYearTotal
                     yearFacts: root.yearFacts
+                    yearMonths: root.yearMonths
                     monthNamesShort: root.monthNamesShort
                     monthNamesLong: root.monthNamesLong
                     onCloseRequested: root.openCalendar(false)

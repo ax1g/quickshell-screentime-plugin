@@ -71,7 +71,7 @@ Item {
         ScreenTip {
             foreground: month.foreground
             fontFamily: month.fontFamily
-                tipBackground: month.panelBackground
+            tipBackground: month.panelBackground
 
             hovered: monthBarMouse.containsMouse
             tipText: {
