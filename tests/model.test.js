@@ -1454,6 +1454,16 @@ test("monthlyTotals with todayKey excludes future dates like yearFacts", () => {
   assert.equal(filtered[11].ms, 0) // Dec future day excluded
 })
 
+test("mergeYear excludes future month lumps like future days", () => {
+  // A Dec lump (e.g. from a clock jump forward and back) must not inflate
+  // the year total and month bars while dayTotals stays empty.
+  const months = { "2026-08": 3600000, "2026-12": 10 * 3600000 }
+  const totals = Model.monthlyTotals({}, months, 2026, {}, "2026-08-19")
+  assert.equal(totals[7].ms, 3600000) // Aug lump kept
+  assert.equal(totals[11].ms, 0) // Dec future lump excluded
+  assert.equal(Model.yearTotal({}, months, 2026, {}, "2026-08-19"), 3600000)
+})
+
 test("yearFacts accepts a string year without bypassing the recharge guard", () => {
   // Current month (Aug) is the quietest but has only 3 tracked days, so the
   // coverage guard excludes it and RECHARGE MONTH falls to Mar. A string

@@ -886,6 +886,11 @@ function mergeYear(days, months, years, year, todayKey) {
   }
   for (var mk in months) {
     if (!Object.prototype.hasOwnProperty.call(months, mk)) continue
+    // Month lumps use the same beyond-todayKey cutoff as days: "YYYY-MM"
+    // keys compare lexicographically, so a lump from a clock jump forward
+    // (e.g. Dec while today is Aug) can't inflate the year total and the
+    // month bars while dayTotals stays empty.
+    if (tk && String(mk) > tk.slice(0, 7)) continue
     var mParts = String(mk).split("-")
     if (mParts.length !== 2 || Number(mParts[0]) !== y) continue
     var mi = Number(mParts[1]) - 1
