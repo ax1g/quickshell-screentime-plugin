@@ -11,6 +11,8 @@ Item {
     anchors.fill: parent
     required property color foreground
     required property string fontFamily
+    // Override for the year hero glyph; "" follows the foreground.
+    required property string heroColor
     required property color panelBackground
     required property color accent
     required property int currentYear
@@ -56,7 +58,7 @@ Item {
         Text {
             id: yearHeroIcon
             text: "\uf073"
-            color: yearHeroIconMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.2)
+            color: root.heroColor !== "" ? root.heroColor : (yearHeroIconMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.2))
             font.family: root.fontFamily
             font.pixelSize: Style.fontPx(2.4)
             anchors.left: parent.left

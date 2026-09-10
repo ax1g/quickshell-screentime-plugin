@@ -66,6 +66,19 @@ Panel {
             root.writeSetting("recordColor", color);
     }
 
+    // Hero icon color for the hourglass, the yearly hero and the settings
+    // glyph. Empty follows the theme foreground, so old installs keep it.
+    readonly property var heroColorOptions: ["#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
+    readonly property string heroColor: {
+        var c = String(root.prefs.heroColor || "");
+        return root.heroColorOptions.indexOf(c) >= 0 ? c : "";
+    }
+
+    function selectHeroColor(color) {
+        if ((color === "" || root.heroColorOptions.indexOf(color) >= 0) && color !== root.heroColor)
+            root.writeSetting("heroColor", color);
+    }
+
     // Empty selection = live today; everything derives from activeDay.
     property string selectedKey: ""
     readonly property var activeDay: serviceReady ? Model.dayFor(root.days, root.today, root.selectedKey, root.todayKey) : null
@@ -261,6 +274,7 @@ Panel {
                     fontFamily: root.contentFontFamily
                     panelBackground: root.bar ? root.bar.background : Color.background
                     accent: Color.accent
+                    heroColor: root.heroColor
                     currentYear: root.currentYear
                     currentYearOffset: root.currentYearOffset
                     oldestDataYear: root.oldestDataYear
@@ -331,7 +345,7 @@ Panel {
                     Text {
                         id: configHeroIcon
                         text: "\uf013"
-                        color: Qt.darker(root.contentForeground, 1.2)
+                        color: root.heroColor !== "" ? root.heroColor : Qt.darker(root.contentForeground, 1.2)
                         font.family: root.contentFontFamily
                         font.pixelSize: Style.fontPx(2.4)
                         anchors.left: parent.left
@@ -412,6 +426,8 @@ Panel {
                             hideRecordTrophy: root.hideRecordTrophy
                             recordColor: root.recordColor
                             recordColorOptions: root.recordColorOptions
+                            heroColor: root.heroColor
+                            heroColorOptions: root.heroColorOptions
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
@@ -420,6 +436,9 @@ Panel {
                             }
                             onRecordColorSelected: function (color) {
                                 root.selectRecordColor(color);
+                            }
+                            onHeroColorSelected: function (color) {
+                                root.selectHeroColor(color);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                             onTrophyToggled: root.writeSetting("hideRecordTrophy", !root.hideRecordTrophy)
@@ -465,6 +484,7 @@ Panel {
                     HeroHeader {
                         foreground: root.contentForeground
                         fontFamily: root.contentFontFamily
+                        heroColor: root.heroColor
                         serviceReady: root.serviceReady
                         expanded: root.expanded
                         calendarOpen: root.calendarOpen

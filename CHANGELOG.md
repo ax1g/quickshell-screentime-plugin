@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Busiest Week Trophy settings: color swatches (gold by default) and a
   toggle to hide the trophy, both persisted across restarts.
+- Hero icon color: swatches (or Auto for the theme foreground) recolor the
+  hourglass, the yearly hero and the settings glyph together.
 
 ### Fixed
 

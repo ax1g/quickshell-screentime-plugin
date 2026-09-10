@@ -80,6 +80,7 @@ test("config menu threads prefs with explicit props and signals", () => {
     "trophyToggled",
     "easterEggsToggled",
     "recordColorSelected",
+    "heroColorSelected",
     "resetRequested",
   ]) {
     assert.match(menu, new RegExp("signal " + sig))
@@ -89,8 +90,12 @@ test("config menu threads prefs with explicit props and signals", () => {
   assert.match(menu, /required property bool hideRecordTrophy/)
   assert.match(menu, /required property string recordColor/)
   assert.match(menu, /required property var recordColorOptions/)
+  assert.match(menu, /required property string heroColor/)
+  assert.match(menu, /required property var heroColorOptions/)
   assert.match(menu, /model: root\.recordColorOptions/)
   assert.match(menu, /root\.recordColorSelected\(modelData\)/)
+  assert.match(menu, /model: root\.heroColorOptions/)
+  assert.match(menu, /root\.heroColorSelected\(modelData\)/)
   assert.match(panel, /hostWidget\.setSetting/)
   assert.match(bar, /function setSetting\(key, value\)/)
 })
@@ -166,4 +171,24 @@ test("busiest week trophy color defaults to gold and persists via setting", () =
   assert.match(trend, /required property color recordColor/)
   assert.match(trend, /color: root\.recordColor/)
   assert.doesNotMatch(trend, /color: "#FFD700"/)
+})
+
+test("hero icon color overrides hourglass, yearly and config glyphs", () => {
+  const drawer = qml("YearDrawer.qml")
+  assert.match(panel, /heroColorOptions: \["#FFD700"/)
+  assert.match(panel, /root\.prefs\.heroColor/)
+  assert.match(panel, /function selectHeroColor\(color\)/)
+  assert.match(panel, /writeSetting\("heroColor", color\)/)
+  assert.match(panel, /heroColor: root\.heroColor/)
+  // Empty follows the theme foreground, so old installs keep it.
+  assert.match(
+    panel,
+    /return root\.heroColorOptions\.indexOf\(c\) >= 0 \? c : ""/,
+  )
+  assert.match(hero, /required property string heroColor/)
+  assert.match(hero, /heroHeader\.heroColor !== "" \? heroHeader\.heroColor/)
+  assert.match(drawer, /required property string heroColor/)
+  assert.match(drawer, /root\.heroColor !== "" \? root\.heroColor/)
+  assert.match(menu, /signal heroColorSelected\(string color\)/)
+  assert.match(menu, /root\.heroColorSelected\(""\)/)
 })

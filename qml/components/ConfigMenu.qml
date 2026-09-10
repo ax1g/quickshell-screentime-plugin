@@ -25,6 +25,8 @@ Column {
     required property bool hideRecordTrophy
     required property string recordColor
     required property var recordColorOptions
+    required property string heroColor
+    required property var heroColorOptions
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -34,6 +36,7 @@ Column {
     signal trophyToggled
     signal easterEggsToggled
     signal recordColorSelected(string color)
+    signal heroColorSelected(string color)
     signal resetRequested
 
     width: parent.width
@@ -247,6 +250,80 @@ Column {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.recordColorSelected(modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // Hero icon color for the hourglass, the yearly hero and the settings
+    // glyph. Auto ("") follows the theme foreground like before.
+    Item {
+        width: root.width
+        height: Math.max(heroLabel.implicitHeight, heroSwatches.implicitHeight) + Style.space(8)
+
+        Text {
+            id: heroLabel
+            text: "Hero icons"
+            color: root.foreground
+            opacity: 0.6
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Row {
+            id: heroSwatches
+            spacing: Style.space(6)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+
+            Rectangle {
+                readonly property bool chosen: root.heroColor === ""
+                width: Style.space(40)
+                height: Style.space(24)
+                radius: Style.space(4)
+                color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
+                border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                border.width: 1
+
+                Text {
+                    text: "Auto"
+                    color: chosen ? root.accent : root.foreground
+                    opacity: chosen ? 1.0 : 0.6
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: chosen
+                    anchors.centerIn: parent
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.heroColorSelected("")
+                }
+            }
+
+            Repeater {
+                model: root.heroColorOptions
+
+                Rectangle {
+                    required property string modelData
+                    readonly property bool chosen: modelData === root.heroColor
+                    width: Style.space(16)
+                    height: Style.space(16)
+                    radius: Style.space(8)
+                    color: modelData
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: chosen ? 2 : 1
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.heroColorSelected(modelData)
                     }
                 }
             }

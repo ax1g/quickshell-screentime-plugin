@@ -8,6 +8,8 @@ Item {
     id: heroHeader
     required property color foreground
     required property string fontFamily
+    // Override for the hourglass glyph; "" follows the foreground.
+    required property string heroColor
     required property bool serviceReady
     required property bool expanded
     required property bool calendarOpen
@@ -62,7 +64,7 @@ Item {
     Text {
         id: heroIcon
         text: "󰔟"
-        color: heroHeader.foreground
+        color: heroHeader.heroColor !== "" ? heroHeader.heroColor : heroHeader.foreground
         font.family: heroHeader.fontFamily
         font.pixelSize: Style.fontPx(2.8)
         anchors.left: parent.left
