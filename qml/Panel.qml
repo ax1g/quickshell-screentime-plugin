@@ -308,8 +308,7 @@ Panel {
                     anchors.top: parent.top
                     anchors.leftMargin: Style.space(12)
                     anchors.rightMargin: Style.space(12)
-                    anchors.topMargin: Style.space(10)
-                    // Extra height is breathing room below the header.
+                    // Flush top like the year hero; breathing room lives below.
                     height: Math.max(configHeroIcon.implicitHeight, configHeroLabels.implicitHeight, configBack.implicitHeight) + Style.space(6)
 
                     Text {
