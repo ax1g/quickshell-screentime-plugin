@@ -27,7 +27,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Tracking now pauses while the session is locked or the screensaver is up,
-  and resumes on return (fixes #10, via PR #12). Lock/screensaver closes the
+  and resumes on return (fixes #10, contributed by @fgrehm via PR #12). Lock/screensaver closes the
   active bucket; focus events and in-flight terminal resolves can't reopen
   it mid-pause, and resume is deferred ~2s and re-validated so a stale
   reading can't briefly restart accrual. Event-driven via `omarchy.lock` /
