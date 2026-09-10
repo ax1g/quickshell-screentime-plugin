@@ -16,7 +16,7 @@ var BROWSER_ALIASES = (function () {
   return qmlBrowserAliases()
 })()
 
-// QML mirror of lib/browser_aliases.json. Keep in sync with that file;
+// QML mirror of js/browser_aliases.json. Keep in sync with that file;
 // tests/model.test.js fails if this lags a change.
 function qmlBrowserAliases() {
   return {

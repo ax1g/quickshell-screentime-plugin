@@ -33,6 +33,10 @@ local.
   busiest Mon–Sun week, weekday rhythm, peak day.
 - Usage patterns: top app, vs yesterday, and busiest day of the week you're
   looking at. Insight and retro colours follow your theme.
+- Configurable: the gear next to SHOW MORE opens prefs that persist —
+  hide the yearly overview or insights, set the week trend to 4/8/13 weeks,
+  default the week total to time or % of 168h, mute the easter eggs, or
+  triple-confirmed reset today (archives untouched).
 - Keyboard-first and keybind-friendly: `Esc` closes, `j`/`k` and arrows
   scroll, wheel works; summon and control the panel via the
   `agx.screen-time` IPC target.
@@ -101,9 +105,11 @@ your checkout is all you need to iterate:
 ```bash
 ln -s "$PWD" ~/.config/omarchy/plugins/agx.screen-time
 node --check js/Model.js && node --check js/State.js
-node --test tests/model.test.js tests/state.test.js
+npx -y prettier@3.9.6 --no-semi --check js/ tests/
+node --test tests/model.test.js tests/state.test.js tests/service.test.js tests/panel.test.js
+ruff check python/ tests/ && ruff format --check python/ tests/
 python3 -m unittest discover -s tests
-qmllint -I ~/.config/qml-lint-imports qml/*.qml qml/components/*.qml
+qmllint -I lint qml/*.qml qml/components/*.qml
 ```
 
 The same checks run in CI on every push. See CONTRIBUTING.md for the

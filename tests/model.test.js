@@ -107,7 +107,7 @@ test("displayName keeps dotted non-reverse-DNS names intact", () => {
 })
 
 test("displayName passes unresolved Steam ids through untouched", () => {
-  // Game titles are resolved by scripts/resolve_app.py before storage;
+  // Game titles are resolved by python/resolve_app.py before storage;
   // the display layer must never touch the filesystem for a label.
   // (require()-based resolution cannot run in QML's JS engine anyway.)
   assert.equal(Model.displayName("steam_app_730"), "steam_app_730")

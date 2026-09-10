@@ -1,0 +1,113 @@
+---
+name: screen-time-contributor
+description: Conventions for working in the agx.screen-time Omarchy plugin. Read before changing code.
+---
+
+# AGENTS.md — agx.screen-time
+
+Screen-time tracker for Omarchy: per-app focused time in the bar, with a
+donut breakdown, paginated week trend, yearly overview, and insights.
+Fully local (one JSON file), terminal-aware, keyboard-first.
+
+## Layout
+
+| Path                 | What lives there                                      |
+| -------------------- | ----------------------------------------------------- |
+| `qml/`               | Shell entry points + section views (`Panel`, `WeekTrend`, `YearDrawer`, `MonthRow`, `Service`, `BarWidget`) |
+| `qml/components/`    | Leaves: one concern per file, explicit `required` props + signals |
+| `js/`                | Pure logic (`Model.js` display math, `State.js` transitions, `browser_aliases.json`) |
+| `python/`            | Terminal/Steam foreground resolver                    |
+| `tests/`             | Node suites (`model`, `state`, `service`, `panel`) + Python `unittest` |
+| `lint/`              | `qmllint` import stubs (vendored shell + Quickshell API). Never hand-edit vendored files; see `lint/README.md` |
+
+`Service.qml` owns side effects (timers, disk, processes). `State.js` owns
+transitions as pure functions. Views are read-only mirrors of the service.
+
+## Commands
+
+```bash
+node --check js/Model.js && node --check js/State.js
+npx -y prettier@3.9.6 --no-semi --check js/ tests/
+node --test tests/model.test.js tests/state.test.js tests/service.test.js tests/panel.test.js
+ruff check python/ tests/ && ruff format --check python/ tests/
+python3 -m unittest discover -s tests
+qmllint -I lint qml/*.qml qml/components/*.qml   # MaxWarnings=0: any warning fails
+for f in qml/*.qml qml/components/*.qml; do qmlformat "$f" | cmp -s - "$f" || echo "needs formatting: $f"; done
+```
+
+Visual check (lint is not enough):
+`quickshell ipc call agx.screen-time open` (with
+`QS_CONFIG_PATH=/usr/share/omarchy/shell`) and screenshot with `grim`.
+
+## Atomic commits (non-negotiable)
+
+- One logical change per commit. Never mix a fix, a feature, a refactor,
+  formatting, or docs in one commit.
+- Conventional Commits: `<type>(<scope>): <short summary>` — imperative,
+  lowercase, no period, max 72 chars. Types: `feat`, `fix`, `test`,
+  `refactor`, `chore`, `docs`, `perf`, `style`.
+- `style` commits are behavior-neutral by definition; `refactor` commits
+  keep all tests green with no behavior change.
+- Commit only what the change needs (`git status` + `git diff` first).
+  Never commit secrets, caches (`.ruff_cache/`), or `__pycache__/`.
+- A commit must leave every suite green. If it doesn't, split it until it does.
+
+## Complexity budget
+
+- Prefer small pure functions with early returns over nested branches.
+  Past three levels of nesting, extract a helper.
+- A file that is hard to skim is too big: extract a component (`qml/`),
+  a helper (`js/`), or a test fixture — don't grow it.
+- No clever one-liners. Boring, obvious code wins every review.
+- QML derivations stay thin: one `Model.*` view call per concern
+  (`weekView`, `yearView`), computed once in `Panel.qml` and threaded down.
+
+## Readability and comments
+
+- Comments are WHY-only. One-line file headers; inline comments only where
+  the reason isn't obvious from the code (sandbox constraints, framework
+  typing lies, ordering hazards, one-way data loss).
+- The opposite rule ("no comments, code is self-documenting") is banned:
+  it was removed because silent rationale rots. Explain the trap, not the line.
+- Name things after the domain (`activeDay`, `keepDays`, `weekOffset`),
+  not the mechanism. No new abbreviations.
+- QML: explicit `required` props + signals between components. Qualify
+  outer access with the nearest id (`rowDelegate.index`). Delegate-context
+  names (`index`, `modelData`) only work with a matching `required`
+  declaration — a bare `row.index` is `undefined`, not an error.
+
+## Language rules
+
+- **QML**: 4 spaces, `qmlformat`-clean. `var` in JS-flavored logic only
+  where the engine requires it. Scoped `// qmllint disable/enable` pairs
+  for audited framework artifacts only, each with its WHY comment.
+- **JavaScript**: `var`, no `let`/`const` in sources (tests may use them).
+  Prettier (`--no-semi`, house style has no semicolons). `Model.js`/`State.js` stay
+  importable by both Node and the QML engine (guarded `module`/`require`).
+- **Python**: stdlib only, 3.9-compatible, `ruff`-clean.
+
+## Preferences pattern
+
+- All widget prefs funnel through `BarWidget.setSetting(key, value)` so no
+  key is ever dropped; they persist in `shell.json`.
+- `Panel.qml` reads them via `prefs` (with an `in` probe, so missing
+  settings can't throw). New prefs default to current behavior — old
+  installs never need migration.
+- Destructive actions need staged confirmation (arm → confirm → execute)
+  with auto-disarm, and must scope their blast radius in code *and* in tests.
+
+## Tests
+
+- Put behavior in `Model.js`/`State.js` so `node --test` can reach it.
+- `tests/service.test.js` / `tests/panel.test.js` assert QML wiring by
+  source shape (props, signals, derivations) — extend them when adding
+  either, and keep the regexes tight to the contract, not the layout.
+- Python behavior gets `unittest` cases in `tests/test_resolve_app.py`.
+
+## Definition of done
+
+- [ ] One commit per logical change, Conventional Commits, suites green.
+- [ ] `qmllint`, `qmlformat`, `prettier`, `ruff`, Node + Python suites all pass.
+- [ ] Panel opened visually and screenshotted for UI changes.
+- [ ] `CHANGELOG.md` entry under `[Unreleased]` for user-facing changes.
+- [ ] No new warnings, no dead imports, no widened suppressions.

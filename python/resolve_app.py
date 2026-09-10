@@ -49,7 +49,7 @@ BROWSER_SUBPROCESS_COMMS = {
 }
 
 # Browser binary basenames -> canonical screen-time app name.
-# Single source of truth: lib/browser_aliases.json (shared with Model.js).
+# Single source of truth: js/browser_aliases.json (shared with Model.js).
 _ALIASES_JSON = os.path.join(
     os.path.dirname(__file__), os.pardir, "js", "browser_aliases.json"
 )
