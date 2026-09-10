@@ -393,6 +393,26 @@ function isRecordWeek(weeks, offset) {
   return true
 }
 
+// Offset of the unique-best week in a monSunWeeks list (newest first),
+// or -1 when there is none: empty, all zero, or a tied top. Unlike
+// isRecordWeek (which only looks at older weeks) this compares against
+// every loaded week, so a paged-back best week still earns the crown.
+function bestWeekOffset(weeks) {
+  var list = Array.isArray(weeks) ? weeks : []
+  var best = -1
+  var bestMs = 0
+  for (var i = 0; i < list.length; i++) {
+    var ms = weekTotal(list[i] ? list[i].days : [])
+    if (ms > bestMs) {
+      bestMs = ms
+      best = i
+    } else if (ms > 0 && ms === bestMs) {
+      best = -1
+    }
+  }
+  return best
+}
+
 // Prune past keepDays (ISO keys compare lexicographically); unchanged
 // input returns by identity.
 function pruneDays(days, todayKey, keepDays) {
@@ -828,7 +848,9 @@ function weekView(days, todayKey, weekCount, offset) {
     week: week,
     max: max,
     totalMs: weekTotal(wdays),
-    isRecord: isRecordWeek(weeks, offset),
+    // The trophy follows the viewed week at any page: unique best across
+    // the whole loaded window, not just "current week beats older weeks".
+    isRecord: offset === bestWeekOffset(weeks),
     hasPrev: hasPrev,
     weekEndKey: wdays.length === 7 ? String(wdays[6].key || "") : "",
   }
@@ -1411,6 +1433,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     weekTrend: weekTrend,
     weekTotal: weekTotal,
     isRecordWeek: isRecordWeek,
+    bestWeekOffset: bestWeekOffset,
     pruneDays: pruneDays,
     insights: insights,
     groupedApps: groupedApps,

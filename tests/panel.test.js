@@ -123,6 +123,13 @@ test("config lives in its own slide-over drawer", () => {
   assert.match(panel, /if \(open\)\s+root\.openCalendar\(false\)/)
 })
 
+test("record trophy follows the best week at any page", () => {
+  assert.match(panel, /readonly property bool recordWeek/)
+  assert.match(panel, /root\.weekView \? root\.weekView\.isRecord/)
+  assert.doesNotMatch(panel, /weekOffset === 0 && serviceReady/)
+  assert.match(trend, /visible: root\.recordWeek/)
+})
+
 test("week total mode persists instead of resetting on dismiss", () => {
   assert.match(panel, /writeSetting\("weekTotalAsPct", !root\.weekTotalAsPct\)/)
   assert.doesNotMatch(panel, /root\.weekTotalAsPct = false/)

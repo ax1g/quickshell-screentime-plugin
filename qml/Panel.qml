@@ -85,8 +85,9 @@ Panel {
     readonly property var axisTicks: Model.weekAxisTicks(root.visibleWeekMax)
     readonly property double axisMaxMs: root.axisTicks.length ? root.axisTicks[root.axisTicks.length - 1] : 0
     readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
-    // Current week beating all older weeks earns the record trophy.
-    readonly property bool recordWeek: root.weekOffset === 0 && serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
+    // The trophy follows the viewed week at any page: it marks the unique
+    // best week on record, not just a leading current week.
+    readonly property bool recordWeek: serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
     property bool expanded: false
     property bool calendarOpen: false
     property bool configOpen: false

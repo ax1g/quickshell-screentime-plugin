@@ -1197,6 +1197,28 @@ test("isRecordWeek needs a strict win over previous weeks", () => {
   assert.equal(Model.isRecordWeek([], 0), false)
 })
 
+test("bestWeekOffset crowns the unique best at any offset", () => {
+  assert.equal(
+    Model.bestWeekOffset([weekEntry([3]), weekEntry([5]), weekEntry([4])]),
+    1,
+  )
+  assert.equal(Model.bestWeekOffset([weekEntry([5]), weekEntry([3])]), 0)
+  // Ties take no crown, and neither do empty or all-zero windows.
+  assert.equal(Model.bestWeekOffset([weekEntry([5]), weekEntry([5])]), -1)
+  assert.equal(Model.bestWeekOffset([weekEntry([0]), weekEntry([0])]), -1)
+  assert.equal(Model.bestWeekOffset([]), -1)
+})
+
+test("weekView crowns a paged-back best week, not just the current one", () => {
+  const days = {
+    "2026-08-17": { total: 1 * HOUR_MS, apps: {} },
+    "2026-08-18": { total: 2 * HOUR_MS, apps: {} },
+    "2026-08-10": { total: 4 * HOUR_MS, apps: {} },
+  }
+  assert.equal(Model.weekView(days, "2026-08-19", 2, 0).isRecord, false)
+  assert.equal(Model.weekView(days, "2026-08-19", 2, 1).isRecord, true)
+})
+
 test("yearSummary merges the three stores with no double counting", () => {
   const days = { "2026-08-15": { total: HOUR_MS, apps: {} } }
   const months = { "2026-07": 2 * HOUR_MS }
