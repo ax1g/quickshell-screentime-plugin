@@ -252,9 +252,12 @@ Column {
 
     // 3-click reset: arm, confirm, execute. Mouse-leave or 3s disarms.
     // The sub-line states the blast radius: today only, history is kept.
+    // The state sits in an urgent-bordered box so the destructive action
+    // reads as a button, matching the week-window option boxes.
     Item {
+        id: resetRow
         width: root.width
-        height: Math.max(resetLabels.implicitHeight, resetState.implicitHeight) + Style.space(8)
+        height: Math.max(resetLabels.implicitHeight, resetBox.implicitHeight) + Style.space(8)
 
         property int stage: 0
 
@@ -262,13 +265,13 @@ Column {
             id: resetRevertTimer
             interval: 3000
             repeat: false
-            onTriggered: parent.stage = 0
+            onTriggered: resetRow.stage = 0
         }
 
         Column {
             id: resetLabels
             anchors.left: parent.left
-            anchors.right: resetState.left
+            anchors.right: resetBox.left
             anchors.rightMargin: Style.space(8)
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
@@ -294,15 +297,26 @@ Column {
             }
         }
 
-        Text {
-            id: resetState
-            text: parent.stage === 0 ? "RESET" : parent.stage === 1 ? "SURE?" : "REALLY?"
-            color: root.urgent
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            font.bold: true
+        Rectangle {
+            id: resetBox
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            width: resetState.implicitWidth + Style.space(16)
+            height: resetState.implicitHeight + Style.space(8)
+            radius: Style.space(4)
+            color: "transparent"
+            border.color: root.urgent
+            border.width: 1
+
+            Text {
+                id: resetState
+                text: resetRow.stage === 0 ? "RESET" : resetRow.stage === 1 ? "SURE?" : "REALLY?"
+                color: root.urgent
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                font.bold: true
+                anchors.centerIn: parent
+            }
         }
 
         MouseArea {
@@ -310,18 +324,18 @@ Column {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                if (parent.stage >= 2) {
-                    parent.stage = 0;
+                if (resetRow.stage >= 2) {
+                    resetRow.stage = 0;
                     resetRevertTimer.stop();
                     root.resetRequested();
                 } else {
-                    parent.stage++;
+                    resetRow.stage++;
                     resetRevertTimer.restart();
                 }
             }
             onContainsMouseChanged: {
-                if (!containsMouse && parent.stage > 0) {
-                    parent.stage = 0;
+                if (!containsMouse && resetRow.stage > 0) {
+                    resetRow.stage = 0;
                     resetRevertTimer.stop();
                 }
             }
