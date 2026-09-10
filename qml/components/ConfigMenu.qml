@@ -55,31 +55,31 @@ Column {
             {
                 kind: "yearly",
                 label: "Yearly overview",
-                sub: "Month bars and yearly retro cards",
+                sub: "Monthly bars and a year-in-review",
                 shown: !root.hideYearly
             },
             {
                 kind: "daily",
-                label: "Daily insights",
-                sub: "Top app, vs yesterday, busiest day",
+                label: "Daily highlights",
+                sub: "Top app, change since yesterday, busiest day",
                 shown: !root.hideDailyInsights
             },
             {
                 kind: "retro",
-                label: "Yearly insights",
-                sub: "Retro cards in the yearly overview",
+                label: "Year-in-review cards",
+                sub: "Fun yearly summaries inside the overview",
                 shown: !root.hideYearInsights
             },
             {
                 kind: "weektotal",
-                label: "Week total as %",
-                sub: "Header shows share of 168 hours",
+                label: "Show week total as %",
+                sub: "Share of the full week (168 hours), not hours",
                 shown: root.weekTotalAsPct
             },
             {
                 kind: "easter",
-                label: "Easter eggs",
-                sub: "Hourglass flip and hover sparkles",
+                label: "Playful extras",
+                sub: "Animated hourglass and cursor sparkles",
                 shown: !root.hideEasterEggs
             }
         ]
@@ -145,7 +145,7 @@ Column {
 
         Text {
             id: weekLabel
-            text: "Week trend"
+            text: "Weeks of history"
             color: root.foreground
             opacity: 0.6
             font.family: root.fontFamily
@@ -201,7 +201,7 @@ Column {
 
         Text {
             id: trophyLabel
-            text: "Record trophy"
+            text: "Best-week trophy"
             color: root.foreground
             opacity: 0.6
             font.family: root.fontFamily
@@ -241,9 +241,10 @@ Column {
     }
 
     // 3-click reset: arm, confirm, execute. Mouse-leave or 3s disarms.
+    // The sub-line states the blast radius: today only, history is kept.
     Item {
         width: root.width
-        height: Math.max(resetLabel.implicitHeight, resetState.implicitHeight) + Style.space(8)
+        height: Math.max(resetLabels.implicitHeight, resetState.implicitHeight) + Style.space(8)
 
         property int stage: 0
 
@@ -254,15 +255,33 @@ Column {
             onTriggered: parent.stage = 0
         }
 
-        Text {
-            id: resetLabel
-            text: "Reset today"
-            color: root.foreground
-            opacity: 0.6
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
+        Column {
+            id: resetLabels
             anchors.left: parent.left
+            anchors.right: resetState.left
+            anchors.rightMargin: Style.space(8)
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+
+            Text {
+                text: "Reset today"
+                color: root.foreground
+                opacity: 0.6
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "Only today is cleared — past days are kept"
+                color: root.foreground
+                opacity: 0.4
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                elide: Text.ElideRight
+            }
         }
 
         Text {
