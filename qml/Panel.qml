@@ -390,7 +390,8 @@ Panel {
 
                     Column {
                         id: configColumn
-                        width: configScroll.width
+                        // Gutter for the scrollbar so the bar never covers rows.
+                        width: configScroll.width - Style.space(8)
                         spacing: Style.space(10)
 
                         ConfigMenu {
@@ -426,6 +427,20 @@ Panel {
                             }
                         }
                     }
+                }
+
+                // Thin scrollbar on the right edge, same idiom as AppLegend:
+                // only visible while the menu overflows.
+                Rectangle {
+                    property real ratio: configScroll.contentHeight > 0 ? configScroll.height / configScroll.contentHeight : 0
+                    visible: configScroll.contentHeight > configScroll.height
+                    width: 2
+                    height: Math.max(Style.space(16), configScroll.height * ratio)
+                    radius: width / 2
+                    color: root.contentForeground
+                    opacity: 0.25
+                    anchors.right: configScroll.right
+                    y: configScroll.y + (configScroll.height - height) * (configScroll.contentHeight > configScroll.height ? configScroll.contentY / (configScroll.contentHeight - configScroll.height) : 0)
                 }
             }
 
