@@ -24,8 +24,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Persisted week-total mode (time vs share of 168h) and an easter-eggs
   toggle (hourglass flip + hover sparkles).
 
-## [1.5.1] - 2026-09-10
-
 ### Fixed
 
 - Tracking now pauses while the session is locked or the screensaver is up,
