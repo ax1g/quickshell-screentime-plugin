@@ -31,6 +31,9 @@ python3 -m unittest discover -s tests
 
 # QML lint (qmllint + .qmllint.ini + lint/ import stubs in repo root)
 qmllint -I lint qml/*.qml qml/components/*.qml
+
+# Headless runtime checks (skips cleanly without Qt 6)
+./tests/geometry/run.sh
 ```
 
 `qmllint` and `qmlformat` ship with Qt 6 (`qt6-declarative-dev-tools`;
@@ -66,7 +69,8 @@ All tests must pass before submitting a PR. CI runs these checks automatically.
 │   └── browser_aliases.json
 ├── python/
 │   └── resolve_app.py      Terminal foreground process resolver
-├── tests/                  Unit tests (Node.js + Python)
+├── tests/                  Unit tests (Node.js + Python) plus
+│                           tests/geometry/ (headless QML runtime checks)
 ├── lint/                   qmllint import stubs (vendored shell + Quickshell API)
 └── docs/assets/            Historical changelog images
 ```

@@ -33,16 +33,24 @@ local.
   busiest Mon–Sun week, weekday rhythm, peak day.
 - Usage patterns: top app, vs yesterday, and busiest day of the week you're
   looking at. Insight and retro colours follow your theme.
-- Configurable: the gear next to SHOW MORE opens prefs that persist —
-  hide the yearly overview or insights, set the week trend to 4/8/12 weeks,
-  default the week total to time or % of 168h, mute the easter eggs, or
-  triple-confirmed reset today (archives untouched).
+- Configurable: the gear next to SHOW MORE opens sectioned prefs that
+  persist — hide the yearly overview or insights, set the week trend to
+  4/8/12/16/20 weeks, rename apps and ignore the noisy ones, tune
+  retention with a stored-footprint readout, recolor the trophy and hero
+  icons from theme swatches, mute the playful extras, triple-confirmed
+  reset today (archives untouched), or four-click wipe everything
+  (no undo).
+- Daily goal: set Off/4/6/8h; a ✓ badge lands in the bar when the day
+  reaches it, with remaining time in the tooltip and a progress bar
+  under the hero total.
 - Keyboard-first and keybind-friendly: `Esc` closes, `j`/`k` and arrows
   scroll, wheel works; summon and control the panel via the
-  `agx.screen-time` IPC target.
+  `agx.screen-time` IPC target (`open`, `toggle`, `resetToday`,
+  `resetAll`, `status`).
 - Private by design: one local JSON file; old days roll into a two-year
   per-day archive, then monthly totals.
-- Hourglass easter egg: flips over on the hour; gold sparkles on hover.
+- Hourglass easter egg: flips over on the hour; gold sparkles on hover;
+  header icons spin as you navigate (mute it all with Playful extras).
 
 ## Install
 
@@ -90,12 +98,12 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
 - A session spanning midnight splits there, so each day keeps its own
   seconds.
-- Daily detail older than ~3 months (95 days, covering the 12-week trend) is
-  pruned, but its total folds into a per-day archive first — the current and
-  previous calendar year's day totals survive as `"years"`, so the yearly
-  overview keeps day counts, streaks, and peak days even though raw app
-  detail is forgotten. Older years live on as per-month aggregates. Delete
-  the file to reset.
+- Daily detail older than the retention window (30/95/365 days, always
+  covering the chosen week trend) is pruned, but its total folds into a
+  per-day archive first — the current and previous calendar year's day
+  totals survive as `"years"`, so the yearly overview keeps day counts,
+  streaks, and peak days even though raw app detail is forgotten. Older
+  years live on as per-month aggregates. Delete the file to reset.
 
 ## Development
 
@@ -110,6 +118,7 @@ node --test tests/model.test.js tests/state.test.js tests/service.test.js tests/
 ruff check python/ tests/ && ruff format --check python/ tests/
 python3 -m unittest discover -s tests
 qmllint -I lint qml/*.qml qml/components/*.qml
+./tests/geometry/run.sh
 ```
 
 The same checks run in CI on every push. See CONTRIBUTING.md for the
