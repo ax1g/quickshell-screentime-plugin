@@ -8,18 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Busiest Week Trophy settings: color swatches (gold by default) and a
-  toggle to hide the trophy, both persisted across restarts.
-- Hero icon color: swatches recolor the hourglass, the yearly hero and the
-  settings glyph together.
-- Busiest Week Trophy and hero icon swatches start with soft-black and
-  white circles with thicker selection rings; the hero Auto pill is gone
-  (old installs without a stored hero color keep following the theme
-  foreground).
-- Ignored apps: comma-separated names that are never tracked and are hidden
-  from history views (matches raw, canonical and display names).
-- Custom app names: comma-separated from=to renames applied before the
-  built-in browser fold.
+- Busiest Week Trophy settings: color swatches starting with black and
+  white (gold by default) and a toggle to hide the trophy, both
+  persisted across restarts.
+- Hero icon color: swatches starting with black and white recolor the
+  hourglass, the yearly hero and the settings glyph together.
+- Ignored apps: banish launchers and portals from tracking and history —
+  type a name, hit ADD, and remove it anytime with ×.
+- Custom app names: call apps what you want (zen becomes browser), with
+  forgiving matching across window classes; re-saving a name updates it.
 - Daily goal: Off/4/6/8h presets with a check badge in the bar, remaining
   time in the tooltip, and a progress bar under the hero total.
 - Wipe all history: a four-click staged control (WIPE ALL → SURE? → NO
@@ -31,15 +28,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   readout of days, month lumps and archived entries.
 - First-run onboarding: coach marks under the hero until anything is
   tracked, explaining coverage and where settings live.
-- Settings lists for ignored apps and renames: type a name and hit ADD
-  (or Enter) to append it below, × removes an entry; saving a rename
-  for an existing name updates its target.
 
 ### Fixed
 
-- App renames match raw, canonical and display names (plus whole
-  dash/dot/underscore segments), so e.g. zen=browser catches zen-bin
-  and zen-browser instead of only the exact window class.
 - Future month lumps no longer inflate the year total and month bars: a lump
   beyond the current month (e.g. from a clock jump forward and back) is
   excluded like future days, so the header, bars and retro cards agree.
