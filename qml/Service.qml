@@ -142,8 +142,43 @@ Item {
     property var ignoredApps: []
     property var appAliases: ({})
     function setTrackingPrefs(ignored, aliases) {
+        var nextAliases = Model.parseAppAliases(aliases);
+        // Refolding is idempotent, so a serialize compare is enough to
+        // notice a changed map without tracking the previous object.
+        var refold = Model.serializeAliases(nextAliases) !== Model.serializeAliases(root.appAliases);
         root.ignoredApps = Model.parseIgnoredApps(ignored);
-        root.appAliases = Model.parseAppAliases(aliases);
+        root.appAliases = nextAliases;
+        if (refold)
+            root.refoldToday();
+    }
+
+    // Fold today's stored time through the current alias map: adding
+    // zen=browser mid-day moves today's earlier zen time onto browser
+    // and renames the live bucket, so the rest of the day accrues
+    // there. Past days are untouched. No-op when nothing resolves
+    // elsewhere (removals, startup, repeated pushes).
+    function refoldToday() {
+        if (!root.ready)
+            return;
+        var now = Date.now();
+        var previous = root.activeApp;
+        // Bill in-flight time to the old name first so no seconds leak.
+        if (previous)
+            root.commitElapsed(now);
+        var folded = Model.refoldDay(root.today, root.appAliases);
+        if (folded !== root.today) {
+            root.today = folded;
+            var nd = Object.assign({}, root.days);
+            nd[root.todayKey] = root.today;
+            root.days = nd;
+        }
+        if (previous) {
+            var renamed = Model.resolveAppName(previous, root.appAliases);
+            if (renamed !== previous)
+                root.activeApp = renamed;
+            root.activeStart = now;
+        }
+        root.persist();
     }
 
     // Screensaver/portal windows open no bucket.

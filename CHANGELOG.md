@@ -16,7 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Ignored apps: banish launchers and portals from tracking and history —
   type a name, hit ADD, and remove it anytime with ×.
 - Custom app names: call apps what you want (zen becomes browser), with
-  forgiving matching across window classes; re-saving a name updates it.
+  forgiving matching across window classes; re-saving a name updates it,
+  and adding one folds today's earlier time into the new name.
 - Daily goal: Off/4/6/8h presets with a check badge in the bar, remaining
   time in the tooltip, and a progress bar under the hero total.
 - Wipe all history: a four-click staged control (WIPE ALL → SURE? → NO
