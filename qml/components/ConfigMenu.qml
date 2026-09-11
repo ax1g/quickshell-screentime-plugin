@@ -231,14 +231,29 @@ Column {
                 width: parent.width
                 spacing: Style.space(6)
 
-                Text {
-                    text: "Busiest Week Trophy"
-                    color: root.foreground
-                    opacity: 0.75
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
+                Column {
                     width: parent.width
-                    elide: Text.ElideRight
+                    spacing: Style.space(2)
+
+                    Text {
+                        text: "Busiest Week Trophy"
+                        color: root.foreground
+                        opacity: 0.75
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        width: parent.width
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        text: "Color of the record-week trophy"
+                        color: root.foreground
+                        opacity: 0.45
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                    }
                 }
 
                 Row {

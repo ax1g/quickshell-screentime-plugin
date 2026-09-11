@@ -488,3 +488,7 @@ test("the week window repushes retention", () => {
 test("week pills read in weeks", () => {
   assert.match(menu, /text: modelData \+ "w"/)
 })
+
+test("trophy color carries a wrapping caption", () => {
+  assert.match(menu, /text: "Color of the record-week trophy"/)
+})
