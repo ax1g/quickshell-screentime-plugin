@@ -229,8 +229,21 @@ function rolloverIfNeeded(state, newKey) {
 }
 
 // Midnight in one transition (close+carry+reopen); null when unneeded.
+// A backward day jump (clock stepped back) carries nothing: the live
+// bucket drops and the day stays put instead of billing evening time
+// onto yesterday morning.
 function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   if (newKey === state.todayKey) return null
+  if (newKey < state.todayKey) {
+    return {
+      today: state.today,
+      days: state.days,
+      todayKey: state.todayKey,
+      activeApp: "",
+      activeStart: 0,
+      lastTick: now,
+    }
+  }
   var app = state.activeApp
   // Close against the NEW day so the split attributes each portion exactly.
   var closed = closeActiveBucket(

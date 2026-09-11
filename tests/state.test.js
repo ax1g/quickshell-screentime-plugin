@@ -1004,3 +1004,28 @@ test("commitElapsed credits intermediate days and resumes at midnight", () => {
   assert.equal(result.activeApp, "zen")
   assert.equal(result.activeStart, localMidnight(2026, 7, 17))
 })
+
+test("advanceRollover ignores backward day jumps", () => {
+  const now = localMidnight(2026, 7, 15) + 9 * 3600000
+  const state = {
+    today: { total: 3600000, apps: { zen: 3600000 } },
+    days: {},
+    todayKey: "2026-08-16",
+    activeApp: "zen",
+    activeStart: now - 60000,
+    lastTick: now - 5000,
+  }
+  const result = State.advanceRollover(
+    state,
+    now,
+    "2026-08-15",
+    30000,
+    state.lastTick,
+  )
+  assert.ok(result)
+  assert.equal(result.todayKey, "2026-08-16")
+  assert.deepEqual(result.today, state.today)
+  assert.equal(result.activeApp, "")
+  assert.equal(result.activeStart, 0)
+  assert.equal(result.lastTick, now)
+})
