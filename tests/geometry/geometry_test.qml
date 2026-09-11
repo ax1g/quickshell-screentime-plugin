@@ -40,6 +40,7 @@ TestCase {
         keepDays: 95
         keepDaysOptions: [30, 95, 365]
         storageLabel: "1 days · 2 months · 3 archived"
+        pluginVersion: "1.6.0"
     }
 
     function collect(item, out) {
@@ -100,7 +101,14 @@ TestCase {
     }
 
     function test_helpRenders() {
-        var help = findText("HELP");
-        verify(help !== null && help.height > 0 && ancestorsOccupy(help), "help card occupies");
+        var help = findText("CONTRIBUTION");
+        verify(help !== null && help.height > 0 && ancestorsOccupy(help), "contribution card occupies");
+    }
+
+    function test_aboutRenders() {
+        var about = findText("ABOUT");
+        verify(about !== null && about.height > 0 && ancestorsOccupy(about), "about card occupies");
+        var name = findText("Screen Time");
+        verify(name !== null && name.height > 0 && ancestorsOccupy(name), "about title occupies");
     }
 }

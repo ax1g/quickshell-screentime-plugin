@@ -61,9 +61,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   full circle on the way back to the main view — all mute with Playful
   extras.
 - Settings page groups prefs into tinted section cards (Display, Colors,
-  Trend & History, Daily Goal, Tracking, Help with a link to the repo,
-  and a red Danger Zone last) with full-width labels that wrap instead
-  of truncating, and larger targets.
+  Trend & History, Daily Goal, Tracking, Contribution, About with the
+  app info and version, and a red Danger Zone last) with full-width
+  labels that wrap instead of truncating, and larger targets.
 - Week trend window is now 4, 8, 12, 16 or 20 weeks instead of 4, 8 or
   13. A stored 13 keeps 12, and retention automatically covers the
   chosen window so far-back weeks never render hollow.

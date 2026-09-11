@@ -33,6 +33,10 @@ Panel {
     readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
+    // Plugin version, mirrored from manifest.json (a test fails when
+    // they drift apart); shown in the settings About section.
+    readonly property string pluginVersion: "1.6.0"
+
     // Week presets, up to 20 weeks back. Retention always covers the
     // visible window (see effectiveKeepDays below).
     readonly property var weekOptions: [4, 8, 12, 16, 20]
@@ -552,6 +556,7 @@ Panel {
                             keepDays: root.keepDays
                             keepDaysOptions: root.keepDaysOptions
                             storageLabel: root.storageLabel
+                            pluginVersion: root.pluginVersion
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)

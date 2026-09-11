@@ -551,3 +551,24 @@ test("wiping history reveals onboarding", () => {
     /root\.storageSummary\.totalMs <= 0 && root\.dayTotal <= 0/,
   )
 })
+
+test("about shows the manifest version", () => {
+  const manifest = JSON.parse(
+    require("node:fs").readFileSync(
+      require("node:path").join(__dirname, "..", "manifest.json"),
+      "utf8",
+    ),
+  )
+  assert.match(
+    panel,
+    new RegExp(
+      'readonly property string pluginVersion: "' + manifest.version + '"',
+    ),
+  )
+  assert.match(menu, /required property string pluginVersion/)
+  assert.match(panel, /pluginVersion: root\.pluginVersion/)
+  assert.match(menu, /text: "ABOUT"/)
+  assert.match(menu, /text: "Screen Time"/)
+  assert.match(menu, /"v" \+ root\.pluginVersion/)
+  assert.match(menu, /Know where your time goes/)
+})

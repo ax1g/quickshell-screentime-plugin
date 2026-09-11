@@ -38,6 +38,7 @@ Column {
     required property int keepDays
     required property var keepDaysOptions
     required property string storageLabel
+    required property string pluginVersion
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -1427,6 +1428,106 @@ Column {
                             wipeRevertTimer.stop();
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // ---- About --------------------------------------------------------
+    // Centered, unlike the left-aligned rows above: glyph, name, version
+    // pill, and the two lines the plugin introduces itself with.
+
+    Rectangle {
+        width: root.width
+        height: aboutBody.implicitHeight + Style.space(24)
+        radius: Style.space(8)
+        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.05)
+
+        Column {
+            id: aboutBody
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: Style.space(12)
+            spacing: Style.space(10)
+
+            Text {
+                text: "ABOUT"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.5
+            }
+
+            Column {
+                width: parent.width
+                spacing: Style.space(6)
+
+                Text {
+                    text: "󰔟"
+                    color: root.accent
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.fontPx(2.4)
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Text {
+                    text: "Screen Time"
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.fontPx(1.5)
+                    font.bold: true
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Style.space(6)
+
+                    Rectangle {
+                        width: versionLabel.implicitWidth + Style.space(16)
+                        height: versionLabel.implicitHeight + Style.space(6)
+                        radius: Style.space(4)
+                        color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15)
+                        border.color: root.accent
+                        border.width: 1
+
+                        Text {
+                            id: versionLabel
+                            text: "v" + root.pluginVersion
+                            color: root.accent
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            font.bold: true
+                            anchors.centerIn: parent
+                        }
+                    }
+                }
+
+                Text {
+                    text: "Know where your time goes."
+                    color: root.foreground
+                    opacity: 0.75
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    text: "Fully local · terminal-aware · keyboard-first"
+                    color: root.foreground
+                    opacity: 0.45
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
                 }
             }
         }
