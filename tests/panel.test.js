@@ -499,3 +499,9 @@ test("settings header icon returns to the main panel", () => {
     /id: configHeroIconMouse[\s\S]*?onClicked: root\.openConfig\(false\)/,
   )
 })
+
+test("help section links to the repo under Github", () => {
+  assert.match(menu, /text: "HELP"/)
+  assert.match(menu, /github\.com\/ax1g\/quickshell-screentime-plugin/)
+  assert.match(menu, /Qt\.openUrlExternally\(link\)/)
+})
