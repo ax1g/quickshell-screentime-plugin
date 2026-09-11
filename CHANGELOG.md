@@ -25,6 +25,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Configurable history retention: 30/95/365-day presets (shorter windows
   archive day detail instead of deleting it) with a stored-footprint
   readout of days, month lumps and archived entries.
+- First-run onboarding: coach marks under the hero until anything is
+  tracked, explaining coverage and where settings live.
 
 ### Fixed
 

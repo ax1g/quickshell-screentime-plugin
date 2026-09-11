@@ -101,6 +101,11 @@ Panel {
     readonly property var storageSummary: Model.storageSummary(root.days, root.months, root.years)
     readonly property string storageLabel: Model.storageLabel(root.storageSummary)
 
+    // First-run onboarding: nothing recorded anywhere and nothing today.
+    // The donut already draws a dim ring when empty; coach marks below
+    // explain what tracking covers and where settings live.
+    readonly property bool showOnboarding: serviceReady && root.storageSummary.totalMs <= 0 && root.dayTotal <= 0
+
     // Empty selection = live today; everything derives from activeDay.
     // Ignored apps are stripped for display so the donut, legend and
     // insights agree with what tracking now records.
@@ -553,6 +558,51 @@ Panel {
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)
+                    }
+
+                    // First-run coach marks; hidden once anything is tracked.
+                    Item {
+                        width: parent.width
+                        visible: root.showOnboarding
+                        height: visible ? onboardingColumn.implicitHeight : 0
+                        implicitHeight: height
+
+                        Column {
+                            id: onboardingColumn
+                            width: parent.width
+                            spacing: Style.space(4)
+
+                            Text {
+                                text: "No screen time yet — focus any window to start"
+                                color: root.contentForeground
+                                opacity: 0.75
+                                font.family: root.contentFontFamily
+                                font.pixelSize: Style.font.bodySmall
+                                font.bold: true
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                text: "Terminals track what runs inside · games count too"
+                                color: root.contentForeground
+                                opacity: 0.4
+                                font.family: root.contentFontFamily
+                                font.pixelSize: Style.font.caption
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                text: "Right-click the bar for icon-only · gear for settings"
+                                color: root.contentForeground
+                                opacity: 0.4
+                                font.family: root.contentFontFamily
+                                font.pixelSize: Style.font.caption
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                            }
+                        }
                     }
 
                     // ---- Per-app donut + legend ------------------------------------
