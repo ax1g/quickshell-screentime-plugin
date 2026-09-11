@@ -906,3 +906,51 @@ test("applyResolvedApp renames through user aliases", () => {
   assert.ok(result)
   assert.equal(result.activeApp, "work")
 })
+
+test("closeActiveBucket rebases on backward clock jumps", () => {
+  const start = localMidnight(2026, 7, 15) + 12 * 3600000
+  const now = start - 60000
+  const state = {
+    today: { total: 1000, apps: { zen: 1000 } },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: start - 5000,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-15",
+    30000,
+    state.lastTick,
+  )
+  assert.deepEqual(result.today, state.today)
+  assert.equal(result.activeApp, "")
+  assert.equal(result.activeStart, 0)
+  assert.equal(result.lastTick, now)
+})
+
+test("commitElapsed rebases an open bucket on backward jumps", () => {
+  const start = localMidnight(2026, 7, 15) + 12 * 3600000
+  const now = start - 60000
+  const state = {
+    today: { total: 1000, apps: { zen: 1000 } },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: start - 5000,
+  }
+  const result = State.commitElapsed(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-15",
+    30000,
+    state.lastTick,
+  )
+  assert.deepEqual(result.today, state.today)
+  assert.equal(result.activeApp, "zen")
+  assert.equal(result.activeStart, now)
+  assert.equal(result.lastTick, now)
+})

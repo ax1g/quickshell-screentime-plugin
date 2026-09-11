@@ -65,6 +65,19 @@ function closeActiveBucket(
       lastTick: now,
     }
   }
+  // Backward clock jump: the start lies in the future, so no duration
+  // can be trusted. Drop the bucket and re-anchor the baseline instead
+  // of billing nothing until the wall clock catches up.
+  if (now < activeStart) {
+    return {
+      today: state.today,
+      days: state.days,
+      todayKey: state.todayKey,
+      activeApp: "",
+      activeStart: 0,
+      lastTick: now,
+    }
+  }
   var dur = Math.max(0, now - activeStart)
   if (dur <= 0) return state
 
@@ -127,6 +140,18 @@ function commitElapsed(
       activeApp: activeApp,
       activeStart: now,
       lastTick: state.lastTick,
+    }
+  }
+  // Backward clock jump: re-anchor the open bucket instead of stalling
+  // it at zero until the wall clock catches up.
+  if (now < activeStart) {
+    return {
+      today: state.today,
+      days: state.days,
+      todayKey: state.todayKey,
+      activeApp: activeApp,
+      activeStart: now,
+      lastTick: now,
     }
   }
   var dur = Math.max(0, now - activeStart)

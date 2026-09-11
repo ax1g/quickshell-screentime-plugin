@@ -32,6 +32,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Backward clock jumps no longer stall tracking: a start timestamp in the
+  future drops (or re-anchors) the bucket instead of billing nothing
+  until the wall clock catches up.
 - Future month lumps no longer inflate the year total and month bars: a lump
   beyond the current month (e.g. from a clock jump forward and back) is
   excluded like future days, so the header, bars and retro cards agree.
