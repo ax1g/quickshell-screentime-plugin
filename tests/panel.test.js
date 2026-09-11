@@ -621,3 +621,17 @@ test("settings editors receive keys instead of panel shortcuts", () => {
   assert.match(panel, /id: configMenu/)
   assert.match(panel, /blocked: configMenu\.editing/)
 })
+
+test("alias row flows from, arrow, to, save", () => {
+  assert.match(menu, /id: aliasInputRow/)
+  assert.match(menu, /id: aliasArrow/)
+  assert.match(menu, /text: "\\u2192"/)
+})
+
+test("alias removal needs two clicks on a left cross", () => {
+  assert.match(menu, /id: aliasEntry/)
+  assert.match(menu, /property bool armed: false/)
+  assert.match(menu, /text: aliasEntry\.armed \? "\?" : "\\u00D7"/)
+  assert.match(menu, /if \(aliasEntry\.armed\)/)
+  assert.match(menu, /root\.aliasRemoved\(modelData\.from\)/)
+})

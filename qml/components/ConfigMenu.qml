@@ -921,11 +921,13 @@ Column {
                 }
 
                 Row {
+                    id: aliasInputRow
                     width: parent.width
                     spacing: Style.space(6)
 
                     Rectangle {
-                        width: (parent.width - aliasSaveBox.width - parent.spacing * 2) / 2
+                        id: aliasFromBox
+                        width: (parent.width - aliasArrow.width - aliasSaveBox.width - parent.spacing * 3) / 2
                         height: aliasFromInput.implicitHeight + Style.space(14)
                         radius: Style.space(6)
                         color: "transparent"
@@ -945,8 +947,23 @@ Column {
                         }
                     }
 
+                    Item {
+                        id: aliasArrow
+                        width: Style.space(16)
+                        height: aliasFromBox.height
+
+                        Text {
+                            text: "\u2192"
+                            color: root.foreground
+                            opacity: 0.6
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            anchors.centerIn: parent
+                        }
+                    }
+
                     Rectangle {
-                        width: (parent.width - aliasSaveBox.width - parent.spacing * 2) / 2
+                        width: (parent.width - aliasArrow.width - aliasSaveBox.width - parent.spacing * 3) / 2
                         height: aliasToInput.implicitHeight + Style.space(14)
                         radius: Style.space(6)
                         color: "transparent"
@@ -1021,9 +1038,30 @@ Column {
                         model: root.aliasEntries
 
                         Item {
+                            id: aliasEntry
                             required property var modelData
+                            property bool armed: false
                             width: aliasListCol.width
                             height: Math.max(aliasName.implicitHeight, aliasRemove.implicitHeight)
+
+                            Timer {
+                                id: disarmTimer
+                                interval: 5000
+                                repeat: false
+                                onTriggered: aliasEntry.armed = false
+                            }
+
+                            Text {
+                                id: aliasRemove
+                                text: aliasEntry.armed ? "?" : "\u00D7"
+                                color: aliasEntry.armed ? root.urgent : root.foreground
+                                opacity: aliasEntry.armed ? 1.0 : 0.75
+                                font.family: root.fontFamily
+                                font.pixelSize: Style.fontPx(1.4)
+                                font.bold: true
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
 
                             Text {
                                 id: aliasName
@@ -1032,21 +1070,11 @@ Column {
                                 opacity: 0.75
                                 font.family: root.fontFamily
                                 font.pixelSize: Style.font.bodySmall
-                                anchors.left: parent.left
-                                anchors.right: aliasRemove.left
-                                anchors.rightMargin: Style.space(8)
-                                anchors.verticalCenter: parent.verticalCenter
-                                elide: Text.ElideRight
-                            }
-
-                            Text {
-                                id: aliasRemove
-                                text: "×"
-                                color: root.urgent
-                                font.family: root.fontFamily
-                                font.pixelSize: Style.font.title
+                                anchors.left: aliasRemove.right
+                                anchors.leftMargin: Style.space(8)
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
                             }
 
                             MouseArea {
@@ -1054,7 +1082,16 @@ Column {
                                 anchors.margins: -Style.space(6)
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.aliasRemoved(modelData.from)
+                                onClicked: {
+                                    if (aliasEntry.armed) {
+                                        disarmTimer.stop();
+                                        aliasEntry.armed = false;
+                                        root.aliasRemoved(modelData.from);
+                                    } else {
+                                        aliasEntry.armed = true;
+                                        disarmTimer.restart();
+                                    }
+                                }
                             }
                         }
                     }
