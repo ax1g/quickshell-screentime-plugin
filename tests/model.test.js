@@ -2029,7 +2029,11 @@ test("upgrading retention preserves every millisecond", () => {
   const days = {}
   let n = 0
   for (let back = 119; back >= 0; back--) {
-    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back)
+    const d = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - back,
+    )
     const key = Model.dayKey(d)
     const total = 3600000 + back * 1000
     days[key] = { total: total, apps: { zen: total } }
@@ -2042,8 +2046,7 @@ test("upgrading retention preserves every millisecond", () => {
   const years = {}
   years[year] = {}
   const before =
-    Object.keys(days).reduce((t, k) => t + days[k].total, 0) +
-    months["2026-07"]
+    Object.keys(days).reduce((t, k) => t + days[k].total, 0) + months["2026-07"]
   const ret = Model.applyRetention(days, years, todayKey, 95, year)
   assert.equal(ret.pruned, true)
   const afterDays = Object.keys(ret.days).reduce(
