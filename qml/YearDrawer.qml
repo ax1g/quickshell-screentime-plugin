@@ -20,6 +20,7 @@ Item {
     required property int oldestDataYear
     required property string calendarYearTotal
     required property int monthsActive
+    required property bool hintMode
     required property var yearFacts
     required property bool hideYearInsights
     // Playful-extras kill switch, like the main hero: the entry swing
@@ -153,12 +154,23 @@ Item {
                 spacing: Style.space(10)
 
                 PagerArrow {
+                    id: prevYearArrow
                     glyph: "\uf053"
                     active: root.currentYear > root.oldestDataYear
                     foreground: root.foreground
                     fontFamily: root.fontFamily
                     fontSize: Style.font.bodySmall
                     onClicked: root.prevYearRequested()
+                }
+
+                HintBadge {
+                    label: "b"
+                    fontFamily: root.fontFamily
+                    accent: root.accent
+                    foreground: root.foreground
+                    show: root.hintMode && root.currentYear > root.oldestDataYear
+                    anchors.top: prevYearArrow.top
+                    anchors.left: prevYearArrow.left
                 }
 
                 Text {
@@ -172,12 +184,23 @@ Item {
                 }
 
                 PagerArrow {
+                    id: nextYearArrow
                     glyph: "\uf054"
                     active: root.currentYearOffset > 0
                     foreground: root.foreground
                     fontFamily: root.fontFamily
                     fontSize: Style.font.bodySmall
                     onClicked: root.nextYearRequested()
+                }
+
+                HintBadge {
+                    label: "n"
+                    fontFamily: root.fontFamily
+                    accent: root.accent
+                    foreground: root.foreground
+                    show: root.hintMode && root.currentYearOffset > 0
+                    anchors.top: nextYearArrow.top
+                    anchors.left: nextYearArrow.left
                 }
             }
         }
@@ -189,6 +212,16 @@ Item {
             foreground: root.foreground
             fontFamily: root.fontFamily
             onClicked: root.closeRequested()
+        }
+
+        HintBadge {
+            label: "m"
+            fontFamily: root.fontFamily
+            accent: root.accent
+            foreground: root.foreground
+            show: root.hintMode
+            anchors.top: backCorner.top
+            anchors.right: backCorner.right
         }
     }
 

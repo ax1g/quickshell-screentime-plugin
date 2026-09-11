@@ -824,3 +824,21 @@ test("settings badges follow the registry", () => {
   assert.match(menu, /root\.hintTag\("reset", 0\)/)
   assert.match(menu, /root\.hintTag\("wipe", 0\)/)
 })
+
+test("year drawer badges back and year pagers", () => {
+  const drawer = qml("YearDrawer.qml")
+  assert.match(drawer, /required property bool hintMode/)
+  assert.match(drawer, /label: "m"/)
+  assert.match(drawer, /label: "b"/)
+  assert.match(drawer, /label: "n"/)
+  assert.match(
+    drawer,
+    /show: root\.hintMode && root\.currentYear > root\.oldestDataYear/,
+  )
+  assert.match(drawer, /show: root\.hintMode && root\.currentYearOffset > 0/)
+  assert.match(panel, /hintMode: root\.hintMode/)
+  assert.match(panel, /if \(root\.calendarOpen\) \{/)
+  assert.match(panel, /root\.openCalendar\(false\)/)
+  assert.match(panel, /root\.currentYearOffset \+= 1/)
+  assert.match(panel, /root\.currentYearOffset -= 1/)
+})

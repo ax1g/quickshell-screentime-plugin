@@ -290,7 +290,18 @@ Panel {
     // mode untouched, and a handled tag always exits it.
     function activateHint(tag) {
         var handled = false;
-        if (tag === "y" && !root.hideYearly) {
+        if (root.calendarOpen) {
+            if (tag === "m") {
+                root.openCalendar(false);
+                handled = true;
+            } else if (tag === "b" && root.currentYear > root.oldestDataYear) {
+                root.currentYearOffset += 1;
+                handled = true;
+            } else if (tag === "n" && root.currentYearOffset > 0) {
+                root.currentYearOffset -= 1;
+                handled = true;
+            }
+        } else if (tag === "y" && !root.hideYearly) {
             root.openCalendar(true);
             handled = true;
         } else if (tag === "c") {
@@ -473,6 +484,7 @@ Panel {
                     oldestDataYear: root.oldestDataYear
                     calendarYearTotal: root.calendarYearTotal
                     monthsActive: root.yearView ? root.yearView.monthsActive : 0
+                    hintMode: root.hintMode
                     yearFacts: root.yearFacts
                     hideYearInsights: root.hideYearInsights
                     yearMonths: root.yearMonths
