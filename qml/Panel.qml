@@ -54,34 +54,36 @@ Panel {
             root.writeSetting("weekCount", count);
     }
 
-    // Busiest Week Trophy swatches; neutrals first, gold is the default
-    // so old installs keep it. The menu's R box resets to the default.
+    // Busiest Week Trophy swatches, derived from the live theme; gold is
+    // the default so old installs keep it. A stored pick stays selected
+    // across theme switches (the menu shows it as a custom slot).
     readonly property string recordDefaultColor: "#FFD700"
-    readonly property var recordColorOptions: ["#2b2b2b", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
-    readonly property string recordColor: {
-        var c = String(root.prefs.recordColor || "");
-        return root.recordColorOptions.indexOf(c) >= 0 ? c : root.recordDefaultColor;
-    }
+    readonly property var recordColorOptions: Model.themeSwatches(Color.accent, Color.foreground, Color.muted)
+    readonly property string recordColor: Model.pickSwatch(root.prefs.recordColor, root.recordDefaultColor)
 
     function selectRecordColor(color) {
-        if (root.recordColorOptions.indexOf(color) >= 0 && color !== root.recordColor)
-            root.writeSetting("recordColor", color);
+        var c = Model.normalizeHex(color, "");
+        if (c && c !== root.recordColor)
+            root.writeSetting("recordColor", c);
     }
 
     // Hero icon color for the hourglass, the yearly hero and the settings
-    // glyph. Empty follows the theme foreground, so old installs keep it;
-    // the menu only offers concrete circles now, and its R box resets to
-    // the default (empty).
+    // glyph. Options follow the theme; empty follows the theme
+    // foreground, so old installs keep it. Stored picks survive theme
+    // switches like the trophy color above.
     readonly property string heroDefaultColor: ""
-    readonly property var heroColorOptions: ["#2b2b2b", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
-    readonly property string heroColor: {
-        var c = String(root.prefs.heroColor || "");
-        return root.heroColorOptions.indexOf(c) >= 0 ? c : root.heroDefaultColor;
-    }
+    readonly property var heroColorOptions: Model.themeSwatches(Color.accent, Color.foreground, Color.muted)
+    readonly property string heroColor: Model.pickSwatch(root.prefs.heroColor, root.heroDefaultColor)
 
     function selectHeroColor(color) {
-        if ((color === "" || root.heroColorOptions.indexOf(color) >= 0) && color !== root.heroColor)
-            root.writeSetting("heroColor", color);
+        if (color === "") {
+            if (root.heroColor !== "")
+                root.writeSetting("heroColor", "");
+            return;
+        }
+        var c = Model.normalizeHex(color, "");
+        if (c && c !== root.heroColor)
+            root.writeSetting("heroColor", c);
     }
 
     // User tracking prefs: normalized once here, pushed to the service

@@ -181,38 +181,58 @@ test("week total mode persists instead of resetting on dismiss", () => {
 })
 
 test("busiest week trophy color defaults to gold and persists via setting", () => {
-  assert.match(panel, /recordColorOptions: \["#2b2b2b", "#FFFFFF", "#FFD700"/)
-  assert.match(panel, /root\.prefs\.recordColor/)
+  assert.match(
+    panel,
+    /Model\.themeSwatches\(Color\.accent, Color\.foreground, Color\.muted\)/,
+  )
+  assert.match(
+    panel,
+    /Model\.pickSwatch\(root\.prefs\.recordColor, root\.recordDefaultColor\)/,
+  )
   assert.match(panel, /function selectRecordColor\(color\)/)
-  assert.match(panel, /writeSetting\("recordColor", color\)/)
+  assert.match(panel, /writeSetting\("recordColor", c\)/)
   assert.match(panel, /recordColor: root\.recordColor/)
   assert.match(trend, /required property color recordColor/)
   assert.match(trend, /color: root\.recordColor/)
   assert.doesNotMatch(trend, /color: "#FFD700"/)
+  // A stored pick missing from the theme set renders as a custom slot
+  // instead of resetting to gold.
+  assert.match(
+    menu,
+    /root\.recordColorOptions\.indexOf\(root\.recordColor\) === -1/,
+  )
+  assert.match(menu, /root\.recordColorSelected\(root\.recordColor\)/)
 })
 
 test("hero icon color overrides hourglass, yearly and config glyphs", () => {
   const drawer = qml("YearDrawer.qml")
-  assert.match(panel, /heroColorOptions: \["#2b2b2b", "#FFFFFF", "#FFD700"/)
-  assert.match(panel, /root\.prefs\.heroColor/)
-  assert.match(panel, /function selectHeroColor\(color\)/)
-  assert.match(panel, /writeSetting\("heroColor", color\)/)
-  assert.match(panel, /heroColor: root\.heroColor/)
-  // Empty follows the theme foreground, so old installs keep it.
   assert.match(
     panel,
-    /return root\.heroColorOptions\.indexOf\(c\) >= 0 \? c : root\.heroDefaultColor/,
+    /Model\.themeSwatches\(Color\.accent, Color\.foreground, Color\.muted\)/,
   )
+  assert.match(
+    panel,
+    /Model\.pickSwatch\(root\.prefs\.heroColor, root\.heroDefaultColor\)/,
+  )
+  assert.match(panel, /function selectHeroColor\(color\)/)
+  assert.match(panel, /writeSetting\("heroColor", c\)/)
+  assert.match(panel, /heroColor: root\.heroColor/)
+  // Empty follows the theme foreground, so old installs keep it.
+  assert.match(panel, /readonly property string heroDefaultColor: ""/)
   assert.match(hero, /required property string heroColor/)
   assert.match(hero, /heroHeader\.heroColor !== "" \? heroHeader\.heroColor/)
   assert.match(drawer, /required property string heroColor/)
   assert.match(drawer, /root\.heroColor !== "" \? root\.heroColor/)
   assert.match(menu, /signal heroColorSelected\(string color\)/)
   assert.match(menu, /root\.heroColorSelected\(modelData\)/)
-  // No Auto pill: the menu offers concrete circles only, starting with
-  // black and white.
+  // No Auto pill: the menu offers theme circles plus a reset glyph.
   assert.doesNotMatch(menu, /text: "Auto"/)
   assert.doesNotMatch(menu, /root\.heroColorSelected\(""\)/)
+  assert.match(
+    menu,
+    /root\.heroColorOptions\.indexOf\(root\.heroColor\) === -1/,
+  )
+  assert.match(menu, /root\.heroColorSelected\(root\.heroColor\)/)
 })
 
 test("tracking prefs normalize in the panel and filter the active day", () => {

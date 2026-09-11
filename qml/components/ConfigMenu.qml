@@ -268,6 +268,27 @@ Column {
                         }
                     }
 
+                    // Stored pick absent from the theme set: a custom slot
+                    // so a theme switch never silently drops the saved
+                    // color. Zero width while hidden keeps the row tight.
+                    Rectangle {
+                        readonly property bool custom: root.recordColor && root.recordColorOptions.indexOf(root.recordColor) === -1
+                        visible: custom
+                        width: custom ? Style.space(20) : 0
+                        height: Style.space(20)
+                        radius: Style.space(10)
+                        color: root.recordColor
+                        border.color: root.accent
+                        border.width: 3
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.recordColorSelected(root.recordColor)
+                        }
+                    }
+
                     // Reset glyph at the right; restores the default color.
                     Item {
                         width: resetTrophyGlyph.implicitWidth
@@ -350,6 +371,26 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.heroColorSelected(modelData)
                             }
+                        }
+                    }
+
+                    // Stored pick absent from the theme set: a custom slot
+                    // like the trophy row above.
+                    Rectangle {
+                        readonly property bool custom: root.heroColor && root.heroColorOptions.indexOf(root.heroColor) === -1
+                        visible: custom
+                        width: custom ? Style.space(20) : 0
+                        height: Style.space(20)
+                        radius: Style.space(10)
+                        color: root.heroColor
+                        border.color: root.accent
+                        border.width: 3
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.heroColorSelected(root.heroColor)
                         }
                     }
 
