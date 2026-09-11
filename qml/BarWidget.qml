@@ -39,8 +39,9 @@ BarWidget {
     readonly property bool iconOnly: root.settingBool("iconOnly", false)
 
     // Daily goal badge: progress counts the same filtered day the panel
-    // shows, so ignored apps never push the goal.
-    readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.setting("dailyGoalHours", 0))
+    // shows, so ignored apps never push the goal. The goal in force is
+    // the log entry for today: days before activation show nothing.
+    readonly property int dailyGoalHours: Model.goalForDay(Model.parseGoalLog(root.setting("dailyGoalLog", [])), root.service ? root.service.todayKey : "")
     readonly property double goalTotal: {
         if (!root.service)
             return 0;

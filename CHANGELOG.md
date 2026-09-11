@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Daily goal counts from the day it is set: past days never show it as
+  reached, and each day keeps the goal it had.
 - Yearly overview polish: the hero shows a tracked-months caption above a
   larger year pager, month bars lose their background tracks, and the top
   months take gold, silver and bronze medals over middle dots.

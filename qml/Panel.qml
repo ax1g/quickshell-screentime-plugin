@@ -200,10 +200,18 @@ Panel {
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
     // Daily goal in whole hours (0 = off) with live progress off the
-    // filtered active day, so ignored apps never push the goal.
+    // filtered active day, so ignored apps never push the goal. The
+    // goal log records every change, so each day keeps the goal it
+    // had: days before activation never show it.
     readonly property var dailyGoalOptions: [0, 4, 6, 8]
     readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.prefs.dailyGoalHours)
-    readonly property var goalProgress: Model.goalProgress(root.dayTotal, root.dailyGoalHours)
+    readonly property var goalLog: Model.parseGoalLog(root.prefs.dailyGoalLog)
+    readonly property var goalProgress: Model.goalProgress(root.dayTotal, Model.goalForDay(root.goalLog, root.activeDayKey))
+
+    function logGoalChange(hours) {
+        root.writeSetting("dailyGoalLog", Model.logGoalChange(root.goalLog, root.todayKey, hours));
+        root.writeSetting("dailyGoalHours", Model.parseDailyGoalHours(hours));
+    }
 
     // Donut shows the grouped view; the legend expands inline.
     readonly property var segments: Model.arcSegments(root.groupedApps)
@@ -598,7 +606,7 @@ Panel {
                             }
                             onDailyGoalSelected: function (hours) {
                                 if (hours !== root.dailyGoalHours)
-                                    root.writeSetting("dailyGoalHours", hours);
+                                    root.logGoalChange(hours);
                             }
                             onKeepDaysSelected: function (days) {
                                 if (days !== root.keepDays)

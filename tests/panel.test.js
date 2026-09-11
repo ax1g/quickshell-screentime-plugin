@@ -276,19 +276,27 @@ test("daily goal threads from prefs to bar badge and hero bar", () => {
     panel,
     /Model\.parseDailyGoalHours\(root\.prefs\.dailyGoalHours\)/,
   )
+  // Each day keeps the goal it had: progress reads the log entry for
+  // the viewed day, never the current pref.
   assert.match(
     panel,
-    /Model\.goalProgress\(root\.dayTotal, root\.dailyGoalHours\)/,
+    /Model\.goalProgress\(root\.dayTotal, Model\.goalForDay\(root\.goalLog, root\.activeDayKey\)\)/,
   )
+  assert.match(panel, /function logGoalChange\(hours\)/)
+  assert.match(panel, /writeSetting\("dailyGoalLog", Model\.logGoalChange/)
   assert.match(panel, /goalProgress: root\.goalProgress/)
   assert.match(menu, /required property int dailyGoalHours/)
   assert.match(menu, /required property var dailyGoalOptions/)
   assert.match(menu, /signal dailyGoalSelected\(int hours\)/)
   assert.match(menu, /root\.dailyGoalSelected\(modelData\)/)
-  assert.match(panel, /writeSetting\("dailyGoalHours", hours\)/)
+  assert.match(panel, /root\.logGoalChange\(hours\)/)
   assert.match(hero, /required property var goalProgress/)
   assert.match(hero, /heroHeader\.goalProgress !== null/)
   assert.match(bar, /readonly property int dailyGoalHours/)
+  assert.match(
+    bar,
+    /Model\.goalForDay\(Model\.parseGoalLog\(root\.setting\("dailyGoalLog", \[\]\)\)/,
+  )
   assert.match(bar, /readonly property bool goalReached/)
   assert.match(bar, /root\.goalReached \? " ✓" : ""/)
   assert.match(bar, /root\.goalTooltip/)

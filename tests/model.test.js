@@ -2185,3 +2185,33 @@ test("logGoalChange appends, replaces same-day, and caps", () => {
   assert.equal(log[log.length - 1].day, "2026-12-28")
   assert.equal(log[0].day > "2025-01-01", true)
 })
+test("goal progress hides for days without an active goal", () => {
+  const log = [
+    { day: "2026-09-11", hours: 6 },
+    { day: "2026-09-12", hours: 0 },
+    { day: "2026-09-13", hours: 8 },
+  ]
+  // Huge past total, no goal then: nothing to reach.
+  assert.equal(
+    Model.goalProgress(12 * 3600000, Model.goalForDay(log, "2026-09-10")),
+    null,
+  )
+  // On day: over goal reads reached.
+  assert.equal(
+    Model.goalProgress(7 * 3600000, Model.goalForDay(log, "2026-09-11"))
+      .reached,
+    true,
+  )
+  // Off day: silent again despite the earlier goal.
+  assert.equal(
+    Model.goalProgress(7 * 3600000, Model.goalForDay(log, "2026-09-12")),
+    null,
+  )
+  // Re-activated with a different goal: judged against 8h, not 6h.
+  const backOn = Model.goalProgress(
+    7 * 3600000,
+    Model.goalForDay(log, "2026-09-13"),
+  )
+  assert.equal(backOn.reached, false)
+  assert.equal(backOn.remainingMs, 3600000)
+})
