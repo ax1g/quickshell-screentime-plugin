@@ -55,11 +55,12 @@ Panel {
     }
 
     // Busiest Week Trophy swatches; neutrals first, gold is the default
-    // so old installs keep it.
+    // so old installs keep it. The menu's R box resets to the default.
+    readonly property string recordDefaultColor: "#FFD700"
     readonly property var recordColorOptions: ["#2b2b2b", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
     readonly property string recordColor: {
         var c = String(root.prefs.recordColor || "");
-        return root.recordColorOptions.indexOf(c) >= 0 ? c : "#FFD700";
+        return root.recordColorOptions.indexOf(c) >= 0 ? c : root.recordDefaultColor;
     }
 
     function selectRecordColor(color) {
@@ -69,11 +70,13 @@ Panel {
 
     // Hero icon color for the hourglass, the yearly hero and the settings
     // glyph. Empty follows the theme foreground, so old installs keep it;
-    // the menu only offers concrete circles now (no Auto to go back to).
+    // the menu only offers concrete circles now, and its R box resets to
+    // the default (empty).
+    readonly property string heroDefaultColor: ""
     readonly property var heroColorOptions: ["#2b2b2b", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
     readonly property string heroColor: {
         var c = String(root.prefs.heroColor || "");
-        return root.heroColorOptions.indexOf(c) >= 0 ? c : "";
+        return root.heroColorOptions.indexOf(c) >= 0 ? c : root.heroDefaultColor;
     }
 
     function selectHeroColor(color) {
@@ -479,8 +482,10 @@ Panel {
                             hideRecordTrophy: root.hideRecordTrophy
                             recordColor: root.recordColor
                             recordColorOptions: root.recordColorOptions
+                            recordDefaultColor: root.recordDefaultColor
                             heroColor: root.heroColor
                             heroColorOptions: root.heroColorOptions
+                            heroDefaultColor: root.heroDefaultColor
                             ignoredEntries: root.ignoredList
                             aliasEntries: root.aliasEntries
                             dailyGoalHours: root.dailyGoalHours

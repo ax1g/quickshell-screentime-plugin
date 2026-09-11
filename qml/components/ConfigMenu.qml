@@ -27,8 +27,10 @@ Column {
     required property bool hideRecordTrophy
     required property string recordColor
     required property var recordColorOptions
+    required property string recordDefaultColor
     required property string heroColor
     required property var heroColorOptions
+    required property string heroDefaultColor
     required property var ignoredEntries
     required property var aliasEntries
     required property int dailyGoalHours
@@ -244,6 +246,34 @@ Column {
                     spacing: Style.space(8)
                     anchors.right: parent.right
 
+                    // R resets to the default color.
+                    Rectangle {
+                        readonly property bool chosen: root.recordColor === root.recordDefaultColor
+                        width: Style.space(28)
+                        height: Style.space(20)
+                        radius: Style.space(10)
+                        color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
+                        border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                        border.width: chosen ? 3 : 1
+
+                        Text {
+                            text: "R"
+                            color: chosen ? root.accent : root.foreground
+                            opacity: chosen ? 1.0 : 0.6
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            font.bold: chosen
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.recordColorSelected(root.recordDefaultColor)
+                        }
+                    }
+
                     Repeater {
                         model: root.recordColorOptions
 
@@ -303,6 +333,34 @@ Column {
                     id: heroSwatches
                     spacing: Style.space(8)
                     anchors.right: parent.right
+
+                    // R resets to the default (the theme foreground).
+                    Rectangle {
+                        readonly property bool chosen: root.heroColor === root.heroDefaultColor
+                        width: Style.space(28)
+                        height: Style.space(20)
+                        radius: Style.space(10)
+                        color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
+                        border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                        border.width: chosen ? 3 : 1
+
+                        Text {
+                            text: "R"
+                            color: chosen ? root.accent : root.foreground
+                            opacity: chosen ? 1.0 : 0.6
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            font.bold: chosen
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.heroColorSelected(root.heroDefaultColor)
+                        }
+                    }
 
                     Repeater {
                         model: root.heroColorOptions

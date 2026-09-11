@@ -198,7 +198,7 @@ test("hero icon color overrides hourglass, yearly and config glyphs", () => {
   // Empty follows the theme foreground, so old installs keep it.
   assert.match(
     panel,
-    /return root\.heroColorOptions\.indexOf\(c\) >= 0 \? c : ""/,
+    /return root\.heroColorOptions\.indexOf\(c\) >= 0 \? c : root\.heroDefaultColor/,
   )
   assert.match(hero, /required property string heroColor/)
   assert.match(hero, /heroHeader\.heroColor !== "" \? heroHeader\.heroColor/)
@@ -332,4 +332,17 @@ test("option pills align left under their labels", () => {
     assert(row, id + " row exists")
     assert.equal(row[1], "left", id + " aligns left")
   }
+})
+
+test("color rows offer an R reset to the default", () => {
+  assert.match(panel, /readonly property string recordDefaultColor: "#FFD700"/)
+  assert.match(panel, /readonly property string heroDefaultColor: ""/)
+  assert.match(menu, /required property string recordDefaultColor/)
+  assert.match(menu, /required property string heroDefaultColor/)
+  assert.match(menu, /root\.recordColorSelected\(root\.recordDefaultColor\)/)
+  assert.match(menu, /root\.heroColorSelected\(root\.heroDefaultColor\)/)
+  assert.match(menu, /root\.recordColor === root\.recordDefaultColor/)
+  assert.match(menu, /root\.heroColor === root\.heroDefaultColor/)
+  assert.match(panel, /recordDefaultColor: root\.recordDefaultColor/)
+  assert.match(panel, /heroDefaultColor: root\.heroDefaultColor/)
 })
