@@ -2,10 +2,11 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// Panel config menu: prefs, week window, today reset.
+// Panel config menu: prefs grouped into labeled sections.
 // Values thread in from BarWidget settings; Panel writes back on signals.
 // Lives in the config slide-over drawer, which owns the title.
-// Rows mirror InsightList metrics: dim bodySmall labels, bold values right.
+// Every row stacks its full-width label block above its controls, and
+// hints wrap instead of eliding, so long captions stay readable.
 // Outer-id reads are idiomatic in delegates; muted for the linter.
 // qmllint disable unqualified
 
@@ -52,7 +53,7 @@ Column {
     signal wipeRequested
 
     width: parent.width
-    spacing: Style.space(8)
+    spacing: Style.space(12)
 
     function activate(kind) {
         if (kind === "yearly")
@@ -67,6 +68,18 @@ Column {
             root.trophyToggled();
         else if (kind === "easter")
             root.easterEggsToggled();
+    }
+
+    // ---- Display ------------------------------------------------------
+
+    Text {
+        text: "DISPLAY"
+        color: root.foreground
+        opacity: 0.45
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        font.letterSpacing: 1.5
     }
 
     Repeater {
@@ -112,20 +125,20 @@ Column {
         Item {
             required property var modelData
             width: root.width
-            height: Math.max(toggleLabels.implicitHeight, toggleSwitch.implicitHeight) + Style.space(4)
+            height: Math.max(toggleLabels.implicitHeight, toggleSwitch.implicitHeight) + Style.space(6)
 
             Column {
                 id: toggleLabels
                 anchors.left: parent.left
                 anchors.right: toggleSwitch.left
-                anchors.rightMargin: Style.space(8)
+                anchors.rightMargin: Style.space(12)
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 0
+                spacing: Style.space(2)
 
                 Text {
                     text: modelData.label
                     color: root.foreground
-                    opacity: 0.6
+                    opacity: 0.75
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     width: parent.width
@@ -135,11 +148,11 @@ Column {
                 Text {
                     text: modelData.sub
                     color: root.foreground
-                    opacity: 0.4
+                    opacity: 0.45
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     width: parent.width
-                    elide: Text.ElideRight
+                    wrapMode: Text.WordWrap
                 }
             }
 
@@ -166,27 +179,168 @@ Column {
         }
     }
 
-    // Week window option boxes; retention already covers the largest one.
-    Item {
+    // ---- Colors -------------------------------------------------------
+
+    Text {
+        text: "COLORS"
+        color: root.foreground
+        opacity: 0.45
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        font.letterSpacing: 1.5
+    }
+
+    // Busiest Week Trophy color swatches; neutrals first, gold is default.
+    Column {
         width: root.width
-        height: Math.max(weekLabel.implicitHeight, weekBoxes.implicitHeight) + Style.space(8)
+        spacing: Style.space(6)
 
         Text {
-            id: weekLabel
-            text: "Weeks of history"
+            text: "Busiest Week Trophy"
             color: root.foreground
-            opacity: 0.6
+            opacity: 0.75
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width
+            elide: Text.ElideRight
+        }
+
+        Row {
+            id: trophySwatches
+            spacing: Style.space(8)
+            anchors.right: parent.right
+
+            Repeater {
+                model: root.recordColorOptions
+
+                Rectangle {
+                    required property string modelData
+                    readonly property bool chosen: modelData === root.recordColor
+                    width: Style.space(20)
+                    height: Style.space(20)
+                    radius: Style.space(10)
+                    color: modelData
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: chosen ? 2 : 1
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.recordColorSelected(modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // Hero icon color for the hourglass, the yearly hero and the settings
+    // glyph. Concrete circles only, starting with black and white.
+    Column {
+        width: root.width
+        spacing: Style.space(6)
+
+        Column {
+            width: parent.width
+            spacing: Style.space(2)
+
+            Text {
+                text: "Hero icons"
+                color: root.foreground
+                opacity: 0.75
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "Hourglass, yearly hero and settings glyph"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                wrapMode: Text.WordWrap
+            }
+        }
+
+        Row {
+            id: heroSwatches
+            spacing: Style.space(8)
+            anchors.right: parent.right
+
+            Repeater {
+                model: root.heroColorOptions
+
+                Rectangle {
+                    required property string modelData
+                    readonly property bool chosen: modelData === root.heroColor
+                    width: Style.space(20)
+                    height: Style.space(20)
+                    radius: Style.space(10)
+                    color: modelData
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: chosen ? 2 : 1
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.heroColorSelected(modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- Trend & history ----------------------------------------------
+
+    Text {
+        text: "TREND & HISTORY"
+        color: root.foreground
+        opacity: 0.45
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        font.letterSpacing: 1.5
+    }
+
+    // Week window option boxes; retention already covers the largest one.
+    Column {
+        width: root.width
+        spacing: Style.space(6)
+
+        Column {
+            width: parent.width
+            spacing: Style.space(2)
+
+            Text {
+                text: "Weeks of history"
+                color: root.foreground
+                opacity: 0.75
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "Paginated Mon–Sun pages back from the current week"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                wrapMode: Text.WordWrap
+            }
         }
 
         Row {
             id: weekBoxes
             spacing: Style.space(6)
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
 
             Repeater {
                 model: root.weekOptions
@@ -194,8 +348,8 @@ Column {
                 Rectangle {
                     required property int modelData
                     readonly property bool chosen: modelData === root.weekCount
-                    width: Style.space(40)
-                    height: Style.space(24)
+                    width: Style.space(44)
+                    height: Style.space(28)
                     radius: Style.space(4)
                     color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
                     border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
@@ -222,81 +376,20 @@ Column {
         }
     }
 
-    // Daily goal presets in hours; 0 is Off. The bar badges a check and
-    // the hero shows remaining once the day reaches the goal.
-    Item {
-        width: root.width
-        height: Math.max(goalLabel.implicitHeight, goalBoxes.implicitHeight) + Style.space(8)
-
-        Text {
-            id: goalLabel
-            text: "Daily goal"
-            color: root.foreground
-            opacity: 0.6
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        Row {
-            id: goalBoxes
-            spacing: Style.space(6)
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-
-            Repeater {
-                model: root.dailyGoalOptions
-
-                Rectangle {
-                    required property int modelData
-                    readonly property bool chosen: modelData === root.dailyGoalHours
-                    width: modelData === 0 ? Style.space(48) : Style.space(40)
-                    height: Style.space(24)
-                    radius: Style.space(4)
-                    color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
-                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                    border.width: 1
-
-                    Text {
-                        text: modelData === 0 ? "Off" : modelData + "h"
-                        color: chosen ? root.accent : root.foreground
-                        opacity: chosen ? 1.0 : 0.6
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.bodySmall
-                        font.bold: chosen
-                        anchors.centerIn: parent
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.dailyGoalSelected(modelData)
-                    }
-                }
-            }
-        }
-    }
-
     // Retention window in days; shrinking it archives day detail instead
     // of deleting it, and the readout shows the stored footprint.
-    Item {
+    Column {
         width: root.width
-        height: Math.max(keepLabel.implicitHeight, keepBoxes.implicitHeight) + Style.space(8)
+        spacing: Style.space(6)
 
         Column {
-            id: keepLabel
-            anchors.left: parent.left
-            anchors.right: keepBoxes.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
+            width: parent.width
+            spacing: Style.space(2)
 
             Text {
                 text: "Keeps history"
                 color: root.foreground
-                opacity: 0.6
+                opacity: 0.75
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 width: parent.width
@@ -306,11 +399,11 @@ Column {
             Text {
                 text: root.storageLabel
                 color: root.foreground
-                opacity: 0.4
+                opacity: 0.45
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 width: parent.width
-                elide: Text.ElideRight
+                wrapMode: Text.WordWrap
             }
         }
 
@@ -318,7 +411,6 @@ Column {
             id: keepBoxes
             spacing: Style.space(6)
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
 
             Repeater {
                 model: root.keepDaysOptions
@@ -326,8 +418,8 @@ Column {
                 Rectangle {
                     required property int modelData
                     readonly property bool chosen: modelData === root.keepDays
-                    width: Style.space(48)
-                    height: Style.space(24)
+                    width: Style.space(52)
+                    height: Style.space(28)
                     radius: Style.space(4)
                     color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
                     border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
@@ -354,97 +446,98 @@ Column {
         }
     }
 
-    // Busiest Week Trophy color swatches; gold first (= default).
-    Item {
-        width: root.width
-        height: Math.max(trophyLabel.implicitHeight, trophySwatches.implicitHeight) + Style.space(8)
+    // ---- Daily goal ---------------------------------------------------
 
-        Text {
-            id: trophyLabel
-            text: "Busiest Week Trophy color"
-            color: root.foreground
-            opacity: 0.6
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
+    Text {
+        text: "DAILY GOAL"
+        color: root.foreground
+        opacity: 0.45
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        font.letterSpacing: 1.5
+    }
+
+    // Daily goal presets in hours; 0 is Off. The bar badges a check and
+    // the hero shows remaining once the day reaches the goal.
+    Column {
+        width: root.width
+        spacing: Style.space(6)
+
+        Column {
+            width: parent.width
+            spacing: Style.space(2)
+
+            Text {
+                text: "Daily screen time goal"
+                color: root.foreground
+                opacity: 0.75
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "A check badge appears in the bar when the day reaches it"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                wrapMode: Text.WordWrap
+            }
         }
 
         Row {
-            id: trophySwatches
+            id: goalBoxes
             spacing: Style.space(6)
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
 
             Repeater {
-                model: root.recordColorOptions
+                model: root.dailyGoalOptions
 
                 Rectangle {
-                    required property string modelData
-                    readonly property bool chosen: modelData === root.recordColor
-                    width: Style.space(16)
-                    height: Style.space(16)
-                    radius: Style.space(8)
-                    color: modelData
+                    required property int modelData
+                    readonly property bool chosen: modelData === root.dailyGoalHours
+                    width: modelData === 0 ? Style.space(52) : Style.space(44)
+                    height: Style.space(28)
+                    radius: Style.space(4)
+                    color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
                     border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                    border.width: chosen ? 2 : 1
+                    border.width: 1
+
+                    Text {
+                        text: modelData === 0 ? "Off" : modelData + "h"
+                        color: chosen ? root.accent : root.foreground
+                        opacity: chosen ? 1.0 : 0.6
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: chosen
+                        anchors.centerIn: parent
+                    }
 
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.recordColorSelected(modelData)
+                        onClicked: root.dailyGoalSelected(modelData)
                     }
                 }
             }
         }
     }
 
-    // Hero icon color for the hourglass, the yearly hero and the settings
-    // glyph. Concrete circles only, starting with black and white.
-    Item {
-        width: root.width
-        height: Math.max(heroLabel.implicitHeight, heroSwatches.implicitHeight) + Style.space(8)
+    // ---- Tracking -----------------------------------------------------
 
-        Text {
-            id: heroLabel
-            text: "Hero icons"
-            color: root.foreground
-            opacity: 0.6
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        Row {
-            id: heroSwatches
-            spacing: Style.space(6)
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-
-            Repeater {
-                model: root.heroColorOptions
-
-                Rectangle {
-                    required property string modelData
-                    readonly property bool chosen: modelData === root.heroColor
-                    width: Style.space(16)
-                    height: Style.space(16)
-                    radius: Style.space(8)
-                    color: modelData
-                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                    border.width: chosen ? 2 : 1
-
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.heroColorSelected(modelData)
-                    }
-                }
-            }
-        }
+    Text {
+        text: "TRACKING"
+        color: root.foreground
+        opacity: 0.45
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        font.letterSpacing: 1.5
     }
 
     // Ignored apps: comma-separated names that are never tracked and are
@@ -452,22 +545,37 @@ Column {
     // raw, canonical and display names. Commits on Enter or focus loss.
     Column {
         width: root.width
-        spacing: Style.space(4)
+        spacing: Style.space(6)
 
-        Text {
-            text: "Ignored apps"
-            color: root.foreground
-            opacity: 0.6
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
+        Column {
             width: parent.width
-            elide: Text.ElideRight
+            spacing: Style.space(2)
+
+            Text {
+                text: "Ignored apps"
+                color: root.foreground
+                opacity: 0.75
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "Never tracked, e.g. launcher, portal"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                wrapMode: Text.WordWrap
+            }
         }
 
         Rectangle {
             width: parent.width
-            height: ignoredInput.implicitHeight + Style.space(12)
-            radius: Style.space(4)
+            height: ignoredInput.implicitHeight + Style.space(14)
+            radius: Style.space(6)
             color: "transparent"
             border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
             border.width: 1
@@ -475,7 +583,7 @@ Column {
             TextInput {
                 id: ignoredInput
                 anchors.fill: parent
-                anchors.margins: Style.space(6)
+                anchors.margins: Style.space(8)
                 text: root.ignoredText
                 color: root.foreground
                 font.family: root.fontFamily
@@ -485,38 +593,43 @@ Column {
                 onEditingFinished: root.ignoredEdited(text)
             }
         }
-
-        Text {
-            text: "Never tracked, e.g. launcher, portal"
-            color: root.foreground
-            opacity: 0.4
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            width: parent.width
-            elide: Text.ElideRight
-        }
     }
 
     // Custom aliases: comma-separated from=to renames applied before the
     // built-in browser fold, so terminals and odd ids get your own names.
     Column {
         width: root.width
-        spacing: Style.space(4)
+        spacing: Style.space(6)
 
-        Text {
-            text: "App names"
-            color: root.foreground
-            opacity: 0.6
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
+        Column {
             width: parent.width
-            elide: Text.ElideRight
+            spacing: Style.space(2)
+
+            Text {
+                text: "App names"
+                color: root.foreground
+                opacity: 0.75
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "Rename apps, e.g. foot=terminal, code=work"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                wrapMode: Text.WordWrap
+            }
         }
 
         Rectangle {
             width: parent.width
-            height: aliasesInput.implicitHeight + Style.space(12)
-            radius: Style.space(4)
+            height: aliasesInput.implicitHeight + Style.space(14)
+            radius: Style.space(6)
             color: "transparent"
             border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
             border.width: 1
@@ -524,7 +637,7 @@ Column {
             TextInput {
                 id: aliasesInput
                 anchors.fill: parent
-                anchors.margins: Style.space(6)
+                anchors.margins: Style.space(8)
                 text: root.aliasesText
                 color: root.foreground
                 font.family: root.fontFamily
@@ -534,26 +647,28 @@ Column {
                 onEditingFinished: root.aliasesEdited(text)
             }
         }
+    }
 
-        Text {
-            text: "Rename apps, e.g. foot=terminal, code=work"
-            color: root.foreground
-            opacity: 0.4
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            width: parent.width
-            elide: Text.ElideRight
-        }
+    // ---- Danger zone --------------------------------------------------
+
+    Text {
+        text: "DANGER ZONE"
+        color: root.urgent
+        opacity: 0.8
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+        font.letterSpacing: 1.5
     }
 
     // 3-click reset: arm, confirm, execute. Mouse-leave or 3s disarms.
-    // The sub-line states the blast radius: today only, history is kept.
+    // The hint states the blast radius: today only, history is kept.
     // The state sits in an urgent-bordered box so the destructive action
     // reads as a button, matching the week-window option boxes.
-    Item {
+    Column {
         id: resetRow
         width: root.width
-        height: Math.max(resetLabels.implicitHeight, resetBox.implicitHeight) + Style.space(8)
+        spacing: Style.space(6)
 
         property int stage: 0
 
@@ -566,16 +681,13 @@ Column {
 
         Column {
             id: resetLabels
-            anchors.left: parent.left
-            anchors.right: resetBox.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
+            width: parent.width
+            spacing: Style.space(2)
 
             Text {
                 text: "Reset today"
                 color: root.foreground
-                opacity: 0.6
+                opacity: 0.75
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 width: parent.width
@@ -585,33 +697,35 @@ Column {
             Text {
                 text: "Only today is cleared — past days are kept"
                 color: root.foreground
-                opacity: 0.4
+                opacity: 0.45
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 width: parent.width
-                elide: Text.ElideRight
+                wrapMode: Text.WordWrap
             }
         }
 
-        Rectangle {
-            id: resetBox
+        Row {
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: resetState.implicitWidth + Style.space(16)
-            height: resetState.implicitHeight + Style.space(8)
-            radius: Style.space(4)
-            color: "transparent"
-            border.color: root.urgent
-            border.width: 1
 
-            Text {
-                id: resetState
-                text: resetRow.stage === 0 ? "RESET" : resetRow.stage === 1 ? "SURE?" : "REALLY?"
-                color: root.urgent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
-                anchors.centerIn: parent
+            Rectangle {
+                id: resetBox
+                width: resetState.implicitWidth + Style.space(20)
+                height: resetState.implicitHeight + Style.space(10)
+                radius: Style.space(4)
+                color: "transparent"
+                border.color: root.urgent
+                border.width: 1
+
+                Text {
+                    id: resetState
+                    text: resetRow.stage === 0 ? "RESET" : resetRow.stage === 1 ? "SURE?" : "REALLY?"
+                    color: root.urgent
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: true
+                    anchors.centerIn: parent
+                }
             }
         }
 
@@ -639,12 +753,12 @@ Column {
     }
 
     // 4-click wipe: arm, confirm, acknowledge irreversibility, execute.
-    // Mouse-leave or 5s disarms. The sub-line names the full blast radius
+    // Mouse-leave or 5s disarms. The hint names the full blast radius
     // and the lack of undo, so the wipe is a conscious decision.
-    Item {
+    Column {
         id: wipeRow
         width: root.width
-        height: Math.max(wipeLabels.implicitHeight, wipeBox.implicitHeight) + Style.space(8)
+        spacing: Style.space(6)
 
         property int stage: 0
 
@@ -657,16 +771,13 @@ Column {
 
         Column {
             id: wipeLabels
-            anchors.left: parent.left
-            anchors.right: wipeBox.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
+            width: parent.width
+            spacing: Style.space(2)
 
             Text {
                 text: "Wipe all history"
                 color: root.foreground
-                opacity: 0.6
+                opacity: 0.75
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 width: parent.width
@@ -681,29 +792,31 @@ Column {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 width: parent.width
-                elide: Text.ElideRight
+                wrapMode: Text.WordWrap
             }
         }
 
-        Rectangle {
-            id: wipeBox
+        Row {
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: wipeState.implicitWidth + Style.space(16)
-            height: wipeState.implicitHeight + Style.space(8)
-            radius: Style.space(4)
-            color: wipeRow.stage >= 2 ? Qt.rgba(root.urgent.r, root.urgent.g, root.urgent.b, 0.15) : "transparent"
-            border.color: root.urgent
-            border.width: wipeRow.stage >= 2 ? 2 : 1
 
-            Text {
-                id: wipeState
-                text: wipeRow.stage === 0 ? "WIPE ALL" : wipeRow.stage === 1 ? "SURE?" : wipeRow.stage === 2 ? "NO UNDO!" : "WIPE!"
-                color: root.urgent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
-                anchors.centerIn: parent
+            Rectangle {
+                id: wipeBox
+                width: wipeState.implicitWidth + Style.space(20)
+                height: wipeState.implicitHeight + Style.space(10)
+                radius: Style.space(4)
+                color: wipeRow.stage >= 2 ? Qt.rgba(root.urgent.r, root.urgent.g, root.urgent.b, 0.15) : "transparent"
+                border.color: root.urgent
+                border.width: wipeRow.stage >= 2 ? 2 : 1
+
+                Text {
+                    id: wipeState
+                    text: wipeRow.stage === 0 ? "WIPE ALL" : wipeRow.stage === 1 ? "SURE?" : wipeRow.stage === 2 ? "NO UNDO!" : "WIPE!"
+                    color: root.urgent
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: true
+                    anchors.centerIn: parent
+                }
             }
         }
 
