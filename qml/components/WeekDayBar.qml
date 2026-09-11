@@ -13,8 +13,20 @@ Item {
     required property color foreground
     required property color accent
     required property string fontFamily
+    required property bool hintMode
+    required property int dayNumber
 
     signal selected(string key)
+
+    HintBadge {
+        label: String(day.dayNumber)
+        fontFamily: day.fontFamily
+        accent: day.accent
+        foreground: day.foreground
+        show: day.hintMode && !day.isFuture && !day.isEmpty
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+    }
 
     // Parent Row spacing is 0; one seventh of its width per day.
     width: parent.width / 7

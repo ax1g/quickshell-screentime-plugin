@@ -16,6 +16,8 @@ Item {
     required property bool calendarEnabled
     required property bool easterEggs
     required property bool configOpen
+    required property bool hintMode
+    required property color accent
     required property double dayTotal
     required property string activeDayKey
     required property string activeDayLabel
@@ -96,6 +98,16 @@ Item {
         }
     }
 
+    HintBadge {
+        label: "y"
+        fontFamily: heroHeader.fontFamily
+        accent: heroHeader.accent
+        foreground: heroHeader.foreground
+        show: heroHeader.hintMode && heroHeader.calendarEnabled
+        anchors.top: heroIcon.top
+        anchors.left: heroIcon.left
+    }
+
     // Gold sparkles burst around the cursor on hover-enter.
     Item {
         id: sparkles
@@ -166,6 +178,16 @@ Item {
         }
     }
 
+    HintBadge {
+        label: "c"
+        fontFamily: heroHeader.fontFamily
+        accent: heroHeader.accent
+        foreground: heroHeader.foreground
+        show: heroHeader.hintMode
+        anchors.top: configGear.top
+        anchors.right: configGear.right
+    }
+
     Row {
         id: showMoreCorner
         spacing: Style.space(4)
@@ -197,6 +219,16 @@ Item {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: heroHeader.expandToggled()
+    }
+
+    HintBadge {
+        label: "m"
+        fontFamily: heroHeader.fontFamily
+        accent: heroHeader.accent
+        foreground: heroHeader.foreground
+        show: heroHeader.hintMode
+        anchors.top: showMoreCorner.top
+        anchors.right: showMoreCorner.right
     }
 
     Column {

@@ -726,3 +726,34 @@ test("hint badge contracts to zero when hidden", () => {
   assert.match(badge, /width: visible \? implicitWidth : 0/)
   assert.match(badge, /height: visible \? implicitHeight : 0/)
 })
+
+test("main surfaces badge hint letters", () => {
+  const daybar = comp("WeekDayBar.qml")
+  assert.match(hero, /required property bool hintMode/)
+  assert.match(hero, /required property color accent/)
+  assert.match(panel, /hintMode: root\.hintMode/)
+  assert.match(panel, /accent: Color\.accent/)
+  assert.match(trend, /required property bool hintMode/)
+  for (const tag of ['label: "y"', 'label: "c"', 'label: "m"']) {
+    assert.match(hero, new RegExp(tag))
+  }
+  for (const tag of ['label: "b"', 'label: "n"', 'label: "t"']) {
+    assert.match(trend, new RegExp(tag))
+  }
+  assert.match(
+    trend,
+    /show: root\.hintMode && root\.weekOffset < root\.maxOffset && root\.hasPrevWeekData/,
+  )
+  assert.match(trend, /show: root\.hintMode && root\.weekOffset > 0/)
+  assert.match(daybar, /required property bool hintMode/)
+  assert.match(daybar, /required property int dayNumber/)
+  assert.match(daybar, /show: day\.hintMode && !day\.isFuture && !day\.isEmpty/)
+  assert.match(trend, /dayNumber: index \+ 1/)
+})
+
+test("hint activation mirrors the click guards", () => {
+  assert.match(panel, /tag === "y" && !root\.hideYearly/)
+  assert.match(panel, /tag === "b" && root\.expanded/)
+  assert.match(panel, /!day\.isFuture && \(Number\(day\.ms\) \|\| 0\) > 0/)
+  assert.match(panel, /if \(handled\)\s*\n\s*root\.hintMode = false/)
+})

@@ -22,6 +22,7 @@ Column {
     required property string activeDayKey
     required property color recordColor
     required property bool showRecordTrophy
+    required property bool hintMode
 
     signal prevWeekRequested
     signal nextWeekRequested
@@ -43,12 +44,23 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
 
             PagerArrow {
+                id: prevArrow
                 glyph: "\uf053"
                 active: root.weekOffset < root.maxOffset && root.hasPrevWeekData
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
                 onClicked: root.prevWeekRequested()
+            }
+
+            HintBadge {
+                label: "b"
+                fontFamily: root.fontFamily
+                accent: root.accent
+                foreground: root.foreground
+                show: root.hintMode && root.weekOffset < root.maxOffset && root.hasPrevWeekData
+                anchors.top: prevArrow.top
+                anchors.left: prevArrow.left
             }
 
             Text {
@@ -64,12 +76,23 @@ Column {
             }
 
             PagerArrow {
+                id: nextArrow
                 glyph: "\uf054"
                 active: root.weekOffset > 0
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
                 onClicked: root.nextWeekRequested()
+            }
+
+            HintBadge {
+                label: "n"
+                fontFamily: root.fontFamily
+                accent: root.accent
+                foreground: root.foreground
+                show: root.hintMode && root.weekOffset > 0
+                anchors.top: nextArrow.top
+                anchors.left: nextArrow.left
             }
         }
 
@@ -114,6 +137,16 @@ Column {
             anchors.right: parent.right
             anchors.rightMargin: Style.space(2)
             anchors.verticalCenter: parent.verticalCenter
+
+            HintBadge {
+                label: "t"
+                fontFamily: root.fontFamily
+                accent: root.accent
+                foreground: root.foreground
+                show: root.hintMode
+                anchors.top: weekTotalLabel.top
+                anchors.right: weekTotalLabel.right
+            }
 
             MouseArea {
                 id: weekTotalMouse
@@ -181,6 +214,8 @@ Column {
                         foreground: root.foreground
                         accent: root.accent
                         fontFamily: root.fontFamily
+                        hintMode: root.hintMode
+                        dayNumber: index + 1
                         onSelected: function (key) {
                             root.daySelected(key);
                         }

@@ -728,6 +728,8 @@ Panel {
                         activeDayKey: root.activeDayKey
                         activeDayLabel: root.activeDayLabel
                         goalProgress: root.goalProgress
+                        hintMode: root.hintMode
+                        accent: Color.accent
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)
@@ -851,6 +853,7 @@ Panel {
                                 axisMaxMs: root.axisMaxMs
                                 activeDayKey: root.activeDayKey
                                 recordColor: root.recordColor
+                                hintMode: root.hintMode
                                 onPrevWeekRequested: root.weekOffset = Math.min(root.maxWeekOffset, root.weekOffset + 1)
                                 onNextWeekRequested: root.weekOffset = Math.max(0, root.weekOffset - 1)
                                 onWeekTotalToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
