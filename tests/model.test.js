@@ -1065,7 +1065,10 @@ test("yearFacts builds the wrapped summary for a full archived year", () => {
   assert.match(find("DAY COUNT").value, /Active on 9 of 357 tracked days/)
   assert.match(find("LONGEST STREAK").value, /3 days in a row/)
   assert.match(find("LONGEST STREAK").sub, /Feb/)
-  assert.equal(find("TOP MONTHS").value, "\uF091 Mar ● Feb ● Jan")
+  assert.equal(
+    find("TOP MONTHS").value,
+    '<font color="#FFD700">\uF091</font> Mar · <font color="#C0C0C0">\uF091</font> Feb · <font color="#CD7F32">\uF091</font> Jan',
+  )
   assert.match(find("AVERAGE SCREEN DAY").value, /4h 53m per active day/)
   assert.match(find("WEEKDAY RHYTHM").value, /Mon leads · 91% weekdays/)
   assert.match(find("PEAK DAY").value, /Mar 9 · 11h, the year's high/)
@@ -1078,12 +1081,12 @@ test("yearFacts builds the wrapped summary for a full archived year", () => {
     assert.ok(c.glyph && c.label && c.value && c.sub && c.color)
 })
 
-test("TOP MONTHS lists months as blobs with no rank numbers", () => {
+test("TOP MONTHS medals months with middle dots", () => {
   const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
   const cards = Model.yearFacts({}, months, {}, 2026, "2026-12-24")
   assert.equal(
     cards.find((c) => c.label === "TOP MONTHS").value,
-    "\uF091 Mar ● Jan",
+    '<font color="#FFD700"></font> Mar · <font color="#C0C0C0"></font> Jan',
   )
 })
 

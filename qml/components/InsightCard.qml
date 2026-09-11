@@ -59,6 +59,10 @@ Rectangle {
         }
 
         Text {
+            id: cardStat
+            // Rich text so values can carry inline markup (the TOP
+            // MONTHS medals); plain values render exactly as before.
+            textFormat: Text.RichText
             text: insightCard.stat
             color: insightCard.foreground
             font.family: insightCard.fontFamily

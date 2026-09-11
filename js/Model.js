@@ -1731,11 +1731,16 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
 
   if (top.length > 0) {
     var rank = []
-    for (var r = 0; r < top.length && r < 3; r++) rank.push(top[r].label)
+    // Gold, silver, bronze: one trophy per medal, months joined by the
+    // same middle dot the SCREEN SHARE card divides its text with.
+    var medals = ["#FFD700", "#C0C0C0", "#CD7F32"]
+    for (var r = 0; r < top.length && r < 3; r++) {
+      rank.push('<font color="' + medals[r] + '">\uF091</font> ' + top[r].label)
+    }
     out.push({
       glyph: "\uF0E7",
       label: "TOP MONTHS",
-      value: "\uF091 " + rank.join(" \u25CF "),
+      value: rank.join(" \u00B7 "),
       sub: "Your heavy-hitting months, ranked.",
     })
   }

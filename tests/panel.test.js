@@ -631,3 +631,9 @@ test("alias removal needs two clicks on a left cross", () => {
   assert.match(menu, /if \(aliasEntry\.armed\)/)
   assert.match(menu, /root\.aliasRemoved\(modelData\.from\)/)
 })
+
+test("year cards render values as rich text for medal markup", () => {
+  const card = comp("InsightCard.qml")
+  assert.match(card, /textFormat: Text\.RichText/)
+  assert.match(card, /text: insightCard\.stat/)
+})
