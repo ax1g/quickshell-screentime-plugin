@@ -196,6 +196,10 @@ BarWidget {
             if (root.service)
                 root.service.resetToday();
         }
+        function resetAll(): void {
+            if (root.service)
+                root.service.resetAll();
+        }
         function status(): void {
             var p = panelLoader.item;
             console.log("agx.screen-time status: opened=" + (p ? p.opened : "no-panel") + " label=" + root.label + " hasActivity=" + root.hasActivity + " apps=" + (root.service ? root.service.appList().length : "none"));

@@ -18,6 +18,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   built-in browser fold.
 - Daily goal: Off/4/6/8h presets with a check badge in the bar, remaining
   time in the tooltip, and a progress bar under the hero total.
+- Wipe all history: a four-click staged control (WIPE ALL → SURE? → NO
+  UNDO! → WIPE!, 5s auto-disarm) that erases every day, month lump and
+  archive entry with no backup, also reachable via
+  `quickshell ipc call agx.screen-time resetAll`.
 
 ### Fixed
 

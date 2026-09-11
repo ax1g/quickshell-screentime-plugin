@@ -482,6 +482,10 @@ Panel {
                                 if (root.service)
                                     root.service.resetToday();
                             }
+                            onWipeRequested: {
+                                if (root.service)
+                                    root.service.resetAll();
+                            }
                         }
                     }
                 }

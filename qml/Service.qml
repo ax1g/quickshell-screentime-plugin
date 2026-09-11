@@ -243,6 +243,28 @@ Item {
         root.persist();
     }
 
+    // Wipes ALL history: live day, day mirror, month lumps and the per-day
+    // archive. Irreversible: no backup is kept, and the file is overwritten
+    // on the next save. The focused app keeps running with activeStart
+    // rebased so cleared time can't come back.
+    function resetAll() {
+        if (!root.ready)
+            return;
+        var now = Date.now();
+        root.today = Model.newDay();
+        root.days = {};
+        root.months = {};
+        root.years = {};
+        // persist() only syncs days (and years when pruned), never months:
+        // clear the adapters outright so stale lumps can't come back.
+        historyAdapter.months = {};
+        historyAdapter.years = {};
+        if (root.activeApp)
+            root.activeStart = now;
+        root.lastTick = now;
+        root.persist();
+    }
+
     // ---- Persistence -------------------------------------------------------
 
     // Fold today into a fresh mirror object so the adapter notifier fires.

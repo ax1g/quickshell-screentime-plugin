@@ -246,3 +246,15 @@ test("daily goal threads from prefs to bar badge and hero bar", () => {
   assert.match(bar, /root\.goalReached \? " ✓" : ""/)
   assert.match(bar, /root\.goalTooltip/)
 })
+
+test("wipe-all needs four conscious clicks and names the blast radius", () => {
+  assert.match(service, /function resetAll\(\)/)
+  assert.match(bar, /function resetAll\(\): void/)
+  assert.match(menu, /signal wipeRequested/)
+  assert.match(menu, /id: wipeRow/)
+  assert.match(menu, /interval: 5000/)
+  assert.match(menu, /cannot be undone/)
+  assert.match(menu, /wipeRow\.stage >= 3/)
+  assert.match(menu, /root\.wipeRequested\(\)/)
+  assert.match(panel, /root\.service\.resetAll\(\)/)
+})

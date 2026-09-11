@@ -121,3 +121,17 @@ test("tracking prefs filter ignored apps and rename via aliases", () => {
   assert.match(service, /Model\.isIgnoredApp\(appId, root\.ignoredApps\)/)
   assert.match(service, /Model\.resolveAppName\(app, root\.appAliases\)/)
 })
+
+test("resetAll wipes days, months and archive, then persists", () => {
+  assert.match(service, /function resetAll\(\)/)
+  const reset = service.match(/function resetAll\(\) \{[\s\S]*?\n    \}/)
+  assert(reset, "resetAll block exists")
+  assert(reset[0].includes("root.today = Model.newDay()"))
+  assert(reset[0].includes("root.days = {}"))
+  assert(reset[0].includes("root.months = {}"))
+  assert(reset[0].includes("root.years = {}"))
+  assert(reset[0].includes("historyAdapter.months = {}"))
+  assert(reset[0].includes("historyAdapter.years = {}"))
+  assert(reset[0].includes("root.persist()"))
+  assert(reset[0].includes("root.activeStart = now"))
+})

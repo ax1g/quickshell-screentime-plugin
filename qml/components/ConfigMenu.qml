@@ -45,6 +45,7 @@ Column {
     signal aliasesEdited(string text)
     signal dailyGoalSelected(int hours)
     signal resetRequested
+    signal wipeRequested
 
     width: parent.width
     spacing: Style.space(8)
@@ -580,6 +581,98 @@ Column {
                 if (!containsMouse && resetRow.stage > 0) {
                     resetRow.stage = 0;
                     resetRevertTimer.stop();
+                }
+            }
+        }
+    }
+
+    // 4-click wipe: arm, confirm, acknowledge irreversibility, execute.
+    // Mouse-leave or 5s disarms. The sub-line names the full blast radius
+    // and the lack of undo, so the wipe is a conscious decision.
+    Item {
+        id: wipeRow
+        width: root.width
+        height: Math.max(wipeLabels.implicitHeight, wipeBox.implicitHeight) + Style.space(8)
+
+        property int stage: 0
+
+        Timer {
+            id: wipeRevertTimer
+            interval: 5000
+            repeat: false
+            onTriggered: wipeRow.stage = 0
+        }
+
+        Column {
+            id: wipeLabels
+            anchors.left: parent.left
+            anchors.right: wipeBox.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+
+            Text {
+                text: "Wipe all history"
+                color: root.foreground
+                opacity: 0.6
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: "Every day, month and archive — cannot be undone"
+                color: root.urgent
+                opacity: 0.8
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                width: parent.width
+                elide: Text.ElideRight
+            }
+        }
+
+        Rectangle {
+            id: wipeBox
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: wipeState.implicitWidth + Style.space(16)
+            height: wipeState.implicitHeight + Style.space(8)
+            radius: Style.space(4)
+            color: wipeRow.stage >= 2 ? Qt.rgba(root.urgent.r, root.urgent.g, root.urgent.b, 0.15) : "transparent"
+            border.color: root.urgent
+            border.width: wipeRow.stage >= 2 ? 2 : 1
+
+            Text {
+                id: wipeState
+                text: wipeRow.stage === 0 ? "WIPE ALL" : wipeRow.stage === 1 ? "SURE?" : wipeRow.stage === 2 ? "NO UNDO!" : "WIPE!"
+                color: root.urgent
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                font.bold: true
+                anchors.centerIn: parent
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                if (wipeRow.stage >= 3) {
+                    wipeRow.stage = 0;
+                    wipeRevertTimer.stop();
+                    root.wipeRequested();
+                } else {
+                    wipeRow.stage++;
+                    wipeRevertTimer.restart();
+                }
+            }
+            onContainsMouseChanged: {
+                if (!containsMouse && wipeRow.stage > 0) {
+                    wipeRow.stage = 0;
+                    wipeRevertTimer.stop();
                 }
             }
         }
