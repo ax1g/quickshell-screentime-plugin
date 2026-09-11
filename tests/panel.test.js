@@ -340,9 +340,45 @@ test("first-run onboarding shows coach marks until anything is tracked", () => {
 
 test("staged rows size explicitly so a fill mousearea cannot collapse them", () => {
   assert.match(menu, /Item \{\s*\n\s*id: resetRow/)
-  assert.match(menu, /height: resetContent\.implicitHeight/)
+  assert.match(
+    menu,
+    /height: Math\.max\(resetLabels\.implicitHeight, resetBtnRow\.height\)/,
+  )
   assert.match(menu, /Item \{\s*\n\s*id: wipeRow/)
-  assert.match(menu, /height: wipeContent\.implicitHeight/)
+  assert.match(
+    menu,
+    /height: Math\.max\(wipeLabels\.implicitHeight, wipeBtnRow\.height\)/,
+  )
+})
+
+test("danger buttons pin top-right beside early-wrapping labels", () => {
+  for (const [labels, buttons] of [
+    ["resetLabels", "resetBtnRow"],
+    ["wipeLabels", "wipeBtnRow"],
+  ]) {
+    assert.match(
+      menu,
+      new RegExp(
+        "id: " +
+          buttons +
+          "\\s*\\n\\s*anchors\\.right: parent\\.right\\s*\\n\\s*anchors\\.top: parent\\.top",
+      ),
+    )
+    assert.match(
+      menu,
+      new RegExp(
+        "id: " +
+          labels +
+          "[\\s\\S]*?width: parent\\.width - " +
+          buttons +
+          "\\.width",
+      ),
+    )
+  }
+  assert.match(
+    menu,
+    /text: wipeRow\.stage === 0 \? "WIPE ALL"[\s\S]*?"CAN'T UNDO!"[\s\S]*?"WIPE!"/,
+  )
 })
 
 test("option pills align left under their labels", () => {
