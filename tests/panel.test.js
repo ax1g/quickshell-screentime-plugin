@@ -501,7 +501,7 @@ test("settings header icon returns to the main panel", () => {
 })
 
 test("help section links out with icons and a privacy note", () => {
-  assert.match(menu, /text: "HELP"/)
+  assert.match(menu, /text: "CONTRIBUTION"/)
   assert.match(menu, /Private by design/)
   assert.match(menu, /issues\/new/)
   assert.match(menu, /"Report a bug"/)

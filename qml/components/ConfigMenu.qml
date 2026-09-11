@@ -1077,7 +1077,7 @@ Column {
             spacing: Style.space(10)
 
             Text {
-                text: "HELP"
+                text: "CONTRIBUTION"
                 color: root.accent
                 opacity: 0.9
                 font.family: root.fontFamily
