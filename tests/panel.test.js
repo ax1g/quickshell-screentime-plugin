@@ -314,3 +314,10 @@ test("first-run onboarding shows coach marks until anything is tracked", () => {
   assert.match(panel, /Terminals track what runs inside/)
   assert.match(panel, /gear for settings/)
 })
+
+test("staged rows size explicitly so a fill mousearea cannot collapse them", () => {
+  assert.match(menu, /Item \{\s*\n\s*id: resetRow/)
+  assert.match(menu, /height: resetContent\.implicitHeight/)
+  assert.match(menu, /Item \{\s*\n\s*id: wipeRow/)
+  assert.match(menu, /height: wipeContent\.implicitHeight/)
+})

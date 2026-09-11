@@ -977,11 +977,12 @@ Column {
 
             // 3-click reset: arm, confirm, execute. Mouse-leave or 3s
             // disarms. The hint states the blast radius: today only,
-            // history is kept.
-            Column {
+            // history is kept. The outer height is explicit so the
+            // fill-anchored MouseArea below can't collapse the column.
+            Item {
                 id: resetRow
                 width: parent.width
-                spacing: Style.space(6)
+                height: resetContent.implicitHeight
 
                 property int stage: 0
 
@@ -990,56 +991,6 @@ Column {
                     interval: 3000
                     repeat: false
                     onTriggered: resetRow.stage = 0
-                }
-
-                Column {
-                    id: resetLabels
-                    width: parent.width
-                    spacing: Style.space(2)
-
-                    Text {
-                        text: "Reset today"
-                        color: root.foreground
-                        opacity: 0.75
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.bodySmall
-                        width: parent.width
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        text: "Only today is cleared — past days are kept"
-                        color: root.foreground
-                        opacity: 0.45
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                    }
-                }
-
-                Row {
-                    anchors.right: parent.right
-
-                    Rectangle {
-                        id: resetBox
-                        width: resetState.implicitWidth + Style.space(20)
-                        height: resetState.implicitHeight + Style.space(10)
-                        radius: Style.space(4)
-                        color: "transparent"
-                        border.color: root.urgent
-                        border.width: 1
-
-                        Text {
-                            id: resetState
-                            text: resetRow.stage === 0 ? "RESET" : resetRow.stage === 1 ? "SURE?" : "REALLY?"
-                            color: root.urgent
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.bodySmall
-                            font.bold: true
-                            anchors.centerIn: parent
-                        }
-                    }
                 }
 
                 MouseArea {
@@ -1063,15 +1014,73 @@ Column {
                         }
                     }
                 }
+
+                Column {
+                    id: resetContent
+                    width: parent.width
+                    spacing: Style.space(6)
+
+                    Column {
+                        id: resetLabels
+                        width: parent.width
+                        spacing: Style.space(2)
+
+                        Text {
+                            text: "Reset today"
+                            color: root.foreground
+                            opacity: 0.75
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            width: parent.width
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: "Only today is cleared — past days are kept"
+                            color: root.foreground
+                            opacity: 0.45
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    Row {
+                        anchors.right: parent.right
+
+                        Rectangle {
+                            id: resetBox
+                            width: resetState.implicitWidth + Style.space(20)
+                            height: resetState.implicitHeight + Style.space(10)
+                            radius: Style.space(4)
+                            color: "transparent"
+                            border.color: root.urgent
+                            border.width: 1
+
+                            Text {
+                                id: resetState
+                                text: resetRow.stage === 0 ? "RESET" : resetRow.stage === 1 ? "SURE?" : "REALLY?"
+                                color: root.urgent
+                                font.family: root.fontFamily
+                                font.pixelSize: Style.font.bodySmall
+                                font.bold: true
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
+                }
             }
 
             // 4-click wipe: arm, confirm, acknowledge irreversibility,
             // execute. Mouse-leave or 5s disarms. The hint names the full
             // blast radius and the lack of undo, so the wipe is conscious.
-            Column {
+            // Explicit outer height like the reset row above: a
+            // fill-anchored MouseArea must never size its own column.
+            Item {
                 id: wipeRow
                 width: parent.width
-                spacing: Style.space(6)
+                height: wipeContent.implicitHeight
 
                 property int stage: 0
 
@@ -1080,57 +1089,6 @@ Column {
                     interval: 5000
                     repeat: false
                     onTriggered: wipeRow.stage = 0
-                }
-
-                Column {
-                    id: wipeLabels
-                    width: parent.width
-                    spacing: Style.space(2)
-
-                    Text {
-                        text: "Wipe all history"
-                        color: root.foreground
-                        opacity: 0.75
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.bodySmall
-                        width: parent.width
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        text: "Every day, month and archive — cannot be undone"
-                        color: root.urgent
-                        opacity: 0.8
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
-                        font.bold: true
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                    }
-                }
-
-                Row {
-                    anchors.right: parent.right
-
-                    Rectangle {
-                        id: wipeBox
-                        width: wipeState.implicitWidth + Style.space(20)
-                        height: wipeState.implicitHeight + Style.space(10)
-                        radius: Style.space(4)
-                        color: wipeRow.stage >= 2 ? Qt.rgba(root.urgent.r, root.urgent.g, root.urgent.b, 0.15) : "transparent"
-                        border.color: root.urgent
-                        border.width: wipeRow.stage >= 2 ? 2 : 1
-
-                        Text {
-                            id: wipeState
-                            text: wipeRow.stage === 0 ? "WIPE ALL" : wipeRow.stage === 1 ? "SURE?" : wipeRow.stage === 2 ? "NO UNDO!" : "WIPE!"
-                            color: root.urgent
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.bodySmall
-                            font.bold: true
-                            anchors.centerIn: parent
-                        }
-                    }
                 }
 
                 MouseArea {
@@ -1151,6 +1109,63 @@ Column {
                         if (!containsMouse && wipeRow.stage > 0) {
                             wipeRow.stage = 0;
                             wipeRevertTimer.stop();
+                        }
+                    }
+                }
+
+                Column {
+                    id: wipeContent
+                    width: parent.width
+                    spacing: Style.space(6)
+
+                    Column {
+                        id: wipeLabels
+                        width: parent.width
+                        spacing: Style.space(2)
+
+                        Text {
+                            text: "Wipe all history"
+                            color: root.foreground
+                            opacity: 0.75
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            width: parent.width
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: "Every day, month and archive — cannot be undone"
+                            color: root.urgent
+                            opacity: 0.8
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: true
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    Row {
+                        anchors.right: parent.right
+
+                        Rectangle {
+                            id: wipeBox
+                            width: wipeState.implicitWidth + Style.space(20)
+                            height: wipeState.implicitHeight + Style.space(10)
+                            radius: Style.space(4)
+                            color: wipeRow.stage >= 2 ? Qt.rgba(root.urgent.r, root.urgent.g, root.urgent.b, 0.15) : "transparent"
+                            border.color: root.urgent
+                            border.width: wipeRow.stage >= 2 ? 2 : 1
+
+                            Text {
+                                id: wipeState
+                                text: wipeRow.stage === 0 ? "WIPE ALL" : wipeRow.stage === 1 ? "SURE?" : wipeRow.stage === 2 ? "NO UNDO!" : "WIPE!"
+                                color: root.urgent
+                                font.family: root.fontFamily
+                                font.pixelSize: Style.font.bodySmall
+                                font.bold: true
+                                anchors.centerIn: parent
+                            }
                         }
                     }
                 }
