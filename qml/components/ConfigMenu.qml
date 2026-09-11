@@ -1492,16 +1492,6 @@ Column {
             anchors.margins: Style.space(12)
             spacing: Style.space(10)
 
-            Text {
-                text: "ABOUT"
-                color: root.foreground
-                opacity: 0.45
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                font.letterSpacing: 1.5
-            }
-
             Column {
                 width: parent.width
                 spacing: Style.space(6)

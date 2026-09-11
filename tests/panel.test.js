@@ -567,7 +567,7 @@ test("about shows the manifest version", () => {
   )
   assert.match(menu, /required property string pluginVersion/)
   assert.match(panel, /pluginVersion: root\.pluginVersion/)
-  assert.match(menu, /text: "ABOUT"/)
+  assert.doesNotMatch(menu, /text: "ABOUT"/)
   assert.match(menu, /text: "Screen Time"/)
   assert.match(menu, /"v" \+ root\.pluginVersion/)
   assert.match(menu, /Know where your time goes/)

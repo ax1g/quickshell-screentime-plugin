@@ -106,9 +106,7 @@ TestCase {
     }
 
     function test_aboutRenders() {
-        var about = findText("ABOUT");
+        var about = findText("Screen Time");
         verify(about !== null && about.height > 0 && ancestorsOccupy(about), "about card occupies");
-        var name = findText("Screen Time");
-        verify(name !== null && name.height > 0 && ancestorsOccupy(name), "about title occupies");
     }
 }
