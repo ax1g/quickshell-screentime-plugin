@@ -2116,3 +2116,72 @@ test("refoldDay inverts through an inverse map on removal", () => {
     apps: { zen: 90000 },
   })
 })
+
+test("parseGoalLog keeps valid entries sorted with latest per day", () => {
+  assert.deepEqual(Model.parseGoalLog(undefined), [])
+  assert.deepEqual(Model.parseGoalLog("nope"), [])
+  assert.deepEqual(
+    Model.parseGoalLog([
+      { day: "2026-09-13", hours: 8 },
+      { day: "2026-09-11", hours: 6 },
+      { day: "2026-09-11", hours: 4 },
+      { day: "junk", hours: 6 },
+      { day: "2026-09-12", hours: 99 },
+    ]),
+    [
+      { day: "2026-09-11", hours: 4 },
+      { day: "2026-09-13", hours: 8 },
+    ],
+  )
+})
+
+test("goalForDay returns the hours in force that day", () => {
+  const log = [
+    { day: "2026-09-11", hours: 6 },
+    { day: "2026-09-12", hours: 0 },
+    { day: "2026-09-13", hours: 8 },
+  ]
+  assert.equal(Model.goalForDay(log, "2026-09-10"), 0)
+  assert.equal(Model.goalForDay(log, "2026-09-11"), 6)
+  assert.equal(Model.goalForDay(log, "2026-09-12"), 0)
+  assert.equal(Model.goalForDay(log, "2026-09-13"), 8)
+  assert.equal(Model.goalForDay(log, "2026-09-20"), 8)
+  assert.equal(Model.goalForDay(null, "2026-09-11"), 0)
+  assert.equal(Model.goalForDay(log, ""), 0)
+})
+
+test("logGoalChange appends, replaces same-day, and caps", () => {
+  assert.deepEqual(Model.logGoalChange([], "2026-09-11", 6), [
+    { day: "2026-09-11", hours: 6 },
+  ])
+  assert.deepEqual(
+    Model.logGoalChange([{ day: "2026-09-11", hours: 6 }], "2026-09-11", 8),
+    [{ day: "2026-09-11", hours: 8 }],
+  )
+  assert.deepEqual(
+    Model.logGoalChange([{ day: "2026-09-10", hours: 6 }], "2026-09-11", 0),
+    [
+      { day: "2026-09-10", hours: 6 },
+      { day: "2026-09-11", hours: 0 },
+    ],
+  )
+  assert.deepEqual(Model.logGoalChange([], "junk", 6), [])
+  let log = []
+  const months = ["2025", "2026"]
+  for (const y of months) {
+    for (let m = 1; m <= 12; m++) {
+      for (let d = 1; d <= 28; d++) {
+        const key =
+          y +
+          "-" +
+          String(m).padStart(2, "0") +
+          "-" +
+          String(d).padStart(2, "0")
+        log = Model.logGoalChange(log, key, 6)
+      }
+    }
+  }
+  assert.ok(log.length <= Model.GOAL_LOG_MAX)
+  assert.equal(log[log.length - 1].day, "2026-12-28")
+  assert.equal(log[0].day > "2025-01-01", true)
+})

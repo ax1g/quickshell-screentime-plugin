@@ -454,6 +454,71 @@ function isMonthKey(key) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(key || ""))
 }
 
+// Goal history: [{ day: "YYYY-MM-DD", hours }] recording every change.
+// The goal counts from the day it is set; earlier days never show it,
+// and each day keeps the goal it had (goals may differ day to day).
+function parseGoalLog(value) {
+  var out = []
+  var raw = Array.isArray(value) ? value : []
+  for (var i = 0; i < raw.length; i++) {
+    var e = raw[i] || {}
+    var day = String(e.day || "")
+    var h = Math.floor(Number(e.hours))
+    if (!isDayKey(day) || !isFinite(h) || h < 0 || h > 24) continue
+    out.push({ day: day, hours: h })
+  }
+  // Latest entry wins per day, chronological order.
+  var byDay = {}
+  for (var j = 0; j < out.length; j++) byDay[out[j].day] = out[j].hours
+  var days = Object.keys(byDay).sort()
+  var clean = []
+  for (var k = 0; k < days.length; k++) {
+    clean.push({ day: days[k], hours: byDay[days[k]] })
+  }
+  return clean
+}
+
+// Hours in force on key: the latest entry on or before it, else 0 (off).
+function goalForDay(log, key) {
+  var k = String(key || "")
+  var best = ""
+  var hours = 0
+  var list = Array.isArray(log) ? log : []
+  for (var i = 0; i < list.length; i++) {
+    var e = list[i] || {}
+    var day = String(e.day || "")
+    if (!isDayKey(day) || day > k) continue
+    var h = Math.floor(Number(e.hours))
+    if (!isFinite(h) || h < 0 || h > 24) continue
+    if (day >= best) {
+      best = day
+      hours = h
+    }
+  }
+  return hours
+}
+
+// Record a goal change made today: replaces today's entry when the goal
+// already changed today, else appends. Bounded so restless toggling
+// can't grow settings without limit.
+var GOAL_LOG_MAX = 500
+function logGoalChange(log, todayKey, hours) {
+  var h = Math.floor(Number(hours))
+  if (!isFinite(h) || h < 0 || h > 24) h = 0
+  var tk = isDayKey(todayKey) ? String(todayKey) : ""
+  var clean = []
+  var base = parseGoalLog(log)
+  for (var i = 0; i < base.length; i++) {
+    if (base[i].day !== tk) clean.push(base[i])
+  }
+  if (tk) clean.push({ day: tk, hours: h })
+  clean.sort(function (a, b) {
+    return a.day < b.day ? -1 : 1
+  })
+  while (clean.length > GOAL_LOG_MAX) clean.shift()
+  return clean
+}
+
 // Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
@@ -1901,6 +1966,10 @@ if (typeof module !== "undefined" && module && module.exports) {
     DAILY_GOAL_PRESETS: DAILY_GOAL_PRESETS,
     parseDailyGoalHours: parseDailyGoalHours,
     goalProgress: goalProgress,
+    GOAL_LOG_MAX: GOAL_LOG_MAX,
+    parseGoalLog: parseGoalLog,
+    goalForDay: goalForDay,
+    logGoalChange: logGoalChange,
     KEEP_DAYS_OPTIONS: KEEP_DAYS_OPTIONS,
     parseKeepDays: parseKeepDays,
     minKeepDays: minKeepDays,
