@@ -228,19 +228,6 @@ Item {
                 }
                 readonly property bool isThisYear: root.currentYear === new Date().getFullYear()
                 readonly property int nowMonth: new Date().getMonth()
-                // Busiest month by tracked totals; earliest wins ties.
-                // -1 while every month is empty, so no trophy appears.
-                readonly property int topMonth: {
-                    var top = -1;
-                    var best = 0;
-                    for (var i = 0; i < months.length; i++) {
-                        if (months[i].ms > best) {
-                            best = months[i].ms;
-                            top = i;
-                        }
-                    }
-                    return top;
-                }
                 readonly property real labelW: Style.space(26)
                 readonly property real labelGap: Style.space(4)
                 // Width fits any hour total at this font.
@@ -266,7 +253,6 @@ Item {
                         monthLong: root.monthNamesLong
                         isThisYear: heatGrid.isThisYear
                         nowMonth: heatGrid.nowMonth
-                        isTop: index === heatGrid.topMonth
                         gridWidth: heatGrid.width
                         hoursW: heatGrid.hoursW
                         foreground: root.foreground

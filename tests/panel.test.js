@@ -600,17 +600,13 @@ test("year hero shows a tracked-months caption over the pager", () => {
   )
 })
 
-test("busiest month earns a gold trophy in the month list", () => {
-  const drawer = qml("YearDrawer.qml")
+test("month rows carry no trophy; ranks live in the card", () => {
   const monthRow = fs.readFileSync(
     path.join(__dirname, "..", "qml", "MonthRow.qml"),
     "utf8",
   )
-  assert.match(drawer, /readonly property int topMonth/)
-  assert.match(drawer, /isTop: index === heatGrid\.topMonth/)
-  assert.match(monthRow, /required property bool isTop/)
-  assert.match(monthRow, /text: "\\uf091"/i)
-  assert.match(monthRow, /color: "#FFD700"/)
+  assert.doesNotMatch(monthRow, /isTop/)
+  assert.doesNotMatch(monthRow, /topMonth/)
 })
 
 test("settings editors receive keys instead of panel shortcuts", () => {
