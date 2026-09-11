@@ -490,8 +490,11 @@ function dayFor(days, today, key, todayKey) {
   return days && days[key] ? days[key] : null
 }
 
-// Local-time calendar key, e.g. "2026-08-13".
+// Local-time calendar key, e.g. "2026-08-13". Anything without a real
+// calendar date yields "" rather than throwing.
 function dayKey(date) {
+  if (!date || typeof date.getTime !== "function" || isNaN(date.getTime()))
+    return ""
   return (
     date.getFullYear() +
     "-" +
@@ -506,8 +509,11 @@ function newDay() {
 }
 
 // Compact human duration: "0m", "45s", "23m", "3h", "2h 14m".
+// Non-finite input renders as zero rather than "Infinityh".
 function fmt(ms) {
-  ms = Math.max(0, Math.round(Number(ms) || 0))
+  ms = Number(ms)
+  if (!isFinite(ms)) ms = 0
+  ms = Math.max(0, Math.round(ms))
   if (ms <= 0) return "0m"
   if (ms < 60000) return Math.max(1, Math.round(ms / 1000)) + "s"
   var mins = Math.round(ms / 60000)
@@ -524,7 +530,9 @@ function fmtDelta(ms) {
 // Worded duration for the panel: "0 MINUTES", "12 MINUTES",
 // "2 HOURS 14 MINUTES", "45 SECONDS".
 function fmtWords(ms) {
-  ms = Math.max(0, Math.round(Number(ms) || 0))
+  ms = Number(ms)
+  if (!isFinite(ms)) ms = 0
+  ms = Math.max(0, Math.round(ms))
   if (ms <= 0) return "0 MINUTES"
   if (ms < 60000) {
     var s = Math.max(1, Math.round(ms / 1000))
@@ -570,11 +578,19 @@ var DONUT_MIN_PCT = 3
 // squashing their axis below a 4-hour reference even when every day is small.
 var TREND_REF_MS = 4 * 3600000
 function groupedApps(apps, maxSlices, minPct) {
-  var list = apps || []
+  var raw = Array.isArray(apps) ? apps : []
+  // Malformed entries carry no time; skipping beats throwing.
+  var list = []
+  for (var k = 0; k < raw.length; k++) {
+    if (raw[k] && typeof raw[k] === "object") list.push(raw[k])
+  }
   var max = typeof maxSlices === "number" ? maxSlices : DONUT_MAX_SLICES
   var floor = typeof minPct === "number" ? minPct : DONUT_MIN_PCT
   var total = 0
-  for (var j = 0; j < list.length; j++) total += Number(list[j].ms) || 0
+  for (var j = 0; j < list.length; j++) {
+    var each = Number(list[j].ms)
+    total += isFinite(each) && each > 0 ? each : 0
+  }
   var head = []
   var tailMs = 0
   for (var i = 0; i < list.length; i++) {
@@ -717,7 +733,11 @@ function weekTrend(days, todayKey) {
 function weekTotal(trend) {
   var total = 0
   var list = Array.isArray(trend) ? trend : []
-  for (var i = 0; i < list.length; i++) total += Number(list[i].ms) || 0
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i] || {}
+    var ms = Number(entry.ms)
+    total += isFinite(ms) && ms > 0 ? ms : 0
+  }
   return total
 }
 
@@ -756,9 +776,10 @@ function bestWeekOffset(weeks) {
 }
 
 // Prune past keepDays (ISO keys compare lexicographically); unchanged
-// input returns by identity.
+// input returns by identity. Absurd windows (Infinity) prune nothing
+// instead of hanging the cutoff loop.
 function pruneDays(days, todayKey, keepDays) {
-  if (!days || !(keepDays >= 1)) return days
+  if (!days || !(keepDays >= 1) || !isFinite(keepDays)) return days
   var cutoff = todayKey
   for (var i = 1; i < keepDays; i++) cutoff = prevKey(cutoff)
   var out = {}
@@ -938,9 +959,16 @@ function insightColors(accentHex, urgentHex) {
 // clockwise; a small gap separates slices. A single app owns the full circle.
 var ARC_GAP_DEG = 1.5
 function arcSegments(apps) {
-  var list = apps || []
+  var raw = Array.isArray(apps) ? apps : []
+  var list = []
+  for (var k = 0; k < raw.length; k++) {
+    if (raw[k] && typeof raw[k] === "object") list.push(raw[k])
+  }
   var total = 0
-  for (var i = 0; i < list.length; i++) total += Number(list[i].ms) || 0
+  for (var i = 0; i < list.length; i++) {
+    var each = Number(list[i].ms)
+    total += isFinite(each) && each > 0 ? each : 0
+  }
   var gap = list.length > 1 ? ARC_GAP_DEG : 0
   var angle = -90
   var out = []
@@ -1024,13 +1052,15 @@ function msUntilNextHour(nowMs) {
 }
 
 // Mon-Sun weeks, newest first: { month, days: [{ key, ms, label, flags }] }.
-// Mon = 0, Sun = 6; future days render as stubs.
+// Mon = 0, Sun = 6; future days render as stubs. Absurd counts prune to
+// nothing instead of hanging the generator.
 function monSunWeeks(days, todayKey, weekCount) {
-  if (!todayKey || weekCount <= 0) return []
+  var count = Math.floor(Number(weekCount))
+  if (!todayKey || !(count >= 1) || !isFinite(count)) return []
   var weeks = []
   var monStart = weekStartMonday(todayKey)
   if (!monStart) return []
-  for (var w = 0; w < weekCount; w++) {
+  for (var w = 0; w < count; w++) {
     var weekDays = []
     var monthCounts = {}
     for (var di = 0; di < 7; di++) {
@@ -1142,11 +1172,13 @@ function weekRangeLabel(week) {
 // Max ms across all days in a monSunWeeks result for consistent bar scaling.
 function scrollableTrendMax(weeks) {
   var max = 0
-  for (var i = 0; i < weeks.length; i++) {
-    var days = weeks[i].days
+  var list = Array.isArray(weeks) ? weeks : []
+  for (var i = 0; i < list.length; i++) {
+    var days = (list[i] && list[i].days) || []
     for (var j = 0; j < days.length; j++) {
-      var ms = Number(days[j].ms) || 0
-      if (ms > max) max = ms
+      var day = days[j] || {}
+      var ms = Number(day.ms)
+      if (isFinite(ms) && ms > max) max = ms
     }
   }
   return max
@@ -1165,7 +1197,8 @@ function weekView(days, todayKey, weekCount, offset) {
     hasPrev: false,
     weekEndKey: "",
   }
-  if (offset < 0 || offset >= weeks.length) return empty
+  if (!(offset >= 0) || offset !== Math.floor(offset) || offset >= weeks.length)
+    return empty
   var week = weeks[offset]
   var wdays = week && week.days ? week.days : []
   var max = 0
@@ -1201,7 +1234,8 @@ function weekView(days, todayKey, weekCount, offset) {
 // Axis ticks anchor to the same max the bars scale against.
 function weekAxisTicks(weekMax) {
   var max = Number(weekMax)
-  if (weekMax === null || weekMax === "" || !(max >= 0)) return []
+  if (weekMax === null || weekMax === "" || !(max >= 0) || !isFinite(max))
+    return []
   var ref = Math.max(max, TREND_REF_MS)
   // The mid gridline label renders as whole hours, so the tick sits on a
   // whole hour too — never 2.5h with a "3h" label.
@@ -1211,7 +1245,9 @@ function weekAxisTicks(weekMax) {
 
 // Tick labels render whole hours; exact values live in tooltips.
 function fmtWholeHours(ms) {
-  ms = Math.max(0, Number(ms) || 0)
+  ms = Number(ms)
+  if (!isFinite(ms)) ms = 0
+  ms = Math.max(0, ms)
   return Math.round(ms / 3600000) + "h"
 }
 
@@ -1315,8 +1351,10 @@ var MIN_RECHARGE_DAYS = 14
 // Days with data in one year-month of a yearDayTotals list.
 function monthCoverage(dayTotals, year, month) {
   var n = 0
-  for (var i = 0; i < dayTotals.length; i++) {
-    var p = String(dayTotals[i].date).split("-")
+  var list = Array.isArray(dayTotals) ? dayTotals : []
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i] || {}
+    var p = String(entry.date).split("-")
     if (Number(p[0]) === year && Number(p[1]) - 1 === month) n++
   }
   return n
@@ -1330,7 +1368,9 @@ function yearHours(year) {
 }
 
 // Whole percent with one decimal, trailing ".0" trimmed: "4.1%", "8.9%".
+// A non-positive divisor yields "0%" instead of "Infinity%".
 function pctStr(ms, divisorMs) {
+  if (!(divisorMs > 0)) return "0%"
   var v = Math.round((Number(ms) / divisorMs) * 1000) / 10
   return String(v).replace(/\.0$/, "") + "%"
 }
@@ -1351,7 +1391,11 @@ function yearDayTotals(years, days, year, todayKey) {
 // Number of active days (at or above minMs) in a dayTotals list.
 function activeDayCount(dayTotals, minMs) {
   var n = 0
-  for (var i = 0; i < dayTotals.length; i++) if (dayTotals[i].ms >= minMs) n++
+  var list = Array.isArray(dayTotals) ? dayTotals : []
+  for (var i = 0; i < list.length; i++) {
+    var ms = list[i] ? Number(list[i].ms) : NaN
+    if (isFinite(ms) && ms >= minMs) n++
+  }
   return n
 }
 
@@ -1364,8 +1408,11 @@ function streakStats(dayTotals) {
   var current = 0
   var run = 0
   var prevMs = null
-  for (var i = 0; i < dayTotals.length; i++) {
-    var t = dayMsUtc(dayTotals[i].date)
+  var list = Array.isArray(dayTotals) ? dayTotals : []
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i] || {}
+    var t = dayMsUtc(entry.date)
+    if (!isFinite(t)) continue
     run = prevMs !== null && t - prevMs === 86400000 ? run + 1 : 1
     if (run > longest) {
       longest = run
@@ -1387,17 +1434,17 @@ function streakStats(dayTotals) {
 // return date. Single missed days don't count as a break. Null when fewer
 // than two days are on record.
 function longestBreak(dayTotals) {
-  if (!dayTotals || dayTotals.length < 2) return null
+  if (!Array.isArray(dayTotals) || dayTotals.length < 2) return null
   var best = null
   for (var i = 1; i < dayTotals.length; i++) {
+    var cur = dayTotals[i] || {}
+    var prev = dayTotals[i - 1] || {}
     var gap =
       Math.round(
-        (dayMsUtc(String(dayTotals[i].date)) -
-          dayMsUtc(String(dayTotals[i - 1].date))) /
-          86400000,
+        (dayMsUtc(String(cur.date)) - dayMsUtc(String(prev.date))) / 86400000,
       ) - 1
     if (gap >= 2 && (!best || gap > best.days))
-      best = { days: gap, end: String(dayTotals[i].date) }
+      best = { days: gap, end: String(cur.date) }
   }
   return best
 }
@@ -1425,12 +1472,13 @@ function mondayKey(key) {
 // into their real weeks, so a hot Sunday can't drag six quiet days into a
 // fake rolling crown. Null without data; earliest week wins ties.
 function busiestSpan(dayTotals) {
-  if (!dayTotals || dayTotals.length === 0) return null
+  if (!Array.isArray(dayTotals) || dayTotals.length === 0) return null
   var sums = {}
   for (var i = 0; i < dayTotals.length; i++) {
-    var ms = Number(dayTotals[i].ms) || 0
+    var entry = dayTotals[i] || {}
+    var ms = Number(entry.ms) || 0
     if (ms <= 0) continue
-    var mon = mondayKey(String(dayTotals[i].date))
+    var mon = mondayKey(String(entry.date))
     sums[mon] = (sums[mon] || 0) + ms
   }
   var best = null
@@ -1458,19 +1506,23 @@ function busiestSpan(dayTotals) {
 function weekdayPattern(dayTotals, totalMs) {
   var sums = [0, 0, 0, 0, 0, 0, 0]
   var wdSum = 0
-  for (var i = 0; i < dayTotals.length; i++) {
-    var p = String(dayTotals[i].date).split("-")
+  var list = Array.isArray(dayTotals) ? dayTotals : []
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i] || {}
+    var p = String(item.date).split("-")
     var day = new Date(
       Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])),
     ).getUTCDay()
-    sums[day] += dayTotals[i].ms
-    if (day >= 1 && day <= 5) wdSum += dayTotals[i].ms
+    var each = Number(item.ms) || 0
+    if (each <= 0) continue
+    sums[day] += each
+    if (day >= 1 && day <= 5) wdSum += each
   }
   var topI = 0
   for (var w = 1; w < 7; w++) if (sums[w] > sums[topI]) topI = w
   return {
     top: WEEKDAY_NAMES[topI],
-    weekdayPct: Math.round((wdSum / totalMs) * 100),
+    weekdayPct: totalMs > 0 ? Math.round((wdSum / totalMs) * 100) : 0,
   }
 }
 
@@ -1483,7 +1535,16 @@ function trackedDays(dayTotals, year, todayKey) {
       (Date.UTC(Number(year) + 1, 0, 1) - Date.UTC(Number(year), 0, 1)) /
         86400000,
     )
-  var first = String(dayTotals[0].date)
+  if (!Array.isArray(dayTotals) || dayTotals.length === 0) return 0
+  var first = ""
+  for (var i = 0; i < dayTotals.length; i++) {
+    var cand = String((dayTotals[i] || {}).date)
+    if (isFinite(dayMsUtc(cand))) {
+      first = cand
+      break
+    }
+  }
+  if (!first) return 0
   return (
     Math.round((dayMsUtc(String(todayKey)) - dayMsUtc(first)) / 86400000) + 1
   )
@@ -1558,6 +1619,7 @@ function yearFacts(days, months, years, year, todayKey, accentHex) {
 // already paid for the merge (like yearView) share it instead of each
 // merging the three stores again.
 function yearFactsFromSummary(summary, year, todayKey, accentHex) {
+  if (!summary || typeof summary !== "object") return []
   var total = summary.total
   if (total <= 0) return []
   var mArr = summary.months
@@ -1826,11 +1888,15 @@ if (typeof module !== "undefined" && module && module.exports) {
     yearTotal: yearTotal,
     sanitizeYears: sanitizeYears,
     MIN_ACTIVE_DAY_MS: MIN_ACTIVE_DAY_MS,
+    monthCoverage: monthCoverage,
+    pctStr: pctStr,
     yearDayTotals: yearDayTotals,
     activeDayCount: activeDayCount,
     streakStats: streakStats,
     longestBreak: longestBreak,
     busiestSpan: busiestSpan,
+    weekdayPattern: weekdayPattern,
+    trackedDays: trackedDays,
     rollupArchive: rollupArchive,
     pruneArchive: pruneArchive,
     yearFacts: yearFacts,

@@ -1824,3 +1824,46 @@ test("refoldDay sums into an already-tracked target", () => {
     apps: { browser: 90000 },
   })
 })
+
+test("pure helpers return safe defaults instead of throwing", () => {
+  assert.equal(Model.dayKey(null), "")
+  assert.equal(Model.dayKey(undefined), "")
+  assert.equal(Model.dayKey(new Date(NaN)), "")
+  assert.equal(Model.fmt(Infinity), "0m")
+  assert.equal(Model.fmtWords(Infinity), "0 MINUTES")
+  assert.equal(Model.fmtWholeHours(Infinity), "0h")
+  assert.deepEqual(Model.weekTotal(null), 0)
+  assert.deepEqual(Model.weekTotal([null, {}, { ms: "x" }]), 0)
+  assert.deepEqual(Model.groupedApps(null), [])
+  assert.deepEqual(
+    Model.groupedApps([null, { app: "a", ms: 60000, pct: 100 }]).length,
+    1,
+  )
+  assert.deepEqual(Model.arcSegments([null]), [])
+  assert.equal(Model.scrollableTrendMax(null), 0)
+  assert.equal(Model.scrollableTrendMax([{ nope: 1 }]), 0)
+  assert.equal(Model.monthCoverage(null, 2026, 7), 0)
+  assert.equal(Model.activeDayCount(null, 60000), 0)
+  assert.equal(Model.activeDayCount([null], 60000), 0)
+  assert.deepEqual(Model.streakStats(null).longest, 0)
+  assert.equal(Model.longestBreak(null), null)
+  assert.equal(Model.longestBreak([null, null]), null)
+  assert.equal(Model.busiestSpan(null), null)
+  assert.equal(Model.busiestSpan([null]), null)
+  assert.deepEqual(Model.weekdayPattern(null, 1000).weekdayPct, 0)
+  assert.deepEqual(Model.weekdayPattern([], 1000).weekdayPct, 0)
+  assert.deepEqual(
+    Model.weekdayPattern([{ date: "2026-08-19", ms: 1 }], 0).weekdayPct,
+    0,
+  )
+  assert.equal(Model.trackedDays([], 2026, "2026-08-19"), 0)
+  assert.equal(Model.trackedDays(null, 2026, "2026-08-19"), 0)
+  assert.deepEqual(Model.yearFactsFromSummary(null, 2026, "2026-08-19"), [])
+  assert.equal(Model.pctStr(5, 0), "0%")
+  assert.deepEqual(Model.weekAxisTicks(Infinity), [])
+  assert.deepEqual(Model.pruneDays({ a: 1 }, "2026-08-19", Infinity), { a: 1 })
+  assert.deepEqual(Model.monSunWeeks({}, "2026-08-19", Infinity), [])
+  assert.deepEqual(Model.monSunWeeks({}, "2026-08-19", "x"), [])
+  assert.equal(Model.weekView({}, "2026-08-19", 2, NaN).week, null)
+  assert.equal(Model.weekView({}, "2026-08-19", 2, 1.5).week, null)
+})
