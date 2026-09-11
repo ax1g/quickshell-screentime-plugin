@@ -637,3 +637,7 @@ test("year cards render values as rich text for medal markup", () => {
   assert.match(card, /textFormat: Text\.RichText/)
   assert.match(card, /text: insightCard\.stat/)
 })
+
+test("goal block breathes below the date line", () => {
+  assert.match(hero, /height: visible \? Style\.space\(4\) : 0/)
+})

@@ -229,7 +229,14 @@ Item {
         }
 
         // Daily goal progress: thin bar plus a remaining/reached caption.
-        // Hidden entirely while the goal is off (goalProgress null).
+        // Hidden entirely while the goal is off (goalProgress null). The
+        // spacer keeps the goal block breathing room below the date line.
+        Item {
+            visible: heroHeader.goalProgress !== null
+            width: parent.width
+            height: visible ? Style.space(4) : 0
+        }
+
         Rectangle {
             visible: heroHeader.goalProgress !== null
             width: parent.width
