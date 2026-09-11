@@ -1803,7 +1803,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
       rank.push('<font color="' + medals[r] + '">\uF091</font> ' + top[r].label)
     }
     out.push({
-      glyph: "\uF0E7",
+      glyph: "\uF073",
       label: "TOP MONTHS",
       value: rank.join(" \u00B7 "),
       sub: "Your heavy-hitting months, ranked.",
@@ -1910,7 +1910,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
 
       var wd = weekdayPattern(dayTotals, daySum)
       out.push({
-        glyph: "\uF073",
+        glyph: "\uF0E7",
         label: "WEEKDAY RHYTHM",
         value: wd.top + " leads \u00b7 " + wd.weekdayPct + "% weekdays",
         sub: "Midweek is your sweet spot.",

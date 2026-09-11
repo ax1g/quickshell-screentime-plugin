@@ -664,3 +664,7 @@ test("removing an alias unfolds today through the inverse map", () => {
   assert.match(panel, /inverse\[String\(to\)\.toLowerCase\(\)\] = from/)
   assert.match(panel, /root\.service\.refoldToday\(inverse\)/)
 })
+
+test("hourglass brightens on hover like the other heroes", () => {
+  assert.match(hero, /heroIconMouse\.containsMouse \? heroHeader\.foreground/)
+})

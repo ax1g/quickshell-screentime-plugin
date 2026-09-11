@@ -2215,3 +2215,13 @@ test("goal progress hides for days without an active goal", () => {
   assert.equal(backOn.reached, false)
   assert.equal(backOn.remainingMs, 3600000)
 })
+test("rhythm takes the bolt, top months take the calendar", () => {
+  const days = {
+    "2026-03-10": { total: 5 * 3600000, apps: { zen: 5 * 3600000 } },
+    "2026-03-11": { total: 5 * 3600000, apps: { zen: 5 * 3600000 } },
+  }
+  const cards = Model.yearFacts(days, {}, {}, 2026, "2026-12-24", "#e45b93")
+  const find = (label) => cards.find((c) => c.label === label)
+  assert.equal(find("TOP MONTHS").glyph, "")
+  assert.equal(find("WEEKDAY RHYTHM").glyph, "")
+})
