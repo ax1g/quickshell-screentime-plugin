@@ -280,7 +280,10 @@ test("retention window threads from prefs to the service with a readout", () => 
 
 test("first-run onboarding shows coach marks until anything is tracked", () => {
   assert.match(panel, /readonly property bool showOnboarding/)
-  assert.match(panel, /root\.storageSummary\.totalMs <= 0 && root\.dayTotal <= 0/)
+  assert.match(
+    panel,
+    /root\.storageSummary\.totalMs <= 0 && root\.dayTotal <= 0/,
+  )
   assert.match(panel, /id: onboardingColumn/)
   assert.match(panel, /visible: root\.showOnboarding/)
   assert.match(panel, /No screen time yet/)
