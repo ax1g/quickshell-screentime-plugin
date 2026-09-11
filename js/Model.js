@@ -345,6 +345,43 @@ function storageLabel(summary) {
   )
 }
 
+// True for 6-digit hex with or without a leading hash.
+function isHexColor(s) {
+  return /^#?[0-9a-fA-F]{6}$/.test(String(s || "").trim())
+}
+
+// Lowercase #rrggbb, or the fallback for anything unparseable.
+function normalizeHex(s, fallback) {
+  var t = String(s || "").trim()
+  if (!isHexColor(t)) return fallback
+  if (t.charAt(0) !== "#") t = "#" + t
+  return t.toLowerCase()
+}
+
+// Swatch options derived from the live theme: the theme neutrals plus an
+// accent family in the sliceColors idiom, so the menu harmonizes with the
+// donut. Reused for both color rows; seven entries keep the row width.
+function themeSwatches(accentHex, foregroundHex, mutedHex) {
+  var chromatics = sliceColors(5, accentHex)
+  return [
+    normalizeHex(foregroundHex, "#ffffff"),
+    normalizeHex(mutedHex, "#808080"),
+    chromatics[0],
+    chromatics[1],
+    chromatics[2],
+    chromatics[3],
+    chromatics[4],
+  ]
+}
+
+// Selection that survives theme switches: any valid stored hex stays
+// selected (the menu renders an extra custom slot when it is absent from
+// the theme set); garbage falls back to the default.
+function pickSwatch(stored, fallback) {
+  var c = normalizeHex(stored, "")
+  return c || fallback
+}
+
 // Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
@@ -1701,6 +1738,10 @@ if (typeof module !== "undefined" && module && module.exports) {
     parseKeepDays: parseKeepDays,
     storageSummary: storageSummary,
     storageLabel: storageLabel,
+    isHexColor: isHexColor,
+    normalizeHex: normalizeHex,
+    themeSwatches: themeSwatches,
+    pickSwatch: pickSwatch,
     sanitizeHistory: sanitizeHistory,
     sanitizeDay: sanitizeDay,
     numMs: numMs,

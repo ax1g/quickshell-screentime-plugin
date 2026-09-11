@@ -1752,3 +1752,44 @@ test("aliasesWith upserts and aliasesWithout deletes", () => {
     "code=work",
   )
 })
+
+test("isHexColor accepts six digits with or without a hash", () => {
+  assert.equal(Model.isHexColor("#FFD700"), true)
+  assert.equal(Model.isHexColor("2b2b2b"), true)
+  assert.equal(Model.isHexColor("#fff"), false)
+  assert.equal(Model.isHexColor("gold"), false)
+  assert.equal(Model.isHexColor(""), false)
+  assert.equal(Model.isHexColor(null), false)
+})
+
+test("normalizeHex lowercases and hashes, else the fallback", () => {
+  assert.equal(Model.normalizeHex("#FFD700", ""), "#ffd700")
+  assert.equal(Model.normalizeHex("2B2B2B", ""), "#2b2b2b")
+  assert.equal(Model.normalizeHex("nope", "fb"), "fb")
+  assert.equal(Model.normalizeHex(undefined, "fb"), "fb")
+})
+
+test("themeSwatches leads with theme neutrals and an accent family", () => {
+  const swatches = Model.themeSwatches("#ff0000", "#CACCCC", "#707880")
+  assert.equal(swatches.length, 7)
+  assert.equal(swatches[0], "#cacccc")
+  assert.equal(swatches[1], "#707880")
+  assert.equal(swatches[2], "#ff0000")
+  for (const s of swatches) assert.match(s, /^#[0-9a-f]{6}$/)
+})
+
+test("themeSwatches degrades gracefully on a grayscale theme", () => {
+  const swatches = Model.themeSwatches("#cacccc", "#cacccc", "#707880")
+  assert.equal(swatches.length, 7)
+  for (let i = 2; i < swatches.length; i++) {
+    assert.ok(Model.hexToHsl(swatches[i]).s < 12)
+  }
+})
+
+test("pickSwatch keeps any valid stored hex, else the default", () => {
+  assert.equal(Model.pickSwatch("#FFD700", "#ffd700"), "#ffd700")
+  assert.equal(Model.pickSwatch("2b2b2b", "fb"), "#2b2b2b")
+  assert.equal(Model.pickSwatch("junk", "fb"), "fb")
+  assert.equal(Model.pickSwatch("", "fb"), "fb")
+  assert.equal(Model.pickSwatch(undefined, "fb"), "fb")
+})
