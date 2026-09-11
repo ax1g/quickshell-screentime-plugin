@@ -123,6 +123,22 @@ Visual check (lint is not enough):
   either, and keep the regexes tight to the contract, not the layout.
 - Python behavior gets `unittest` cases in `tests/test_resolve_app.py`.
 
+## Changelog
+
+- The changelog speaks to users of the last release, not to the working
+  tree. Before adding an entry, diff against the last released version:
+  if no released user ever saw the old behavior, there is nothing to
+  announce — fold the tweak into the feature's own entry instead.
+- `Fixed` entries are for bugs in shipped behavior only. A fix to a
+  feature that itself is still unreleased (e.g. restyling a settings
+  page introduced in the same cycle) gets no entry at all.
+- Internal work never appears: refactors, tests, tooling, file moves.
+- `Added` entries sell like marketing: lead with the user win, not the
+  mechanism. Write "Know your week at a glance", never "paginated
+  Mon–Sun week view with ISO headers". One entry per feature, two lines max.
+- No internals in user-facing lines: no file names, no pref keys, no
+  function names (typed IPC commands are the exception — users run them).
+
 ## Definition of done
 
 - [ ] One commit per logical change, Conventional Commits, suites green.
