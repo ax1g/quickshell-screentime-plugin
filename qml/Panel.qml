@@ -482,7 +482,7 @@ Panel {
                         spacing: 0
 
                         Text {
-                            text: "Screen Time"
+                            text: "Setting"
                             color: root.contentForeground
                             font.family: root.contentFontFamily
                             font.pixelSize: Style.fontPx(1.5)
@@ -492,7 +492,7 @@ Panel {
                         }
 
                         Text {
-                            text: "Settings"
+                            text: "Display, tracking, goals & data"
                             color: Qt.darker(root.contentForeground, 1.4)
                             font.family: root.contentFontFamily
                             font.pixelSize: Style.font.caption

@@ -572,3 +572,9 @@ test("about shows the manifest version", () => {
   assert.match(menu, /"v" \+ root\.pluginVersion/)
   assert.match(menu, /Know where your time goes/)
 })
+
+test("settings header reads Setting with a content subtitle", () => {
+  assert.match(panel, /text: "Setting"/)
+  assert.match(panel, /Display, tracking, goals & data/)
+  assert.doesNotMatch(panel, /text: "Screen Time"/)
+})
