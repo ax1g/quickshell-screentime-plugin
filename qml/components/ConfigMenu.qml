@@ -1090,7 +1090,7 @@ Column {
                 }
 
                 MouseArea {
-                    anchors.fill: parent
+                    anchors.fill: resetBox
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
@@ -1188,7 +1188,7 @@ Column {
                 }
 
                 MouseArea {
-                    anchors.fill: parent
+                    anchors.fill: wipeBox
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {

@@ -431,3 +431,9 @@ test("config opens expanded like the yearly drawer", () => {
   assert(fn[0].includes("keyCatcher.collapsedCardH = keyCatcher.height"))
   assert(fn[0].includes("root.expanded = true"))
 })
+
+test("only the danger buttons arm reset, never their labels", () => {
+  assert.match(menu, /anchors\.fill: resetBox/)
+  assert.match(menu, /anchors\.fill: wipeBox/)
+  assert.doesNotMatch(menu, /id: resetRow[\s\S]*?anchors\.fill: parent/)
+})
