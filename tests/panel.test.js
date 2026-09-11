@@ -672,6 +672,23 @@ test("hourglass brightens on hover like the other heroes", () => {
 test("settings inputs show a theme-colored cursor on focus", () => {
   const cursors = menu.match(/cursorVisible: activeFocus/g)
   assert(cursors && cursors.length === 3, "cursor in all three inputs")
-  const delegates = menu.match(/cursorDelegate: Rectangle \{\s*\n\s*color: root\.foreground/g)
+  const delegates = menu.match(
+    /cursorDelegate: Rectangle \{\s*\n\s*color: root\.foreground/g,
+  )
   assert(delegates && delegates.length === 3, "theme cursor in all three")
+})
+
+test("tab cycles through the settings inputs", () => {
+  assert.match(
+    menu,
+    /id: ignoredInput[\s\S]*?KeyNavigation\.tab: aliasFromInput/,
+  )
+  assert.match(
+    menu,
+    /id: aliasFromInput[\s\S]*?KeyNavigation\.tab: aliasToInput/,
+  )
+  assert.match(menu, /id: aliasToInput[\s\S]*?KeyNavigation\.tab: ignoredInput/)
+  assert.match(menu, /KeyNavigation\.backtab: ignoredInput/)
+  assert.match(menu, /KeyNavigation\.backtab: aliasFromInput/)
+  assert.match(menu, /KeyNavigation\.backtab: aliasToInput/)
 })

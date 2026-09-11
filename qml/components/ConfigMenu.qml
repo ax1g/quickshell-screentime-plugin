@@ -783,6 +783,8 @@ Column {
 
                         TextInput {
                             id: ignoredInput
+                            KeyNavigation.tab: aliasFromInput
+                            KeyNavigation.backtab: aliasToInput
                             cursorVisible: activeFocus
                             cursorDelegate: Rectangle {
                                 color: root.foreground
@@ -940,6 +942,8 @@ Column {
 
                         TextInput {
                             id: aliasFromInput
+                            KeyNavigation.tab: aliasToInput
+                            KeyNavigation.backtab: ignoredInput
                             cursorVisible: activeFocus
                             cursorDelegate: Rectangle {
                                 color: root.foreground
@@ -980,6 +984,8 @@ Column {
 
                         TextInput {
                             id: aliasToInput
+                            KeyNavigation.tab: ignoredInput
+                            KeyNavigation.backtab: aliasFromInput
                             cursorVisible: activeFocus
                             cursorDelegate: Rectangle {
                                 color: root.foreground
