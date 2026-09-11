@@ -1867,3 +1867,94 @@ test("pure helpers return safe defaults instead of throwing", () => {
   assert.equal(Model.weekView({}, "2026-08-19", 2, NaN).week, null)
   assert.equal(Model.weekView({}, "2026-08-19", 2, 1.5).week, null)
 })
+
+test("isDayKey accepts real padded days only", () => {
+  assert.equal(Model.isDayKey("2026-08-19"), true)
+  assert.equal(Model.isDayKey("2024-02-29"), true)
+  assert.equal(Model.isDayKey("2026-02-29"), false)
+  assert.equal(Model.isDayKey("2026-13-01"), false)
+  assert.equal(Model.isDayKey("2026-8-5"), false)
+  assert.equal(Model.isDayKey("garbage"), false)
+  assert.equal(Model.isDayKey("__proto__"), false)
+  assert.equal(Model.isDayKey(""), false)
+  assert.equal(Model.isDayKey(null), false)
+})
+
+test("isMonthKey accepts real calendar months only", () => {
+  assert.equal(Model.isMonthKey("2026-08"), true)
+  assert.equal(Model.isMonthKey("2026-13"), false)
+  assert.equal(Model.isMonthKey("2026-8"), false)
+  assert.equal(Model.isMonthKey("__proto__"), false)
+})
+
+test("sanitizeHistory drops malformed keys, keeps identity when clean", () => {
+  const days = { "2026-08-19": { total: 1000, apps: {} } }
+  const months = { "2026-08": 1000 }
+  const years = { 2026: { "2026-08-18": 1000 } }
+  const clean = Model.sanitizeHistory(days, months, years)
+  assert.equal(clean.days, days)
+  assert.equal(clean.months, months)
+  const dirty = Model.sanitizeHistory(
+    { "2026-08-19": { total: 1000, apps: {} }, junk: { total: 1, apps: {} } },
+    { "2026-08": 1000, nope: 5 },
+    { 2026: { "2026-08-18": 1000, "2026-02-29": 5 } },
+  )
+  assert.deepEqual(Object.keys(dirty.days), ["2026-08-19"])
+  assert.deepEqual(Object.keys(dirty.months), ["2026-08"])
+  assert.deepEqual(Object.keys(dirty.years[2026]), ["2026-08-18"])
+})
+
+test("sanitizeYears drops wrong-year days and proto keys", () => {
+  const out = Model.sanitizeYears({
+    2026: { "2026-08-18": 1000, "2025-01-01": 5 },
+    junk: { "2026-08-18": 1 },
+  })
+  assert.deepEqual(Object.keys(out), ["2026"])
+  assert.deepEqual(Object.keys(out[2026]), ["2026-08-18"])
+  const proto = JSON.parse('{"2026": {"__proto__": 5, "2026-08-18": 1}}')
+  assert.deepEqual(Object.keys(Model.sanitizeYears(proto)[2026]), [
+    "2026-08-18",
+  ])
+  assert.equal({}.polluted, undefined)
+})
+
+test("parseAppAliases never mints __proto__", () => {
+  assert.deepEqual(Model.parseAppAliases("__proto__=x, a=b"), { a: "b" })
+  assert.equal(Model.aliasesWith("", "__proto__", "x"), "")
+  assert.equal({}.polluted, undefined)
+})
+
+test("mergeYear ignores phantom and malformed dates", () => {
+  const merged = Model.mergeYear(
+    {
+      "2026-02-29": { total: 3600000, apps: {} },
+      "2024-02-29": { total: 3600000, apps: {} },
+    },
+    {},
+    {},
+    2026,
+    "2026-12-31",
+  )
+  assert.equal(merged.monthMs[1], 0)
+  assert.deepEqual(merged.dayTotals, [])
+  const leap = Model.mergeYear(
+    { "2024-02-29": { total: 3600000, apps: {} } },
+    {},
+    {},
+    2024,
+    "2024-12-31",
+  )
+  assert.equal(leap.monthMs[1], 3600000)
+})
+
+test("rollupArchive only rolls real day keys", () => {
+  const out = Model.rollupArchive(
+    {},
+    {
+      "2026-08-18": { total: 1000, apps: {} },
+      junk: { total: 5, apps: {} },
+    },
+  )
+  assert.deepEqual(Object.keys(out["2026"]), ["2026-08-18"])
+  assert.equal({}.polluted, undefined)
+})

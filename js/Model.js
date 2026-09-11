@@ -112,7 +112,10 @@ function parseAppAliases(value) {
       .trim()
       .toLowerCase()
     var val = String(v === undefined || v === null ? "" : v).trim()
-    if (key && val) out[key] = val
+    // Never mint "__proto__": assigning it mutates the prototype
+    // instead of storing an entry.
+    if (!key || !val || key === "__proto__") return
+    out[key] = val
   }
   if (value && typeof value === "object" && !Array.isArray(value)) {
     for (var k in value) {
@@ -262,8 +265,9 @@ function serializeAliases(obj) {
   var parts = []
   var src = obj && typeof obj === "object" ? obj : {}
   for (var k in src) {
-    if (Object.prototype.hasOwnProperty.call(src, k))
-      parts.push(k + "=" + src[k])
+    if (!Object.prototype.hasOwnProperty.call(src, k)) continue
+    if (k === "__proto__") continue
+    parts.push(k + "=" + src[k])
   }
   return parts.join(", ")
 }
@@ -274,7 +278,7 @@ function aliasesWith(value, from, to) {
     .trim()
     .toLowerCase()
   var t = String(to || "").trim()
-  if (f && t) obj[f] = t
+  if (f && t && f !== "__proto__") obj[f] = t
   return serializeAliases(obj)
 }
 
@@ -415,6 +419,25 @@ function pickSwatch(stored, fallback) {
   return c || fallback
 }
 
+// True for real padded calendar days ("2026-08-19"). Rolled-over
+// overflow ("2026-02-30", "2026-13-01") and garbage fail, so unpadded
+// keys can never reintroduce lexicographic mis-compares downstream.
+function isDayKey(key) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(key || ""))) return false
+  var p = String(key).split("-")
+  var y = Number(p[0])
+  var m = Number(p[1])
+  var d = Number(p[2])
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false
+  var dt = new Date(y, m - 1, d)
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
+}
+
+// True for real calendar months ("2026-08").
+function isMonthKey(key) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(key || ""))
+}
+
 // Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
@@ -422,17 +445,33 @@ function isPlainObject(v) {
 
 function sanitizeHistory(days, months, years) {
   var cleanDays = isPlainObject(days) ? days : {}
+  var cleanMonths = isPlainObject(months) ? months : {}
   var rebuilt = false
   var out = {}
   for (var k in cleanDays) {
     if (!Object.prototype.hasOwnProperty.call(cleanDays, k)) continue
+    // Malformed keys ("junk", "__proto__", unpadded dates) never survive
+    // a load; downstream lexicographic compares assume real day keys.
+    if (!isDayKey(k)) {
+      rebuilt = true
+      continue
+    }
     var fixed = sanitizeDay(cleanDays[k])
     out[k] = fixed.day
     if (fixed.changed) rebuilt = true
   }
+  var mout = {}
+  for (var mk in cleanMonths) {
+    if (!Object.prototype.hasOwnProperty.call(cleanMonths, mk)) continue
+    if (!isMonthKey(mk)) {
+      rebuilt = true
+      continue
+    }
+    mout[mk] = cleanMonths[mk]
+  }
   return {
     days: rebuilt ? out : cleanDays,
-    months: isPlainObject(months) ? months : {},
+    months: rebuilt ? mout : cleanMonths,
     years: sanitizeYears(years),
   }
 }
@@ -447,6 +486,10 @@ function sanitizeDay(d) {
   var appsChanged = apps !== d.apps
   for (var app in apps) {
     if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
+    if (app === "__proto__") {
+      appsChanged = true
+      continue
+    }
     var ms = Number(apps[app])
     if (isFinite(ms) && ms >= 0) cleanApps[app] = ms
     else appsChanged = true
@@ -464,7 +507,7 @@ function sanitizeYears(years) {
   var out = {}
   for (var yk in years) {
     if (!Object.prototype.hasOwnProperty.call(years, yk)) continue
-    if (!isPlainObject(years[yk])) {
+    if (!/^\d{4}$/.test(String(yk)) || !isPlainObject(years[yk])) {
       rebuilt = true
       continue
     }
@@ -472,6 +515,12 @@ function sanitizeYears(years) {
     var dayChanged = false
     for (var dk in years[yk]) {
       if (!Object.prototype.hasOwnProperty.call(years[yk], dk)) continue
+      // Day keys must be real dates of their own year; anything else
+      // (including "__proto__") is discarded, never assigned.
+      if (!isDayKey(dk) || String(dk).slice(0, 4) !== String(yk)) {
+        dayChanged = true
+        continue
+      }
       var v = Number(years[yk][dk])
       if (isFinite(v) && v >= 0) day[dk] = v
       else dayChanged = true
@@ -1270,6 +1319,9 @@ function mergeYear(days, months, years, year, todayKey) {
   function addDay(key, ms) {
     var k = String(key)
     if (tk && k > tk) return
+    // Phantom dates ("2026-02-29") must not inflate month totals they
+    // can never appear in as day entries.
+    if (!isDayKey(k)) return
     var p = k.split("-")
     if (p.length !== 3 || Number(p[0]) !== y) return
     var m = Number(p[1]) - 1
@@ -1557,6 +1609,9 @@ function rollupArchive(years, prunedDays) {
   var out = Object.assign({}, years || {})
   for (var dk in prunedDays) {
     if (!Object.prototype.hasOwnProperty.call(prunedDays, dk)) continue
+    // Only real day keys roll up; anything else (including "__proto__")
+    // would corrupt the archive object.
+    if (!isDayKey(dk)) continue
     var d = prunedDays[dk]
     var total = d && d.total ? d.total : 0
     if (total <= 0) continue
@@ -1837,6 +1892,8 @@ if (typeof module !== "undefined" && module && module.exports) {
     storageLabel: storageLabel,
     isHexColor: isHexColor,
     normalizeHex: normalizeHex,
+    isDayKey: isDayKey,
+    isMonthKey: isMonthKey,
     themeSwatches: themeSwatches,
     pickSwatch: pickSwatch,
     sanitizeHistory: sanitizeHistory,
