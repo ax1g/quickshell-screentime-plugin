@@ -136,7 +136,7 @@ Column {
                     {
                         kind: "easter",
                         label: "Playful extras",
-                        sub: "Animated hourglass and cursor sparkles",
+                        sub: "Hourglass flip, sparkles and header spins",
                         shown: !root.hideEasterEggs
                     }
                 ]

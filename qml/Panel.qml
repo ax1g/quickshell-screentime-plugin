@@ -286,10 +286,12 @@ Panel {
         } else {
             root.configOpen = false;
         }
-        if (open)
-            configGearSpin.restart();
-        else if (!root.calendarOpen)
+        if (open) {
+            if (!root.hideEasterEggs)
+                configGearSpin.restart();
+        } else if (!root.calendarOpen) {
             root.celebrateHome();
+        }
     }
 
     // Return-to-main celebration, once both drawers rest closed and only
@@ -365,6 +367,7 @@ Panel {
                     panelBackground: root.bar ? root.bar.background : Color.background
                     accent: Color.accent
                     heroColor: root.heroColor
+                    easterEggs: !root.hideEasterEggs
                     currentYear: root.currentYear
                     currentYearOffset: root.currentYearOffset
                     oldestDataYear: root.oldestDataYear

@@ -21,6 +21,9 @@ Item {
     required property string calendarYearTotal
     required property var yearFacts
     required property bool hideYearInsights
+    // Playful-extras kill switch, like the main hero: the entry swing
+    // mutes with it.
+    required property bool easterEggs
     required property var yearMonths
     required property var monthNamesShort
     required property var monthNamesLong
@@ -31,7 +34,8 @@ Item {
 
     // Entry celebration, called by the panel as the drawer slides in.
     function swingCalendar() {
-        calendarSwing.restart();
+        if (root.easterEggs)
+            calendarSwing.restart();
     }
 
     Rectangle {

@@ -64,9 +64,10 @@ Item {
     }
 
     // Return-to-main celebration: a full hourglass turn. Reuses the
-    // easter-egg flip; navigation feedback always plays.
+    // easter-egg flip and mutes with it.
     function spinHourglass() {
-        heroFlip.restart();
+        if (heroHeader.easterEggs)
+            heroFlip.restart();
     }
 
     Text {
@@ -159,7 +160,8 @@ Item {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            gearSpin.restart();
+            if (heroHeader.easterEggs)
+                gearSpin.restart();
             heroHeader.configToggled();
         }
     }

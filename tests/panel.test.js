@@ -460,7 +460,7 @@ test("drawer switches never read as a return home", () => {
   )
   assert.match(
     panel,
-    /else if \(!root\.calendarOpen\)\s*\n\s*root\.celebrateHome\(\)/,
+    /} else if \(!root\.calendarOpen\) \{\s*\n\s*root\.celebrateHome\(\);/,
   )
   assert.match(
     panel,
@@ -509,4 +509,15 @@ test("help section links out with icons and a privacy note", () => {
   assert.match(menu, /"Contribute"/)
   assert.match(menu, /Qt\.openUrlExternally\(modelData\.url\)/)
   assert.match(menu, /github\.com\/ax1g\/quickshell-screentime-plugin/)
+})
+
+test("playful extras mute the header spins", () => {
+  const drawer = qml("YearDrawer.qml")
+  assert.match(hero, /if \(heroHeader\.easterEggs\)\s*\n\s*gearSpin\.restart/)
+  assert.match(hero, /if \(heroHeader\.easterEggs\)\s*\n\s*heroFlip\.restart/)
+  assert.match(panel, /if \(open\) \{\s*\n\s*if \(!root\.hideEasterEggs\)/)
+  assert.match(drawer, /required property bool easterEggs/)
+  assert.match(drawer, /if \(root\.easterEggs\)\s*\n\s*calendarSwing\.restart/)
+  assert.match(panel, /easterEggs: !root\.hideEasterEggs/)
+  assert.match(menu, /Hourglass flip, sparkles and header spins/)
 })

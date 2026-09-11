@@ -46,7 +46,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Header icons celebrate navigation: the settings gear sweeps as settings
   opens, the yearly calendar swings on entry, and the hourglass turns a
-  full circle on the way back to the main view.
+  full circle on the way back to the main view — all mute with Playful
+  extras.
 - Settings page groups prefs into tinted section cards (Display, Colors,
   Trend & History, Daily Goal, Tracking, Help with a link to the repo,
   and a red Danger Zone last) with full-width labels that wrap instead
