@@ -641,3 +641,14 @@ test("year cards render values as rich text for medal markup", () => {
 test("goal block breathes below the date line", () => {
   assert.match(hero, /height: visible \? Style\.space\(4\) : 0/)
 })
+
+test("settings inputs show a focus ring", () => {
+  for (const id of ["ignoredInput", "aliasFromInput", "aliasToInput"]) {
+    assert.match(
+      menu,
+      new RegExp(
+        "border\\.color: " + id + "\\.activeFocus \\? root\\.accent",
+      ),
+    )
+  }
+})

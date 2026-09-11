@@ -778,8 +778,8 @@ Column {
                         height: ignoredInput.implicitHeight + Style.space(14)
                         radius: Style.space(6)
                         color: "transparent"
-                        border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                        border.width: 1
+                        border.color: ignoredInput.activeFocus ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                        border.width: ignoredInput.activeFocus ? 2 : 1
 
                         TextInput {
                             id: ignoredInput
@@ -931,8 +931,8 @@ Column {
                         height: aliasFromInput.implicitHeight + Style.space(14)
                         radius: Style.space(6)
                         color: "transparent"
-                        border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                        border.width: 1
+                        border.color: aliasFromInput.activeFocus ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                        border.width: aliasFromInput.activeFocus ? 2 : 1
 
                         TextInput {
                             id: aliasFromInput
@@ -967,8 +967,8 @@ Column {
                         height: aliasToInput.implicitHeight + Style.space(14)
                         radius: Style.space(6)
                         color: "transparent"
-                        border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                        border.width: 1
+                        border.color: aliasToInput.activeFocus ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                        border.width: aliasToInput.activeFocus ? 2 : 1
 
                         TextInput {
                             id: aliasToInput
