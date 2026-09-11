@@ -954,3 +954,53 @@ test("commitElapsed rebases an open bucket on backward jumps", () => {
   assert.equal(result.activeStart, now)
   assert.equal(result.lastTick, now)
 })
+
+test("closeActiveBucket splits a multi-day bucket day by day", () => {
+  const start = localMidnight(2026, 7, 15) + 23 * 3600000
+  const now = localMidnight(2026, 7, 17) + 10000
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-17",
+    lastTick: start,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-17",
+    30 * 3600000,
+    state.lastTick,
+  )
+  assert.equal(result.days["2026-08-15"].total, 3600000)
+  assert.equal(result.days["2026-08-16"].total, 86400000)
+  assert.equal(result.today.total, 10000)
+  assert.deepEqual(result.today.apps, { zen: 10000 })
+  assert.equal(result.activeApp, "")
+})
+
+test("commitElapsed credits intermediate days and resumes at midnight", () => {
+  const start = localMidnight(2026, 7, 15) + 23 * 3600000
+  const now = localMidnight(2026, 7, 17) + 10000
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-17",
+    lastTick: start,
+  }
+  const result = State.commitElapsed(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-17",
+    30 * 3600000,
+    state.lastTick,
+  )
+  assert.equal(result.days["2026-08-15"].total, 3600000)
+  assert.equal(result.days["2026-08-16"].total, 86400000)
+  assert.deepEqual(result.today, { total: 0, apps: {} })
+  assert.equal(result.activeApp, "zen")
+  assert.equal(result.activeStart, localMidnight(2026, 7, 17))
+})

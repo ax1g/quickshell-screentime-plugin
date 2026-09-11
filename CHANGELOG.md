@@ -32,6 +32,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Buckets spanning several midnights split day by day instead of piling
+  everything onto the start day.
 - Backward clock jumps no longer stall tracking: a start timestamp in the
   future drops (or re-anchors) the bucket instead of billing nothing
   until the wall clock catches up.

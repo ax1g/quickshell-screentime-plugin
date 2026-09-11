@@ -44,6 +44,32 @@ function dayMinus(full, base) {
   return { total: total, apps: apps }
 }
 
+// Local midnight starting the day after ms (date arithmetic, so DST
+// days land on the true wall-clock boundary).
+function nextMidnightMs(ms) {
+  var d = new Date(ms)
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime()
+}
+
+// Split [activeStart, now) across calendar days: { days, todayDur,
+// resumeAt }. Every touched history day gets a fresh object; the caller
+// owns today/todayDur and the reopened bucket at resumeAt. A multi-day
+// suspend lands day by day instead of piling onto the start day.
+function splitAcrossDays(state, model, app, activeStart, now, todayKey) {
+  var d = Object.assign({}, state.days)
+  var cursor = activeStart
+  var guard = 0
+  while (guard < 370 && model.dayKey(new Date(cursor)) !== todayKey) {
+    var chunk = Math.max(0, Math.min(now, nextMidnightMs(cursor)) - cursor)
+    if (chunk <= 0) break
+    var key = model.dayKey(new Date(cursor))
+    d[key] = accumulateBucket(d[key] || model.newDay(), app, chunk)
+    cursor += chunk
+    guard++
+  }
+  return { days: d, todayDur: Math.max(0, now - cursor), resumeAt: cursor }
+}
+
 // Close the open bucket onto its start day; suspend gaps drop it.
 function closeActiveBucket(
   state,
@@ -93,27 +119,21 @@ function closeActiveBucket(
       lastTick: state.lastTick,
     }
   }
-  // Bucket spans midnight: split at midnight like commitElapsed — the
-  // pre-midnight portion lands on the start day, the rest on today.
-  var dt = new Date(now)
-  var midnightMs = new Date(
-    dt.getFullYear(),
-    dt.getMonth(),
-    dt.getDate(),
-  ).getTime()
-  var yesterdayDur = Math.max(0, Math.min(dur, midnightMs - activeStart))
-  var todayDur = dur - yesterdayDur
-  var d = Object.assign({}, state.days)
-  if (yesterdayDur > 0) {
-    var day = d[startDay] || model.newDay()
-    d[startDay] = accumulateBucket(day, activeApp, yesterdayDur)
-  }
+  // Bucket spans midnights: credit each calendar day its own share.
+  var split = splitAcrossDays(
+    state,
+    model,
+    activeApp,
+    activeStart,
+    now,
+    todayKey,
+  )
   return {
     today:
-      todayDur > 0
-        ? accumulateBucket(state.today, activeApp, todayDur)
+      split.todayDur > 0
+        ? accumulateBucket(state.today, activeApp, split.todayDur)
         : state.today,
-    days: d,
+    days: split.days,
     todayKey: state.todayKey,
     activeApp: "",
     activeStart: 0,
@@ -171,25 +191,22 @@ function commitElapsed(
       lastTick: state.lastTick,
     }
   }
-  // Midnight split: yesterday's share to history, fresh bucket from midnight.
-  var dt = new Date(now)
-  var midnightMs = new Date(
-    dt.getFullYear(),
-    dt.getMonth(),
-    dt.getDate(),
-  ).getTime()
-  var yesterdayDur = Math.max(0, midnightMs - activeStart)
-  var d = Object.assign({}, state.days)
-  if (yesterdayDur > 0) {
-    var day = d[startDay] || model.newDay()
-    d[startDay] = accumulateBucket(day, activeApp, yesterdayDur)
-  }
+  // Midnight split: history days take their shares, today's share stays
+  // in flight with the bucket reopened at its start.
+  var split = splitAcrossDays(
+    state,
+    model,
+    activeApp,
+    activeStart,
+    now,
+    todayKey,
+  )
   return {
     today: state.today,
-    days: d,
+    days: split.days,
     todayKey: state.todayKey,
     activeApp: activeApp,
-    activeStart: midnightMs,
+    activeStart: split.resumeAt,
     lastTick: state.lastTick,
   }
 }
