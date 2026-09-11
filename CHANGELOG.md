@@ -10,7 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Keyboard hints: press `f` to badge every main-panel control with a
   letter (`y` yearly, `c` settings, `m` more, `b`/`n` week pages,
-  `t` week total, `1`–`7` days); `j`/`k` keep scrolling, `Esc` exits.
+  `t` week total, `1`–`7` days); the settings menu takes two-letter
+  tags for every row, and staged confirmations advance one step like
+  a pointer click. `j`/`k` keep scrolling, `Esc` exits.
 
 ### Changed
 

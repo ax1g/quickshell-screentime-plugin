@@ -181,6 +181,13 @@ Panel {
     // Hint mode (f): letter badges over the main panel's pressables.
     // j/k keep scrolling — the catcher eats them before text keys.
     property bool hintMode: false
+    // Two-letter buffer for the settings registry; cleared whenever
+    // the mode exits.
+    property string hintBuffer: ""
+    onHintModeChanged: {
+        if (!root.hintMode)
+            root.hintBuffer = "";
+    }
     property int weekOffset: 0
     // True while an older week holds data (enables the prev pager).
     readonly property bool hasPrevWeekData: root.weekView ? root.weekView.hasPrev : false
@@ -310,7 +317,8 @@ Panel {
             }
         }
         if (handled)
-            root.hintMode = false;
+            return true;
+        return false;
     }
 
     // Slide animates on toggle only; layout moves snap. Opens expanded.
@@ -397,12 +405,23 @@ Panel {
             }
             onTextKey: function (t) {
                 if (t === "f" || t === "F") {
-                    if (!root.calendarOpen && !root.configOpen)
-                        root.hintMode = !root.hintMode;
+                    root.hintMode = !root.hintMode;
                     return;
                 }
                 if (root.hintMode) {
-                    root.activateHint(String(t).toLowerCase());
+                    var key = String(t).toLowerCase();
+                    if (root.configOpen) {
+                        root.hintBuffer += key;
+                        if (root.hintBuffer.length >= 2) {
+                            var tag = root.hintBuffer;
+                            root.hintBuffer = "";
+                            if (configMenu.activateHint(tag))
+                                root.hintMode = false;
+                        }
+                    } else if (!root.calendarOpen) {
+                        if (root.activateHint(key))
+                            root.hintMode = false;
+                    }
                     return;
                 }
                 if (t === "p" || t === "P")
@@ -636,6 +655,7 @@ Panel {
                             keepDaysOptions: root.keepDaysOptions
                             storageLabel: root.storageLabel
                             pluginVersion: root.pluginVersion
+                            hintMode: root.hintMode
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)

@@ -41,6 +41,7 @@ TestCase {
         keepDaysOptions: [30, 95, 365]
         storageLabel: "1 days · 2 months · 3 archived"
         pluginVersion: "1.6.0"
+        hintMode: false
     }
 
     function collect(item, out) {

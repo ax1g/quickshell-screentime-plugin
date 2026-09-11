@@ -39,6 +39,7 @@ Column {
     required property var keepDaysOptions
     required property string storageLabel
     required property string pluginVersion
+    required property bool hintMode
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -78,6 +79,152 @@ Column {
             root.trophyToggled();
         else if (kind === "easter")
             root.easterEggsToggled();
+    }
+
+    // Hint-mode registry: ordered { tag, kind, sub } entries covering
+    // every pressable in render order, rebuilt whenever hint mode starts
+    // so dynamic lists (removes, custom slots) freeze for the session.
+    // Tags are two letters (aa-az, ba-zz); single letters would starve
+    // past the first two dozen rows. Staged confirmations (reset, wipe)
+    // advance one click step like a pointer click; alias removal fires
+    // whole because re-adding the alias fully restores it.
+    property var hintItems: []
+
+    function hintTagFor(n) {
+        return String.fromCharCode(97 + Math.floor(n / 26)) + String.fromCharCode(97 + (n % 26));
+    }
+
+    function buildHintItems() {
+        var items = [];
+        function add(kind, sub) {
+            items.push({
+                tag: hintTagFor(items.length),
+                kind: kind,
+                sub: sub
+            });
+        }
+        var toggleKinds = ["yearly", "daily", "retro", "weektotal", "trophy", "easter"];
+        for (var t = 0; t < toggleKinds.length; t++)
+            add("toggle", toggleKinds[t]);
+        for (var s = 0; s < root.recordColorOptions.length; s++)
+            add("trophy-swatch", s);
+        if (root.recordColor && root.recordColorOptions.indexOf(root.recordColor) === -1)
+            add("trophy-custom", 0);
+        add("trophy-reset", 0);
+        for (var h = 0; h < root.heroColorOptions.length; h++)
+            add("hero-swatch", h);
+        if (root.heroColor && root.heroColorOptions.indexOf(root.heroColor) === -1)
+            add("hero-custom", 0);
+        add("hero-reset", 0);
+        for (var w = 0; w < root.weekOptions.length; w++)
+            add("weeks", w);
+        for (var k = 0; k < root.keepDaysOptions.length; k++)
+            add("keep", k);
+        for (var g = 0; g < root.dailyGoalOptions.length; g++)
+            add("goal", g);
+        add("field-ignored", 0);
+        add("add-ignored", 0);
+        for (var r = 0; r < root.ignoredEntries.length; r++)
+            add("remove-ignored", r);
+        add("field-from", 0);
+        add("field-to", 0);
+        add("add-alias", 0);
+        for (var a = 0; a < root.aliasEntries.length; a++)
+            add("remove-alias", a);
+        for (var l = 0; l < root.helpItems.length; l++)
+            add("help", l);
+        add("reset", 0);
+        add("wipe", 0);
+        root.hintItems = items;
+    }
+
+    function hintTag(kind, sub) {
+        for (var i = 0; i < root.hintItems.length; i++) {
+            if (root.hintItems[i].kind === kind && root.hintItems[i].sub === sub)
+                return root.hintItems[i].tag;
+        }
+        return "";
+    }
+
+    function activateHint(tag) {
+        var entry = null;
+        for (var i = 0; i < root.hintItems.length; i++) {
+            if (root.hintItems[i].tag === tag) {
+                entry = root.hintItems[i];
+                break;
+            }
+        }
+        if (!entry)
+            return false;
+        var kind = entry.kind;
+        var sub = entry.sub;
+        if (kind === "toggle")
+            root.activate(sub);
+        else if (kind === "trophy-swatch")
+            root.recordColorSelected(root.recordColorOptions[sub]);
+        else if (kind === "trophy-custom")
+            root.recordColorSelected(root.recordColor);
+        else if (kind === "trophy-reset")
+            root.recordColorSelected(root.recordDefaultColor);
+        else if (kind === "hero-swatch")
+            root.heroColorSelected(root.heroColorOptions[sub]);
+        else if (kind === "hero-custom")
+            root.heroColorSelected(root.heroColor);
+        else if (kind === "hero-reset")
+            root.heroColorSelected(root.heroDefaultColor);
+        else if (kind === "weeks")
+            root.weekWindowSelected(root.weekOptions[sub]);
+        else if (kind === "keep")
+            root.keepDaysSelected(root.keepDaysOptions[sub]);
+        else if (kind === "goal")
+            root.dailyGoalSelected(root.dailyGoalOptions[sub]);
+        else if (kind === "field-ignored")
+            ignoredInput.forceActiveFocus();
+        else if (kind === "add-ignored") {
+            root.ignoredAdded(ignoredInput.text);
+            ignoredInput.text = "";
+            ignoredInput.focus = false;
+        } else if (kind === "remove-ignored")
+            root.ignoredRemoved(root.ignoredEntries[sub]);
+        else if (kind === "field-from")
+            aliasFromInput.forceActiveFocus();
+        else if (kind === "field-to")
+            aliasToInput.forceActiveFocus();
+        else if (kind === "add-alias") {
+            root.aliasAdded(aliasFromInput.text, aliasToInput.text);
+            aliasFromInput.text = "";
+            aliasToInput.text = "";
+            aliasFromInput.focus = false;
+            aliasToInput.focus = false;
+        } else if (kind === "remove-alias")
+            root.aliasRemoved(root.aliasEntries[sub].from);
+        else if (kind === "help")
+            Qt.openUrlExternally(root.helpItems[sub].url);
+        else if (kind === "reset") {
+            if (resetRow.stage >= 2) {
+                resetRow.stage = 0;
+                resetRevertTimer.stop();
+                root.resetRequested();
+            } else {
+                resetRow.stage++;
+                resetRevertTimer.restart();
+            }
+        } else if (kind === "wipe") {
+            if (wipeRow.stage >= 3) {
+                wipeRow.stage = 0;
+                wipeRevertTimer.stop();
+                root.wipeRequested();
+            } else {
+                wipeRow.stage++;
+                wipeRevertTimer.restart();
+            }
+        }
+        return true;
+    }
+
+    onHintModeChanged: {
+        if (root.hintMode)
+            root.buildHintItems();
     }
 
     // ---- Display ------------------------------------------------------
@@ -194,6 +341,17 @@ Column {
                         onToggled: root.activate(modelData.kind)
                     }
 
+                    HintBadge {
+                        readonly property string tag: root.hintTag("toggle", modelData.kind)
+                        label: tag
+                        fontFamily: root.fontFamily
+                        accent: root.accent
+                        foreground: root.foreground
+                        show: root.hintMode && tag !== ""
+                        anchors.top: toggleSwitch.top
+                        anchors.right: toggleSwitch.right
+                    }
+
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
@@ -285,6 +443,17 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.recordColorSelected(modelData)
                             }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("trophy-swatch", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                            }
                         }
                     }
 
@@ -306,6 +475,17 @@ Column {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.recordColorSelected(root.recordColor)
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("trophy-custom", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
 
@@ -332,6 +512,17 @@ Column {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.recordColorSelected(root.recordDefaultColor)
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("trophy-reset", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
                 }
@@ -392,6 +583,17 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.heroColorSelected(modelData)
                             }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("hero-swatch", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                            }
                         }
                     }
 
@@ -412,6 +614,17 @@ Column {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.heroColorSelected(root.heroColor)
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("hero-custom", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
 
@@ -439,6 +652,17 @@ Column {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.heroColorSelected(root.heroDefaultColor)
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("hero-reset", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
                 }
@@ -536,6 +760,17 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.weekWindowSelected(modelData)
                             }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("weeks", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                            }
                         }
                     }
                 }
@@ -605,6 +840,17 @@ Column {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.keepDaysSelected(modelData)
+                            }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("keep", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.top: parent.top
+                                anchors.right: parent.right
                             }
                         }
                     }
@@ -704,6 +950,17 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.dailyGoalSelected(modelData)
                             }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("goal", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                            }
                         }
                     }
                 }
@@ -799,7 +1056,19 @@ Column {
                             onAccepted: {
                                 root.ignoredAdded(text);
                                 ignoredInput.text = "";
+                                ignoredInput.focus = false;
                             }
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("field-ignored", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
 
@@ -829,7 +1098,19 @@ Column {
                             onClicked: {
                                 root.ignoredAdded(ignoredInput.text);
                                 ignoredInput.text = "";
+                                ignoredInput.focus = false;
                             }
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("add-ignored", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
                 }
@@ -854,6 +1135,7 @@ Column {
 
                         Item {
                             required property string modelData
+                            required property int index
                             width: ignoredListCol.width
                             height: Math.max(ignoredName.implicitHeight, ignoredRemove.implicitHeight)
 
@@ -887,6 +1169,17 @@ Column {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.ignoredRemoved(modelData)
+                            }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("remove-ignored", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
@@ -957,6 +1250,17 @@ Column {
                             clip: true
                             onAccepted: aliasToInput.forceActiveFocus()
                         }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("field-from", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                        }
                     }
 
                     Item {
@@ -1001,7 +1305,20 @@ Column {
                                 root.aliasAdded(aliasFromInput.text, aliasToInput.text);
                                 aliasFromInput.text = "";
                                 aliasToInput.text = "";
+                                aliasFromInput.focus = false;
+                                aliasToInput.focus = false;
                             }
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("field-to", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
 
@@ -1032,7 +1349,20 @@ Column {
                                 root.aliasAdded(aliasFromInput.text, aliasToInput.text);
                                 aliasFromInput.text = "";
                                 aliasToInput.text = "";
+                                aliasFromInput.focus = false;
+                                aliasToInput.focus = false;
                             }
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("add-alias", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
                 }
@@ -1058,6 +1388,7 @@ Column {
                         Item {
                             id: aliasEntry
                             required property var modelData
+                            required property int index
                             property bool armed: false
                             width: aliasListCol.width
                             height: Math.max(aliasName.implicitHeight, aliasRemove.implicitHeight)
@@ -1111,6 +1442,17 @@ Column {
                                     }
                                 }
                             }
+
+                            HintBadge {
+                                readonly property string tag: root.hintTag("remove-alias", index)
+                                label: tag
+                                fontFamily: root.fontFamily
+                                accent: root.accent
+                                foreground: root.foreground
+                                show: root.hintMode && tag !== ""
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
                     }
                 }
@@ -1119,6 +1461,28 @@ Column {
     }
 
     // ---- Help ---------------------------------------------------------
+
+    // Shared by the link rows below and the hint registry above.
+    readonly property var helpItems: [
+        {
+            glyph: "\uf188",
+            label: "Report a bug",
+            sub: "Something broken? Tell us here",
+            url: "https://github.com/ax1g/quickshell-screentime-plugin/issues/new"
+        },
+        {
+            glyph: "\uf0eb",
+            label: "Share an idea",
+            sub: "A feature you wish existed",
+            url: "https://github.com/ax1g/quickshell-screentime-plugin/issues"
+        },
+        {
+            glyph: "\uf126",
+            label: "Contribute",
+            sub: "Pull requests welcome",
+            url: "https://github.com/ax1g/quickshell-screentime-plugin"
+        }
+    ]
 
     Rectangle {
         width: root.width
@@ -1179,29 +1543,11 @@ Column {
             // Outer-id reads are idiomatic in delegates, covered by the
             // file-wide suppression at the top.
             Repeater {
-                model: [
-                    {
-                        glyph: "\uf188",
-                        label: "Report a bug",
-                        sub: "Something broken? Tell us here",
-                        url: "https://github.com/ax1g/quickshell-screentime-plugin/issues/new"
-                    },
-                    {
-                        glyph: "\uf0eb",
-                        label: "Share an idea",
-                        sub: "A feature you wish existed",
-                        url: "https://github.com/ax1g/quickshell-screentime-plugin/issues"
-                    },
-                    {
-                        glyph: "\uf126",
-                        label: "Contribute",
-                        sub: "Pull requests welcome",
-                        url: "https://github.com/ax1g/quickshell-screentime-plugin"
-                    }
-                ]
+                model: root.helpItems
 
                 Item {
                     required property var modelData
+                    required property int index
                     width: parent.width
                     height: Math.max(helpRowLabels.implicitHeight, helpOpen.implicitHeight, helpRowGlyph.implicitHeight) + Style.space(4)
 
@@ -1252,6 +1598,17 @@ Column {
                         opacity: helpRowMouse.containsMouse ? 0.9 : 0.4
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    HintBadge {
+                        readonly property string tag: root.hintTag("help", index)
+                        label: tag
+                        fontFamily: root.fontFamily
+                        accent: root.accent
+                        foreground: root.foreground
+                        show: root.hintMode && tag !== ""
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -1367,6 +1724,17 @@ Column {
                             font.bold: true
                             anchors.centerIn: parent
                         }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("reset", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                        }
                     }
                 }
 
@@ -1463,6 +1831,17 @@ Column {
                             font.pixelSize: Style.font.bodySmall
                             font.bold: true
                             anchors.centerIn: parent
+                        }
+
+                        HintBadge {
+                            readonly property string tag: root.hintTag("wipe", 0)
+                            label: tag
+                            fontFamily: root.fontFamily
+                            accent: root.accent
+                            foreground: root.foreground
+                            show: root.hintMode && tag !== ""
+                            anchors.top: parent.top
+                            anchors.right: parent.right
                         }
                     }
                 }

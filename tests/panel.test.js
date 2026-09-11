@@ -755,5 +755,72 @@ test("hint activation mirrors the click guards", () => {
   assert.match(panel, /tag === "y" && !root\.hideYearly/)
   assert.match(panel, /tag === "b" && root\.expanded/)
   assert.match(panel, /!day\.isFuture && \(Number\(day\.ms\) \|\| 0\) > 0/)
-  assert.match(panel, /if \(handled\)\s*\n\s*root\.hintMode = false/)
+  assert.match(panel, /if \(handled\)\s*\n\s*return true;/)
+  assert.match(
+    panel,
+    /if \(root\.activateHint\(key\)\)\s*\n\s*root\.hintMode = false;/,
+  )
+})
+
+test("hint buffer resolves two-letter settings tags", () => {
+  assert.match(panel, /property string hintBuffer: ""/)
+  assert.match(panel, /onHintModeChanged/)
+  assert.match(panel, /root\.hintBuffer \+= key/)
+  assert.match(panel, /if \(root\.hintBuffer\.length >= 2\)/)
+  assert.match(panel, /if \(configMenu\.activateHint\(tag\)\)/)
+  assert.match(panel, /else if \(!root\.calendarOpen\)/)
+})
+
+test("settings registry covers every pressable in order", () => {
+  assert.match(menu, /required property bool hintMode/)
+  assert.match(menu, /property var hintItems: \[\]/)
+  assert.match(menu, /function buildHintItems\(\)/)
+  assert.match(menu, /function hintTag\(kind, sub\)/)
+  assert.match(menu, /function activateHint\(tag\)/)
+  assert.match(menu, /onHintModeChanged/)
+  assert.match(menu, /root\.buildHintItems\(\)/)
+  for (const kind of [
+    "toggle",
+    "trophy-swatch",
+    "trophy-custom",
+    "trophy-reset",
+    "hero-swatch",
+    "hero-custom",
+    "hero-reset",
+    "weeks",
+    "keep",
+    "goal",
+    "field-ignored",
+    "add-ignored",
+    "remove-ignored",
+    "field-from",
+    "field-to",
+    "add-alias",
+    "remove-alias",
+    "help",
+    "reset",
+    "wipe",
+  ]) {
+    assert.match(menu, new RegExp('"' + kind + '"'))
+  }
+  // Staged confirmations advance one step, never execute.
+  assert.match(menu, /resetRow\.stage\+\+/)
+  assert.match(menu, /wipeRow\.stage\+\+/)
+  // Alias removal through hints restores outright: re-adding undoes it.
+  assert.match(menu, /root\.aliasRemoved\(root\.aliasEntries\[sub\]\.from\)/)
+  // Committing releases the keyboard back to shortcuts.
+  assert.match(menu, /ignoredInput\.focus = false/)
+  assert.match(menu, /aliasToInput\.focus = false/)
+})
+
+test("settings badges follow the registry", () => {
+  assert.match(menu, /root\.hintTag\("toggle", modelData\.kind\)/)
+  assert.match(menu, /root\.hintTag\("weeks", index\)/)
+  assert.match(menu, /root\.hintTag\("remove-ignored", index\)/)
+  assert.match(menu, /root\.hintTag\("remove-alias", index\)/)
+  assert.match(menu, /root\.hintTag\("help", index\)/)
+  assert.match(menu, /root\.hintTag\("field-ignored", 0\)/)
+  assert.match(menu, /root\.hintTag\("add-alias", 0\)/)
+  assert.match(menu, /root\.hintTag\("reset", 0\)/)
+  assert.match(menu, /root\.hintTag\("wipe", 0\)/)
 })
