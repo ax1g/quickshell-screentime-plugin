@@ -430,14 +430,14 @@ Panel {
                         anchors.topMargin: -Style.space(4)
                     }
 
-                    // Settings sweep, matching the home gear: 12 to 4
-                    // o'clock as the drawer slides in over it.
+                    // Settings sweep, matching the home gear: a half turn
+                    // as the drawer slides in over it.
                     NumberAnimation {
                         id: configGearSpin
                         target: configHeroIcon
                         property: "rotation"
                         from: 0
-                        to: 120
+                        to: 180
                         duration: 450
                         easing.type: Easing.OutBack
                     }

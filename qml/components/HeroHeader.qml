@@ -141,13 +141,13 @@ Item {
         anchors.verticalCenter: showMoreCorner.verticalCenter
     }
 
-    // Gear sweep: 12 to 4 o'clock each time settings opens.
+    // Gear sweep: a half turn each time settings opens.
     NumberAnimation {
         id: gearSpin
         target: configGear
         property: "rotation"
         from: 0
-        to: 120
+        to: 180
         duration: 450
         easing.type: Easing.OutBack
     }

@@ -352,9 +352,11 @@ test("color rows offer an R reset to the default", () => {
 
 test("navigation celebrates through the header icons", () => {
   const drawer = qml("YearDrawer.qml")
-  // Home gear sweeps 12 to 4 o'clock as settings opens.
+  // Home gear sweeps a half turn as settings opens.
   assert.match(hero, /id: gearSpin/)
-  assert.match(hero, /to: 120/)
+  assert.match(hero, /to: 180/)
+  assert.match(panel, /id: configGearSpin/)
+  assert.match(panel, /to: 180/)
   assert.match(hero, /gearSpin\.restart\(\);/)
   // Returning home turns the hourglass a full circle.
   assert.match(hero, /function spinHourglass\(\)/)
