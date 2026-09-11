@@ -338,7 +338,10 @@ Item {
     function scheduleSave() {
         if (root.startupPhase || root.backupPending)
             return;
-        saveTimer.restart();
+        // Start, never restart: continuous focus flapping must not defer
+        // the write indefinitely past the crash window.
+        if (!saveTimer.running)
+            saveTimer.start();
     }
 
     function onHistoryLoaded() {

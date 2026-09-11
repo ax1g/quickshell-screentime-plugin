@@ -32,6 +32,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Rapid focus switches no longer defer the history write indefinitely:
+  the debounced save starts once instead of restarting, bounding crash
+  loss to the debounce window.
 - Buckets spanning several midnights split day by day instead of piling
   everything onto the start day.
 - Backward clock jumps no longer stall tracking: a start timestamp in the
