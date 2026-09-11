@@ -432,15 +432,25 @@ Panel {
                     // Flush top like the year hero; breathing room lives below.
                     height: Math.max(configHeroIcon.implicitHeight, configHeroLabels.implicitHeight, configBack.implicitHeight) + Style.space(6)
 
+                    // Icon returns to the main panel, like the year hero.
                     Text {
                         id: configHeroIcon
                         text: "\uf013"
-                        color: root.heroColor !== "" ? root.heroColor : Qt.darker(root.contentForeground, 1.2)
+                        color: root.heroColor !== "" ? root.heroColor : (configHeroIconMouse.containsMouse ? root.contentForeground : Qt.darker(root.contentForeground, 1.2))
                         font.family: root.contentFontFamily
                         font.pixelSize: Style.fontPx(2.4)
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.topMargin: -Style.space(4)
+
+                        MouseArea {
+                            id: configHeroIconMouse
+                            anchors.fill: parent
+                            anchors.margins: -Style.space(6)
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.openConfig(false)
+                        }
                     }
 
                     // Settings sweep, matching the home gear: a full turn

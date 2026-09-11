@@ -492,3 +492,10 @@ test("week pills read in weeks", () => {
 test("trophy color carries a wrapping caption", () => {
   assert.match(menu, /text: "Color of the record-week trophy"/)
 })
+
+test("settings header icon returns to the main panel", () => {
+  assert.match(
+    panel,
+    /id: configHeroIconMouse[\s\S]*?onClicked: root\.openConfig\(false\)/,
+  )
+})
