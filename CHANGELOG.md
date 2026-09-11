@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Busiest Week Trophy needs two weeks of tracked data before it appears,
+  so a lone first week can't crown itself.
+
 ### Fixed
 
 - Corrupt history files are preserved aside even without python3

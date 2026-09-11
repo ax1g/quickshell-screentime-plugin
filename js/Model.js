@@ -1260,6 +1260,17 @@ function weekView(days, todayKey, weekCount, offset) {
     }
     if (hasPrev) break
   }
+  // Weeks holding any tracked time; the trophy needs at least two.
+  var dataWeeks = 0
+  for (i = 0; i < weeks.length; i++) {
+    var scanned = weeks[i] && weeks[i].days ? weeks[i].days : []
+    for (var s = 0; s < scanned.length; s++) {
+      if ((Number(scanned[s].ms) || 0) > 0) {
+        dataWeeks++
+        break
+      }
+    }
+  }
   return {
     weeks: weeks,
     week: week,
@@ -1267,7 +1278,8 @@ function weekView(days, todayKey, weekCount, offset) {
     totalMs: weekTotal(wdays),
     // The Busiest Week Trophy follows the viewed week at any page: unique best across
     // the whole loaded window, not just "current week beats older weeks".
-    isRecord: offset === bestWeekOffset(weeks),
+    // It needs two weeks of tracked data: a lone first week crowns nothing.
+    isRecord: offset === bestWeekOffset(weeks) && dataWeeks >= 2,
     hasPrev: hasPrev,
     weekEndKey: wdays.length === 7 ? String(wdays[6].key || "") : "",
   }

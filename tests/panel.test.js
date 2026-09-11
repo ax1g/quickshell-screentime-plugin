@@ -578,3 +578,14 @@ test("settings header reads Settings with a content subtitle", () => {
   assert.match(panel, /Display, tracking, goals & data/)
   assert.doesNotMatch(panel, /text: "Screen Time"/)
 })
+
+test("trophy needs two weeks of tracked data", () => {
+  const model = fs.readFileSync(
+    path.join(__dirname, "..", "js", "Model.js"),
+    "utf8",
+  )
+  assert.match(
+    model,
+    /isRecord: offset === bestWeekOffset\(weeks\) && dataWeeks >= 2/,
+  )
+})

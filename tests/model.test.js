@@ -1559,7 +1559,28 @@ test("weekView agrees with the individual primitives", () => {
   assert.deepEqual(view.weeks, weeks)
   assert.equal(view.max, Model.scrollableTrendMax(weeks))
   assert.equal(view.totalMs, Model.weekTotal(view.week.days))
-  assert.equal(view.isRecord, Model.isRecordWeek(weeks, 0))
+  // A lone data week crowns nothing, even though it beats every older
+  // (empty) week on record.
+  assert.equal(Model.isRecordWeek(weeks, 0), true)
+  assert.equal(view.isRecord, false)
+})
+
+test("weekView crowns the unique best once two weeks hold data", () => {
+  const days = {
+    "2026-08-18": { total: 2 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-12": { total: 1 * HOUR_MS_VIEW, apps: {} },
+  }
+  const view = Model.weekView(days, "2026-08-19", 2, 0)
+  assert.equal(view.isRecord, true)
+})
+
+test("weekView trophy follows the best week to its page", () => {
+  const days = {
+    "2026-08-18": { total: 1 * HOUR_MS_VIEW, apps: {} },
+    "2026-08-12": { total: 2 * HOUR_MS_VIEW, apps: {} },
+  }
+  assert.equal(Model.weekView(days, "2026-08-19", 2, 0).isRecord, false)
+  assert.equal(Model.weekView(days, "2026-08-19", 2, 1).isRecord, true)
 })
 
 test("weekView tolerates an out-of-range offset", () => {
