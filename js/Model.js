@@ -1735,7 +1735,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     out.push({
       glyph: "\uF0E7",
       label: "TOP MONTHS",
-      value: rank.join(" \u25CF "),
+      value: "\uF091 " + rank.join(" \u25CF "),
       sub: "Your heavy-hitting months, ranked.",
     })
   }

@@ -14,6 +14,7 @@ Item {
     required property var monthLong
     required property bool isThisYear
     required property int nowMonth
+    required property bool isTop
     required property real gridWidth
     required property real hoursW
     required property color foreground
@@ -24,7 +25,9 @@ Item {
     readonly property real labelW: Style.space(26)
     readonly property real labelGap: Style.space(4)
     readonly property bool isCurrentMonth: month.isThisYear && month.index === month.nowMonth
-    readonly property real availW: month.gridWidth - month.labelW - month.labelGap - month.hoursW - month.labelGap
+    readonly property real trophyW: month.isTop ? Style.space(16) : 0
+    readonly property real barX: month.labelW + month.labelGap + month.trophyW + (month.isTop ? month.labelGap : 0)
+    readonly property real availW: month.gridWidth - month.barX - month.hoursW - month.labelGap
     readonly property real ratio: month.maxMs > 0 ? (month.months[month.index] ? month.months[month.index].ms / month.maxMs : 0) : 0
 
     width: month.gridWidth
@@ -33,13 +36,28 @@ Item {
     Text {
         text: month.monthShort[month.index]
         color: month.foreground
-        opacity: month.isCurrentMonth ? 1.0 : 0.55
+        opacity: month.isCurrentMonth || month.isTop ? 1.0 : 0.55
         font.family: month.fontFamily
         font.pixelSize: Style.font.caption
-        font.bold: month.isCurrentMonth
+        font.bold: month.isCurrentMonth || month.isTop
         width: month.labelW
         elide: Text.ElideRight
         anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+    }
+
+    // Busiest month: a gold trophy, larger than the weekly one, beside
+    // the label. The TOP MONTHS card lists the same months as blobs.
+
+    Text {
+        visible: month.isTop
+        text: "\uf091"
+        color: "#FFD700"
+        font.family: month.fontFamily
+        font.pixelSize: Style.font.title
+        width: month.trophyW
+        elide: Text.ElideRight
+        x: month.labelW + month.labelGap
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -47,7 +65,7 @@ Item {
     // row behind a partial bar reads as loading, not progress.
     Rectangle {
         id: monthBar
-        x: month.labelW + month.labelGap
+        x: month.barX
         width: Math.max(0, month.availW * month.ratio)
         height: parent.height
         radius: Style.space(2)

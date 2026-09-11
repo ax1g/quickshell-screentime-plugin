@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Yearly overview polish: the hero shows a tracked-months caption above a
+  larger year pager, month bars lose their background tracks, and the
+  busiest month earns a gold trophy (mirrored in the TOP MONTHS card).
 - Busiest Week Trophy needs two weeks of tracked data before it appears,
   so a lone first week can't crown itself.
 

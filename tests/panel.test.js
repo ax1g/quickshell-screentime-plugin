@@ -599,3 +599,16 @@ test("year hero shows a tracked-months caption over the pager", () => {
     /monthsActive: root\.yearView \? root\.yearView\.monthsActive : 0/,
   )
 })
+
+test("busiest month earns a gold trophy in the month list", () => {
+  const drawer = qml("YearDrawer.qml")
+  const monthRow = fs.readFileSync(
+    path.join(__dirname, "..", "qml", "MonthRow.qml"),
+    "utf8",
+  )
+  assert.match(drawer, /readonly property int topMonth/)
+  assert.match(drawer, /isTop: index === heatGrid\.topMonth/)
+  assert.match(monthRow, /required property bool isTop/)
+  assert.match(monthRow, /text: "\\uf091"/i)
+  assert.match(monthRow, /color: "#FFD700"/)
+})

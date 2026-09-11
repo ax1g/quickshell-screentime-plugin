@@ -1065,7 +1065,7 @@ test("yearFacts builds the wrapped summary for a full archived year", () => {
   assert.match(find("DAY COUNT").value, /Active on 9 of 357 tracked days/)
   assert.match(find("LONGEST STREAK").value, /3 days in a row/)
   assert.match(find("LONGEST STREAK").sub, /Feb/)
-  assert.equal(find("TOP MONTHS").value, "Mar ● Feb ● Jan")
+  assert.equal(find("TOP MONTHS").value, "\uF091 Mar ● Feb ● Jan")
   assert.match(find("AVERAGE SCREEN DAY").value, /4h 53m per active day/)
   assert.match(find("WEEKDAY RHYTHM").value, /Mon leads · 91% weekdays/)
   assert.match(find("PEAK DAY").value, /Mar 9 · 11h, the year's high/)
@@ -1081,7 +1081,10 @@ test("yearFacts builds the wrapped summary for a full archived year", () => {
 test("TOP MONTHS lists months as blobs with no rank numbers", () => {
   const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
   const cards = Model.yearFacts({}, months, {}, 2026, "2026-12-24")
-  assert.equal(cards.find((c) => c.label === "TOP MONTHS").value, "Mar ● Jan")
+  assert.equal(
+    cards.find((c) => c.label === "TOP MONTHS").value,
+    "\uF091 Mar ● Jan",
+  )
 })
 
 test("RECHARGE MONTH skips a thin current month when history exists", () => {
