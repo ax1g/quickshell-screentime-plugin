@@ -178,7 +178,7 @@ test("week total mode persists instead of resetting on dismiss", () => {
 })
 
 test("busiest week trophy color defaults to gold and persists via setting", () => {
-  assert.match(panel, /recordColorOptions: \["#FFD700"/)
+  assert.match(panel, /recordColorOptions: \["#000000", "#FFFFFF", "#FFD700"/)
   assert.match(panel, /root\.prefs\.recordColor/)
   assert.match(panel, /function selectRecordColor\(color\)/)
   assert.match(panel, /writeSetting\("recordColor", color\)/)
@@ -190,7 +190,7 @@ test("busiest week trophy color defaults to gold and persists via setting", () =
 
 test("hero icon color overrides hourglass, yearly and config glyphs", () => {
   const drawer = qml("YearDrawer.qml")
-  assert.match(panel, /heroColorOptions: \["#FFD700"/)
+  assert.match(panel, /heroColorOptions: \["#000000", "#FFFFFF", "#FFD700"/)
   assert.match(panel, /root\.prefs\.heroColor/)
   assert.match(panel, /function selectHeroColor\(color\)/)
   assert.match(panel, /writeSetting\("heroColor", color\)/)
@@ -205,7 +205,11 @@ test("hero icon color overrides hourglass, yearly and config glyphs", () => {
   assert.match(drawer, /required property string heroColor/)
   assert.match(drawer, /root\.heroColor !== "" \? root\.heroColor/)
   assert.match(menu, /signal heroColorSelected\(string color\)/)
-  assert.match(menu, /root\.heroColorSelected\(""\)/)
+  assert.match(menu, /root\.heroColorSelected\(modelData\)/)
+  // No Auto pill: the menu offers concrete circles only, starting with
+  // black and white.
+  assert.doesNotMatch(menu, /text: "Auto"/)
+  assert.doesNotMatch(menu, /root\.heroColorSelected\(""\)/)
 })
 
 test("tracking prefs normalize in the panel and filter the active day", () => {

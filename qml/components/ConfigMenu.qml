@@ -401,7 +401,7 @@ Column {
     }
 
     // Hero icon color for the hourglass, the yearly hero and the settings
-    // glyph. Auto ("") follows the theme foreground like before.
+    // glyph. Concrete circles only, starting with black and white.
     Item {
         width: root.width
         height: Math.max(heroLabel.implicitHeight, heroSwatches.implicitHeight) + Style.space(8)
@@ -422,33 +422,6 @@ Column {
             spacing: Style.space(6)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-
-            Rectangle {
-                readonly property bool chosen: root.heroColor === ""
-                width: Style.space(40)
-                height: Style.space(24)
-                radius: Style.space(4)
-                color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
-                border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                border.width: 1
-
-                Text {
-                    text: "Auto"
-                    color: chosen ? root.accent : root.foreground
-                    opacity: chosen ? 1.0 : 0.6
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    font.bold: chosen
-                    anchors.centerIn: parent
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.heroColorSelected("")
-                }
-            }
 
             Repeater {
                 model: root.heroColorOptions
