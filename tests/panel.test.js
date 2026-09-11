@@ -401,3 +401,10 @@ test("drawer switches never read as a return home", () => {
     /if \(root\.opened\)\s*\n\s*heroHeader\.spinHourglass\(\)/,
   )
 })
+
+test("config opens expanded like the yearly drawer", () => {
+  const fn = panel.match(/function openConfig\(open\) \{[\s\S]*?\n    \}/)
+  assert(fn, "openConfig block exists")
+  assert(fn[0].includes("keyCatcher.collapsedCardH = keyCatcher.height"))
+  assert(fn[0].includes("root.expanded = true"))
+})

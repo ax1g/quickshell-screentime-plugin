@@ -263,6 +263,8 @@ Panel {
     }
 
     // Config slides from the right; same chrome contract as the calendar.
+    // Like the yearly drawer, it opens expanded: settings get the full
+    // panel even from SHOW LESS mode.
     function openConfig(open) {
         configDrawer.sliding = true;
         if (open) {
@@ -270,6 +272,10 @@ Panel {
             // this as a return to the main panel.
             root.configOpen = true;
             root.openCalendar(false);
+            if (!root.expanded) {
+                keyCatcher.collapsedCardH = keyCatcher.height;
+                root.expanded = true;
+            }
         } else {
             root.configOpen = false;
         }
