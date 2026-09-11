@@ -1329,7 +1329,7 @@ Column {
                 Row {
                     id: resetBtnRow
                     anchors.right: parent.right
-                    anchors.top: parent.top
+                    anchors.verticalCenter: parent.verticalCenter
 
                     Rectangle {
                         id: resetBox
@@ -1426,7 +1426,7 @@ Column {
                 Row {
                     id: wipeBtnRow
                     anchors.right: parent.right
-                    anchors.top: parent.top
+                    anchors.verticalCenter: parent.verticalCenter
 
                     Rectangle {
                         id: wipeBox

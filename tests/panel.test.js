@@ -358,7 +358,7 @@ test("staged rows size explicitly so a fill mousearea cannot collapse them", () 
   )
 })
 
-test("danger buttons pin top-right beside early-wrapping labels", () => {
+test("danger buttons center vertically beside early-wrapping labels", () => {
   for (const [labels, buttons] of [
     ["resetLabels", "resetBtnRow"],
     ["wipeLabels", "wipeBtnRow"],
@@ -368,7 +368,7 @@ test("danger buttons pin top-right beside early-wrapping labels", () => {
       new RegExp(
         "id: " +
           buttons +
-          "\\s*\\n\\s*anchors\\.right: parent\\.right\\s*\\n\\s*anchors\\.top: parent\\.top",
+          "\\s*\\n\\s*anchors\\.right: parent\\.right\\s*\\n\\s*anchors\\.verticalCenter: parent\\.verticalCenter",
       ),
     )
     assert.match(
