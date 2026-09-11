@@ -146,7 +146,10 @@ test("config lives in its own slide-over drawer", () => {
   assert.match(panel, /onConfigToggled: root\.openConfig\(!root\.configOpen\)/)
   // The two drawers never overlap: opening one closes the other.
   assert.match(panel, /if \(open\)\s+root\.configOpen = false/)
-  assert.match(panel, /if \(open\)\s+root\.openCalendar\(false\)/)
+  assert.match(
+    panel,
+    /root\.configOpen = true;\s*\n\s*root\.openCalendar\(false\)/,
+  )
 })
 
 test("busiest week trophy follows the best week at any page", () => {
@@ -345,4 +348,45 @@ test("color rows offer an R reset to the default", () => {
   assert.match(menu, /root\.heroColor === root\.heroDefaultColor/)
   assert.match(panel, /recordDefaultColor: root\.recordDefaultColor/)
   assert.match(panel, /heroDefaultColor: root\.heroDefaultColor/)
+})
+
+test("navigation celebrates through the header icons", () => {
+  const drawer = qml("YearDrawer.qml")
+  // Home gear sweeps 12 to 4 o'clock as settings opens.
+  assert.match(hero, /id: gearSpin/)
+  assert.match(hero, /to: 120/)
+  assert.match(hero, /gearSpin\.restart\(\);/)
+  // Returning home turns the hourglass a full circle.
+  assert.match(hero, /function spinHourglass\(\)/)
+  assert.match(hero, /heroFlip\.restart\(\)/)
+  assert.match(panel, /id: heroHeader/)
+  assert.match(panel, /function celebrateHome\(\)/)
+  assert.match(panel, /heroHeader\.spinHourglass\(\)/)
+  // The settings header gear sweeps as its drawer slides in.
+  assert.match(panel, /id: configGearSpin/)
+  assert.match(panel, /configGearSpin\.restart\(\)/)
+  // The yearly calendar swings once on entry, pivoting at the top.
+  assert.match(drawer, /transformOrigin: Item\.Top/)
+  assert.match(drawer, /id: calendarSwing/)
+  assert.match(drawer, /function swingCalendar\(\)/)
+  assert.match(drawer, /calendarSwing\.restart\(\)/)
+  assert.match(panel, /id: yearDrawer/)
+  assert.match(panel, /yearDrawer\.swingCalendar\(\)/)
+})
+
+test("drawer switches never read as a return home", () => {
+  // Opening one drawer closes the other; only both resting closed
+  // celebrates, and dismiss closes drawers silently.
+  assert.match(
+    panel,
+    /else if \(!root\.configOpen\)\s*\n\s*root\.celebrateHome\(\)/,
+  )
+  assert.match(
+    panel,
+    /else if \(!root\.calendarOpen\)\s*\n\s*root\.celebrateHome\(\)/,
+  )
+  assert.match(
+    panel,
+    /if \(root\.opened\)\s*\n\s*heroHeader\.spinHourglass\(\)/,
+  )
 })

@@ -29,6 +29,11 @@ Item {
     signal prevYearRequested
     signal nextYearRequested
 
+    // Entry celebration, called by the panel as the drawer slides in.
+    function swingCalendar() {
+        calendarSwing.restart();
+    }
+
     Rectangle {
         anchors.fill: parent
         color: root.panelBackground
@@ -64,6 +69,9 @@ Item {
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.topMargin: -Style.space(4)
+            // Pendulum pivot: the top hangs on the wall while the
+            // bottom swings left and right on entry.
+            transformOrigin: Item.Top
 
             MouseArea {
                 id: yearHeroIconMouse
@@ -72,6 +80,36 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.closeRequested()
+            }
+        }
+
+        // Entry swing: a small damped sway, settling back to rest.
+        SequentialAnimation {
+            id: calendarSwing
+
+            NumberAnimation {
+                target: yearHeroIcon
+                property: "rotation"
+                from: 0
+                to: 12
+                duration: 140
+                easing.type: Easing.OutCubic
+            }
+
+            NumberAnimation {
+                target: yearHeroIcon
+                property: "rotation"
+                to: -9
+                duration: 200
+                easing.type: Easing.InOutQuad
+            }
+
+            NumberAnimation {
+                target: yearHeroIcon
+                property: "rotation"
+                to: 0
+                duration: 260
+                easing.type: Easing.OutCubic
             }
         }
 

@@ -256,14 +256,34 @@ Panel {
             root.expanded = true;
         }
         root.calendarOpen = open;
+        if (open)
+            yearDrawer.swingCalendar();
+        else if (!root.configOpen)
+            root.celebrateHome();
     }
 
     // Config slides from the right; same chrome contract as the calendar.
     function openConfig(open) {
         configDrawer.sliding = true;
-        if (open)
+        if (open) {
+            // Claim the flag first: the calendar close below must not read
+            // this as a return to the main panel.
+            root.configOpen = true;
             root.openCalendar(false);
-        root.configOpen = open;
+        } else {
+            root.configOpen = false;
+        }
+        if (open)
+            configGearSpin.restart();
+        else if (!root.calendarOpen)
+            root.celebrateHome();
+    }
+
+    // Return-to-main celebration, once both drawers rest closed and only
+    // while the panel itself stays open (dismiss closes drawers silently).
+    function celebrateHome() {
+        if (root.opened)
+            heroHeader.spinHourglass();
     }
 
     KeyboardPanel {
@@ -326,6 +346,7 @@ Panel {
                 }
 
                 YearDrawer {
+                    id: yearDrawer
                     foreground: root.contentForeground
                     fontFamily: root.contentFontFamily
                     panelBackground: root.bar ? root.bar.background : Color.background
@@ -407,6 +428,18 @@ Panel {
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.topMargin: -Style.space(4)
+                    }
+
+                    // Settings sweep, matching the home gear: 12 to 4
+                    // o'clock as the drawer slides in over it.
+                    NumberAnimation {
+                        id: configGearSpin
+                        target: configHeroIcon
+                        property: "rotation"
+                        from: 0
+                        to: 120
+                        duration: 450
+                        easing.type: Easing.OutBack
                     }
 
                     Column {
@@ -571,6 +604,7 @@ Panel {
                     spacing: Style.space(12)
 
                     HeroHeader {
+                        id: heroHeader
                         foreground: root.contentForeground
                         fontFamily: root.contentFontFamily
                         heroColor: root.heroColor

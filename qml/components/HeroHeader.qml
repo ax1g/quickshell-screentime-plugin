@@ -63,6 +63,12 @@ Item {
         }
     }
 
+    // Return-to-main celebration: a full hourglass turn. Reuses the
+    // easter-egg flip; navigation feedback always plays.
+    function spinHourglass() {
+        heroFlip.restart();
+    }
+
     Text {
         id: heroIcon
         text: "󰔟"
@@ -135,13 +141,27 @@ Item {
         anchors.verticalCenter: showMoreCorner.verticalCenter
     }
 
+    // Gear sweep: 12 to 4 o'clock each time settings opens.
+    NumberAnimation {
+        id: gearSpin
+        target: configGear
+        property: "rotation"
+        from: 0
+        to: 120
+        duration: 450
+        easing.type: Easing.OutBack
+    }
+
     MouseArea {
         id: configGearMouse
         anchors.fill: configGear
         anchors.margins: -Style.space(4)
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: heroHeader.configToggled()
+        onClicked: {
+            gearSpin.restart();
+            heroHeader.configToggled();
+        }
     }
 
     Row {

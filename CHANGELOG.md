@@ -43,6 +43,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Header icons celebrate navigation: the settings gear sweeps as settings
+  opens, the yearly calendar swings on entry, and the hourglass turns a
+  full circle on the way back to the main view.
 - Settings page groups prefs into tinted section cards (Display, Colors,
   Trend & History, Daily Goal, Tracking, and a red Danger Zone) with
   full-width labels that wrap instead of truncating, and larger targets.
