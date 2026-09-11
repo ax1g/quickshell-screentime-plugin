@@ -521,3 +521,33 @@ test("playful extras mute the header spins", () => {
   assert.match(panel, /easterEggs: !root\.hideEasterEggs/)
   assert.match(menu, /Hourglass flip, sparkles and header spins/)
 })
+
+test("ipc surface routes every panel action", () => {
+  for (const fn of [
+    "open",
+    "close",
+    "show",
+    "hide",
+    "toggle",
+    "resetToday",
+    "resetAll",
+    "status",
+  ]) {
+    assert.match(bar, new RegExp("function " + fn + "\\("), fn + " exists")
+  }
+  assert.match(bar, /root\.service\.resetToday\(\)/)
+  assert.match(bar, /root\.service\.resetAll\(\)/)
+  assert.match(bar, /root\.togglePanel\(\)/)
+})
+
+test("wiping history reveals onboarding", () => {
+  const reset = service.match(/function resetAll\(\) \{[\s\S]*?\n    \}/)
+  assert(reset, "resetAll block exists")
+  assert(reset[0].includes("root.days = {}"))
+  assert(reset[0].includes("root.months = {}"))
+  assert(reset[0].includes("root.years = {}"))
+  assert.match(
+    panel,
+    /root\.storageSummary\.totalMs <= 0 && root\.dayTotal <= 0/,
+  )
+})

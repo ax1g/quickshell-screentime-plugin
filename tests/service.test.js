@@ -176,9 +176,7 @@ test("ignoring the focused app evicts its live bucket", () => {
   )
   assert(prefs, "setTrackingPrefs block exists")
   assert(
-    prefs[0].includes(
-      "Model.isIgnoredApp(root.activeApp, root.ignoredApps)",
-    ),
+    prefs[0].includes("Model.isIgnoredApp(root.activeApp, root.ignoredApps)"),
   )
   assert(prefs[0].includes("State.closeActiveBucket"))
   assert(prefs[0].includes('root.activeApp = ""'))
