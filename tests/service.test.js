@@ -181,3 +181,11 @@ test("ignoring the focused app evicts its live bucket", () => {
   assert(prefs[0].includes("State.closeActiveBucket"))
   assert(prefs[0].includes('root.activeApp = ""'))
 })
+
+test("corrupt history is set aside without depending on python", () => {
+  const backup = service.match(/id: backupProc[\s\S]*?\n    \}/)
+  assert(backup, "backupProc block exists")
+  assert(backup[0].includes("[[ -s "))
+  assert(backup[0].includes(".corrupt-$(date +%s)"))
+  assert(!backup[0].includes("|| exit 0"), "no early exit without python")
+})

@@ -471,13 +471,16 @@ Item {
         }
     }
 
-    // Move aside only non-empty files that fail to parse.
+    // Move aside non-empty files that fail to parse. The validity check
+    // uses python3 when present, but the move itself never depends on
+    // it: without python an unreadable file is still preserved aside
+    // instead of being overwritten on the next save.
     property bool backupAttempted: false
     // qmllint disable signal-handler-parameters
     Process {
         id: backupProc
         environment: root.procEnv
-        command: ["bash", "-c", "command -v python3 >/dev/null 2>&1 || exit 0; f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]] && ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi"]
+        command: ["bash", "-c", "f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]]; then if command -v python3 >/dev/null 2>&1 && python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then :; else mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi; fi"]
         onExited: {
             // Unblock writes; queued state persists on the next tick.
             root.backupPending = false;

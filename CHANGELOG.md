@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrupt history files are preserved aside even without python3
+  installed; previously the safety copy depended on it, so tracking
+  could overwrite the unreadable file on the next save.
+
 ## [1.6.0] - 2026-09-11
 
 ### Added
