@@ -29,6 +29,8 @@ Column {
     required property var heroColorOptions
     required property string ignoredText
     required property string aliasesText
+    required property int dailyGoalHours
+    required property var dailyGoalOptions
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -41,6 +43,7 @@ Column {
     signal heroColorSelected(string color)
     signal ignoredEdited(string text)
     signal aliasesEdited(string text)
+    signal dailyGoalSelected(int hours)
     signal resetRequested
 
     width: parent.width
@@ -208,6 +211,63 @@ Column {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.weekWindowSelected(modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // Daily goal presets in hours; 0 is Off. The bar badges a check and
+    // the hero shows remaining once the day reaches the goal.
+    Item {
+        width: root.width
+        height: Math.max(goalLabel.implicitHeight, goalBoxes.implicitHeight) + Style.space(8)
+
+        Text {
+            id: goalLabel
+            text: "Daily goal"
+            color: root.foreground
+            opacity: 0.6
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Row {
+            id: goalBoxes
+            spacing: Style.space(6)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+
+            Repeater {
+                model: root.dailyGoalOptions
+
+                Rectangle {
+                    required property int modelData
+                    readonly property bool chosen: modelData === root.dailyGoalHours
+                    width: modelData === 0 ? Style.space(48) : Style.space(40)
+                    height: Style.space(24)
+                    radius: Style.space(4)
+                    color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+
+                    Text {
+                        text: modelData === 0 ? "Off" : modelData + "h"
+                        color: chosen ? root.accent : root.foreground
+                        opacity: chosen ? 1.0 : 0.6
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: chosen
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.dailyGoalSelected(modelData)
                     }
                 }
             }

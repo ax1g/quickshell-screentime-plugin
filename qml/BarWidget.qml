@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Io
 import qs.Ui
 import qs.Commons
+import "../js/Model.js" as Model
 
 // Bar button: today's total; hosts the panel. Tracking lives in Service.
 BarWidget {
@@ -36,6 +37,25 @@ BarWidget {
     }
 
     readonly property bool iconOnly: root.settingBool("iconOnly", false)
+
+    // Daily goal badge: progress counts the same filtered day the panel
+    // shows, so ignored apps never push the goal.
+    readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.setting("dailyGoalHours", 0))
+    readonly property double goalTotal: {
+        if (!root.service)
+            return 0;
+        var day = Model.filterIgnoredDay(root.service.today, Model.parseIgnoredApps(root.setting("ignoredApps", "")));
+        return day ? (day.total || 0) : 0;
+    }
+    readonly property bool goalReached: root.dailyGoalHours > 0 && root.goalTotal >= root.dailyGoalHours * 3600000
+    readonly property string goalTooltip: {
+        if (root.dailyGoalHours <= 0)
+            return "";
+        var goal = Model.fmt(root.dailyGoalHours * 3600000);
+        if (root.goalReached)
+            return " · goal reached (" + goal + ")";
+        return " · " + Model.fmt(root.dailyGoalHours * 3600000 - root.goalTotal) + " left of " + goal;
+    }
 
     // Session cache of keys written before the shell delivers settings
     // (or while its API is unreachable). Merged into every built entry
@@ -187,12 +207,13 @@ BarWidget {
         anchors.fill: parent
         bar: root.bar
         // Single label at bar size: glyph + duration render uniformly.
-        text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label
+        // A reached daily goal appends a check badge.
+        text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label + (root.goalReached ? " ✓" : "")
         labelVisible: !root.vertical && !root.iconOnly
         hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
         fixedHeight: root.vertical ? root.verticalLines.length * Style.bar.iconSlot : -1
         horizontalMargin: 8.5
-        tooltipText: root.hasActivity ? "Screen time today \u00b7 " + root.label : "Screen time \u00b7 no activity yet"
+        tooltipText: (root.hasActivity ? "Screen time today \u00b7 " + root.label : "Screen time \u00b7 no activity yet") + root.goalTooltip
         onPressed: function (b) {
             if (b === Qt.RightButton)
                 root.toggleIconOnly();

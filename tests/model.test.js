@@ -1654,3 +1654,24 @@ test("filterIgnoredDay strips ignored apps and recomputes the total", () => {
     apps: {},
   })
 })
+
+test("parseDailyGoalHours keeps whole hours 1-24, else off", () => {
+  assert.equal(Model.parseDailyGoalHours(6), 6)
+  assert.equal(Model.parseDailyGoalHours("8"), 8)
+  assert.equal(Model.parseDailyGoalHours(0), 0)
+  assert.equal(Model.parseDailyGoalHours(25), 0)
+  assert.equal(Model.parseDailyGoalHours("lots"), 0)
+  assert.equal(Model.parseDailyGoalHours(undefined), 0)
+})
+
+test("goalProgress reports pct, remaining and reached", () => {
+  assert.equal(Model.goalProgress(3600000, 0), null)
+  const half = Model.goalProgress(3 * 3600000, 6)
+  assert.equal(half.pct, 50)
+  assert.equal(half.remainingMs, 3 * 3600000)
+  assert.equal(half.reached, false)
+  const over = Model.goalProgress(7 * 3600000, 6)
+  assert.equal(over.pct, 100)
+  assert.equal(over.remainingMs, 0)
+  assert.equal(over.reached, true)
+})

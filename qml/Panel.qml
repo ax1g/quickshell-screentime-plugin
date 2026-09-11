@@ -144,6 +144,12 @@ Panel {
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
+    // Daily goal in whole hours (0 = off) with live progress off the
+    // filtered active day, so ignored apps never push the goal.
+    readonly property var dailyGoalOptions: [0, 4, 6, 8]
+    readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.prefs.dailyGoalHours)
+    readonly property var goalProgress: Model.goalProgress(root.dayTotal, root.dailyGoalHours)
+
     // Donut shows the grouped view; the legend expands inline.
     readonly property var segments: Model.arcSegments(root.groupedApps)
     readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
@@ -445,6 +451,8 @@ Panel {
                             heroColorOptions: root.heroColorOptions
                             ignoredText: Array.isArray(root.prefs.ignoredApps) ? root.prefs.ignoredApps.join(", ") : String(root.prefs.ignoredApps || "")
                             aliasesText: String(root.prefs.appAliases || "")
+                            dailyGoalHours: root.dailyGoalHours
+                            dailyGoalOptions: root.dailyGoalOptions
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
@@ -462,6 +470,10 @@ Panel {
                             }
                             onAliasesEdited: function (text) {
                                 root.writeSetting("appAliases", text);
+                            }
+                            onDailyGoalSelected: function (hours) {
+                                if (hours !== root.dailyGoalHours)
+                                    root.writeSetting("dailyGoalHours", hours);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                             onTrophyToggled: root.writeSetting("hideRecordTrophy", !root.hideRecordTrophy)
@@ -517,6 +529,7 @@ Panel {
                         dayTotal: root.dayTotal
                         activeDayKey: root.activeDayKey
                         activeDayLabel: root.activeDayLabel
+                        goalProgress: root.goalProgress
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)

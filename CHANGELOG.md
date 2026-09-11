@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from history views (matches raw, canonical and display names).
 - Custom app names: comma-separated from=to renames applied before the
   built-in browser fold.
+- Daily goal: Off/4/6/8h presets with a check badge in the bar, remaining
+  time in the tooltip, and a progress bar under the hero total.
 
 ### Fixed
 

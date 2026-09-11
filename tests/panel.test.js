@@ -223,3 +223,26 @@ test("tracking prefs normalize in the panel and filter the active day", () => {
   assert.match(panel, /writeSetting\("ignoredApps", text\)/)
   assert.match(panel, /writeSetting\("appAliases", text\)/)
 })
+
+test("daily goal threads from prefs to bar badge and hero bar", () => {
+  assert.match(
+    panel,
+    /Model\.parseDailyGoalHours\(root\.prefs\.dailyGoalHours\)/,
+  )
+  assert.match(
+    panel,
+    /Model\.goalProgress\(root\.dayTotal, root\.dailyGoalHours\)/,
+  )
+  assert.match(panel, /goalProgress: root\.goalProgress/)
+  assert.match(menu, /required property int dailyGoalHours/)
+  assert.match(menu, /required property var dailyGoalOptions/)
+  assert.match(menu, /signal dailyGoalSelected\(int hours\)/)
+  assert.match(menu, /root\.dailyGoalSelected\(modelData\)/)
+  assert.match(panel, /writeSetting\("dailyGoalHours", hours\)/)
+  assert.match(hero, /required property var goalProgress/)
+  assert.match(hero, /heroHeader\.goalProgress !== null/)
+  assert.match(bar, /readonly property int dailyGoalHours/)
+  assert.match(bar, /readonly property bool goalReached/)
+  assert.match(bar, /root\.goalReached \? " ✓" : ""/)
+  assert.match(bar, /root\.goalTooltip/)
+})

@@ -170,6 +170,29 @@ function filterIgnoredDay(day, ignoredList) {
   return { total: total, apps: clean }
 }
 
+// Daily screen-time goal in whole hours; 0 (or unparseable) means off.
+var DAILY_GOAL_PRESETS = [0, 4, 6, 8]
+function parseDailyGoalHours(value) {
+  var h = Math.floor(Number(value))
+  if (!isFinite(h) || h < 1 || h > 24) return 0
+  return h
+}
+
+// Progress toward the daily goal: { goalMs, pct, remainingMs, reached }.
+// Null when the goal is off so callers can hide goal UI entirely.
+function goalProgress(totalMs, goalHours) {
+  var goal = parseDailyGoalHours(goalHours)
+  if (goal <= 0) return null
+  var goalMs = goal * 3600000
+  var total = Math.max(0, Number(totalMs) || 0)
+  return {
+    goalMs: goalMs,
+    pct: Math.min(100, Math.round((total / goalMs) * 100)),
+    remainingMs: Math.max(0, goalMs - total),
+    reached: total >= goalMs,
+  }
+}
+
 // Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
@@ -1513,6 +1536,9 @@ if (typeof module !== "undefined" && module && module.exports) {
     aliasApp: aliasApp,
     resolveAppName: resolveAppName,
     filterIgnoredDay: filterIgnoredDay,
+    DAILY_GOAL_PRESETS: DAILY_GOAL_PRESETS,
+    parseDailyGoalHours: parseDailyGoalHours,
+    goalProgress: goalProgress,
     sanitizeHistory: sanitizeHistory,
     sanitizeDay: sanitizeDay,
     numMs: numMs,

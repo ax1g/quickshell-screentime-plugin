@@ -19,6 +19,8 @@ Item {
     required property double dayTotal
     required property string activeDayKey
     required property string activeDayLabel
+    // Daily goal progress from Model.goalProgress; null when the goal is off.
+    required property var goalProgress
 
     signal expandToggled
     signal calendarToggled
@@ -200,6 +202,33 @@ Item {
             font.family: heroHeader.fontFamily
             font.pixelSize: Style.font.caption
             font.bold: true
+            elide: Text.ElideRight
+            width: parent.width
+        }
+
+        // Daily goal progress: thin bar plus a remaining/reached caption.
+        // Hidden entirely while the goal is off (goalProgress null).
+        Rectangle {
+            visible: heroHeader.goalProgress !== null
+            width: parent.width
+            height: 3
+            radius: 1.5
+            color: Qt.rgba(heroHeader.foreground.r, heroHeader.foreground.g, heroHeader.foreground.b, 0.15)
+
+            Rectangle {
+                width: parent.width * (heroHeader.goalProgress ? heroHeader.goalProgress.pct / 100 : 0)
+                height: parent.height
+                radius: parent.radius
+                color: heroHeader.goalProgress && heroHeader.goalProgress.reached ? heroHeader.foreground : Qt.rgba(heroHeader.foreground.r, heroHeader.foreground.g, heroHeader.foreground.b, 0.55)
+            }
+        }
+
+        Text {
+            visible: heroHeader.goalProgress !== null
+            text: heroHeader.goalProgress ? (heroHeader.goalProgress.reached ? "Daily goal reached" : Model.fmt(heroHeader.goalProgress.remainingMs) + " left of " + Model.fmt(heroHeader.goalProgress.goalMs) + " goal") : ""
+            color: Qt.darker(heroHeader.foreground, 1.4)
+            font.family: heroHeader.fontFamily
+            font.pixelSize: Style.font.caption
             elide: Text.ElideRight
             width: parent.width
         }
