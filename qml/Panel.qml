@@ -438,14 +438,14 @@ Panel {
                         anchors.topMargin: -Style.space(4)
                     }
 
-                    // Settings sweep, matching the home gear: a half turn
+                    // Settings sweep, matching the home gear: a full turn
                     // as the drawer slides in over it.
                     NumberAnimation {
                         id: configGearSpin
                         target: configHeroIcon
                         property: "rotation"
                         from: 0
-                        to: 180
+                        to: 360
                         duration: 450
                         easing.type: Easing.OutBack
                     }

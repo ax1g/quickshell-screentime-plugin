@@ -141,13 +141,13 @@ Item {
         anchors.verticalCenter: showMoreCorner.verticalCenter
     }
 
-    // Gear sweep: a half turn each time settings opens.
+    // Gear sweep: a full turn each time settings opens.
     NumberAnimation {
         id: gearSpin
         target: configGear
         property: "rotation"
         from: 0
-        to: 180
+        to: 360
         duration: 450
         easing.type: Easing.OutBack
     }

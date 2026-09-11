@@ -420,11 +420,11 @@ test("color rows offer a reset glyph at the right", () => {
 
 test("navigation celebrates through the header icons", () => {
   const drawer = qml("YearDrawer.qml")
-  // Home gear sweeps a half turn as settings opens.
+  // Home gear sweeps a full turn as settings opens.
   assert.match(hero, /id: gearSpin/)
-  assert.match(hero, /to: 180/)
+  assert.match(hero, /id: gearSpin[\s\S]*?to: 360/)
   assert.match(panel, /id: configGearSpin/)
-  assert.match(panel, /to: 180/)
+  assert.match(panel, /id: configGearSpin[\s\S]*?to: 360/)
   assert.match(hero, /gearSpin\.restart\(\);/)
   // Returning home turns the hourglass a full circle.
   assert.match(hero, /function spinHourglass\(\)/)
