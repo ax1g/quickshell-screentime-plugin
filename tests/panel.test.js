@@ -321,3 +321,15 @@ test("staged rows size explicitly so a fill mousearea cannot collapse them", () 
   assert.match(menu, /Item \{\s*\n\s*id: wipeRow/)
   assert.match(menu, /height: wipeContent\.implicitHeight/)
 })
+
+test("option pills align left under their labels", () => {
+  for (const id of ["weekBoxes", "keepBoxes", "goalBoxes"]) {
+    const row = menu.match(
+      new RegExp(
+        "id: " + id + "[\\s\\S]*?anchors\\.(left|right): parent\\.(left|right)",
+      ),
+    )
+    assert(row, id + " row exists")
+    assert.equal(row[1], "left", id + " aligns left")
+  }
+})

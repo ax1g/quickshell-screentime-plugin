@@ -389,7 +389,7 @@ Column {
                 Row {
                     id: weekBoxes
                     spacing: Style.space(6)
-                    anchors.right: parent.right
+                    anchors.left: parent.left
 
                     Repeater {
                         model: root.weekOptions
@@ -459,7 +459,7 @@ Column {
                 Row {
                     id: keepBoxes
                     spacing: Style.space(6)
-                    anchors.right: parent.right
+                    anchors.left: parent.left
 
                     Repeater {
                         model: root.keepDaysOptions
@@ -557,7 +557,7 @@ Column {
                 Row {
                     id: goalBoxes
                     spacing: Style.space(6)
-                    anchors.right: parent.right
+                    anchors.left: parent.left
 
                     Repeater {
                         model: root.dailyGoalOptions
