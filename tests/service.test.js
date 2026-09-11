@@ -153,9 +153,7 @@ test("changed aliases refold today and rename the live bucket", () => {
 })
 
 test("debounced saves cannot starve under focus flapping", () => {
-  const schedule = service.match(
-    /function scheduleSave\(\) \{[\s\S]*?\n    \}/,
-  )
+  const schedule = service.match(/function scheduleSave\(\) \{[\s\S]*?\n    \}/)
   assert(schedule, "scheduleSave block exists")
   assert(schedule[0].includes("if (!saveTimer.running)"))
   assert(!schedule[0].includes("saveTimer.restart()"))
