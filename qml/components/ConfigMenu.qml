@@ -501,7 +501,7 @@ Column {
                             border.width: 1
 
                             Text {
-                                text: modelData
+                                text: modelData + "w"
                                 color: chosen ? root.accent : root.foreground
                                 opacity: chosen ? 1.0 : 0.6
                                 font.family: root.fontFamily

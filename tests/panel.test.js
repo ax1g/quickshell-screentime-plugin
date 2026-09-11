@@ -481,3 +481,7 @@ test("only the danger buttons arm reset, never their labels", () => {
 test("the week window repushes retention", () => {
   assert.match(panel, /onWeekCountChanged: root\.pushTrackingPrefs\(\)/)
 })
+
+test("week pills read in weeks", () => {
+  assert.match(menu, /text: modelData \+ "w"/)
+})
