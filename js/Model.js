@@ -200,6 +200,30 @@ function filterIgnoredDay(day, ignoredList) {
   return { total: total, apps: clean }
 }
 
+// Remap one stored day through the alias map, merging totals of keys
+// that now resolve elsewhere. Used when an alias is added mid-day so
+// today's earlier time folds into the new name from that point on;
+// past days keep the key that was live then and are never passed here.
+// Returns the input by identity when nothing resolves elsewhere.
+function refoldDay(day, aliases) {
+  if (!day || !aliases) return day
+  var apps = day.apps && typeof day.apps === "object" ? day.apps : {}
+  var out = {}
+  var total = 0
+  var changed = false
+  for (var app in apps) {
+    if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
+    var ms = Number(apps[app]) || 0
+    if (ms <= 0) continue
+    var key = resolveAppName(app, aliases)
+    if (key !== app) changed = true
+    out[key] = (out[key] || 0) + ms
+    total += ms
+  }
+  if (!changed) return day
+  return { total: total, apps: out }
+}
+
 // List editing for the settings menu: the prefs store comma strings while
 // the menu shows one row per entry with a remove button and a save box.
 function ignoredWith(list, name) {
@@ -1734,6 +1758,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     aliasApp: aliasApp,
     resolveAppName: resolveAppName,
     filterIgnoredDay: filterIgnoredDay,
+    refoldDay: refoldDay,
     ignoredWith: ignoredWith,
     ignoredWithout: ignoredWithout,
     aliasPairs: aliasPairs,

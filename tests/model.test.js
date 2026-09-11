@@ -1801,3 +1801,26 @@ test("minKeepDays covers the window plus slack", () => {
   assert.equal(Model.minKeepDays(undefined), 95)
   assert.equal(Model.minKeepDays(0), 95)
 })
+
+test("refoldDay merges keys that resolve elsewhere, keeps the total", () => {
+  const day = { total: 70000, apps: { zen: 60000, foot: 10000 } }
+  assert.deepEqual(Model.refoldDay(day, { zen: "browser" }), {
+    total: 70000,
+    apps: { browser: 60000, foot: 10000 },
+  })
+})
+
+test("refoldDay returns the input by identity when nothing moves", () => {
+  const day = { total: 70000, apps: { zen: 60000, foot: 10000 } }
+  assert.equal(Model.refoldDay(day, {}), day)
+  assert.equal(Model.refoldDay(day, { code: "work" }), day)
+  assert.equal(Model.refoldDay(null, { zen: "browser" }), null)
+})
+
+test("refoldDay sums into an already-tracked target", () => {
+  const day = { total: 90000, apps: { zen: 60000, browser: 30000 } }
+  assert.deepEqual(Model.refoldDay(day, { zen: "browser" }), {
+    total: 90000,
+    apps: { browser: 90000 },
+  })
+})
