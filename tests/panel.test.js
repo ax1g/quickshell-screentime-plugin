@@ -668,3 +668,10 @@ test("removing an alias unfolds today through the inverse map", () => {
 test("hourglass brightens on hover like the other heroes", () => {
   assert.match(hero, /heroIconMouse\.containsMouse \? heroHeader\.foreground/)
 })
+
+test("settings inputs show a theme-colored cursor on focus", () => {
+  const cursors = menu.match(/cursorVisible: activeFocus/g)
+  assert(cursors && cursors.length === 3, "cursor in all three inputs")
+  const delegates = menu.match(/cursorDelegate: Rectangle \{\s*\n\s*color: root\.foreground/g)
+  assert(delegates && delegates.length === 3, "theme cursor in all three")
+})

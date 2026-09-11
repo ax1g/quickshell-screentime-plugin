@@ -783,6 +783,10 @@ Column {
 
                         TextInput {
                             id: ignoredInput
+                            cursorVisible: activeFocus
+                            cursorDelegate: Rectangle {
+                                color: root.foreground
+                            }
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             color: root.foreground
@@ -936,6 +940,10 @@ Column {
 
                         TextInput {
                             id: aliasFromInput
+                            cursorVisible: activeFocus
+                            cursorDelegate: Rectangle {
+                                color: root.foreground
+                            }
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             color: root.foreground
@@ -972,6 +980,10 @@ Column {
 
                         TextInput {
                             id: aliasToInput
+                            cursorVisible: activeFocus
+                            cursorDelegate: Rectangle {
+                                color: root.foreground
+                            }
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             color: root.foreground
