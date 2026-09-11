@@ -52,6 +52,7 @@ ruff check python/ tests/ && ruff format --check python/ tests/
 python3 -m unittest discover -s tests
 qmllint -I lint qml/*.qml qml/components/*.qml   # MaxWarnings=0: any warning fails
 for f in qml/*.qml qml/components/*.qml; do qmlformat "$f" | cmp -s - "$f" || echo "needs formatting: $f"; done
+./tests/geometry/run.sh   # headless runtime checks; skips without Qt 6
 ```
 
 Visual check (lint is not enough):
@@ -139,10 +140,30 @@ Visual check (lint is not enough):
 - No internals in user-facing lines: no file names, no pref keys, no
   function names (typed IPC commands are the exception — users run them).
 
+## QA traps
+
+- `tests/geometry/run.sh` instantiates the real components headlessly
+  (Qt 6 `qmltestrunner`, offscreen) and asserts rows occupy space.
+  Extend `geometry_test.qml` when adding rows, buttons, or required
+  props to `ConfigMenu.qml` — keep its prop block in sync or it fails
+  loudly. Thresholds stay relative (nonzero heights), never pixels.
+- Never put an `anchors.fill` MouseArea inside an implicit-height
+  `Column`: it collapses to zero. Size the row explicitly (fixed
+  height or `Math.max(...)`) and fill against that.
+- New prefs need a settings-matrix pass: every consumer (Panel
+  derivation, Service push, BarWidget, menu UI) × every shape the
+  setting can hold (missing, garbage, extremes). Pure helpers must
+  return safe defaults, never throw; history input is validated once
+  at the `sanitize*` boundary with `isDayKey`/`isMonthKey`.
+- Unreachable-in-theory is not untested-in-practice: clock jumps,
+  suspends past midnight, corrupt files, and missing helpers are the
+  paths that break. Cover the transition, not just the happy day.
+
 ## Definition of done
 
 - [ ] One commit per logical change, Conventional Commits, suites green.
 - [ ] `qmllint`, `qmlformat`, `prettier`, `ruff`, Node + Python suites all pass.
+- [ ] `tests/geometry/run.sh` passes (or skips loudly without Qt 6).
 - [ ] Panel opened visually and screenshotted for UI changes.
 - [ ] `CHANGELOG.md` entry under `[Unreleased]` for user-facing changes.
 - [ ] No new warnings, no dead imports, no widened suppressions.
