@@ -2103,3 +2103,16 @@ test("yearView counts active months for the hero caption", () => {
     0,
   )
 })
+
+test("refoldDay inverts through an inverse map on removal", () => {
+  const day = { total: 70000, apps: { browser: 60000, foot: 10000 } }
+  assert.deepEqual(Model.refoldDay(day, { browser: "zen" }), {
+    total: 70000,
+    apps: { zen: 60000, foot: 10000 },
+  })
+  const mixed = { total: 90000, apps: { browser: 60000, zen: 30000 } }
+  assert.deepEqual(Model.refoldDay(mixed, { browser: "zen" }), {
+    total: 90000,
+    apps: { zen: 90000 },
+  })
+})

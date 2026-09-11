@@ -646,9 +646,13 @@ test("settings inputs show a focus ring", () => {
   for (const id of ["ignoredInput", "aliasFromInput", "aliasToInput"]) {
     assert.match(
       menu,
-      new RegExp(
-        "border\\.color: " + id + "\\.activeFocus \\? root\\.accent",
-      ),
+      new RegExp("border\\.color: " + id + "\\.activeFocus \\? root\\.accent"),
     )
   }
+})
+
+test("removing an alias unfolds today through the inverse map", () => {
+  assert.match(panel, /var to = root\.appAliases\[from\] \|\| ""/)
+  assert.match(panel, /inverse\[String\(to\)\.toLowerCase\(\)\] = from/)
+  assert.match(panel, /root\.service\.refoldToday\(inverse\)/)
 })

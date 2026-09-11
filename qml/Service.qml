@@ -161,20 +161,23 @@ Item {
         }
     }
 
-    // Fold today's stored time through the current alias map: adding
-    // zen=browser mid-day moves today's earlier zen time onto browser
-    // and renames the live bucket, so the rest of the day accrues
-    // there. Past days are untouched. No-op when nothing resolves
-    // elsewhere (removals, startup, repeated pushes).
-    function refoldToday() {
+    // Fold today's stored time through an alias map: adding zen=browser
+    // mid-day moves today's earlier zen time onto browser and renames
+    // the live bucket, so the rest of the day accrues there. Removing
+    // an alias unfolds with the inverse map, restoring the original
+    // name for today and the future. Past days are untouched. No-op
+    // when nothing resolves elsewhere (startup, repeated pushes).
+    // Defaults to the live map when the caller passes none.
+    function refoldToday(aliases) {
         if (!root.ready)
             return;
+        var map = aliases || root.appAliases;
         var now = Date.now();
         var previous = root.activeApp;
         // Bill in-flight time to the old name first so no seconds leak.
         if (previous)
             root.commitElapsed(now);
-        var folded = Model.refoldDay(root.today, root.appAliases);
+        var folded = Model.refoldDay(root.today, map);
         if (folded !== root.today) {
             root.today = folded;
             var nd = Object.assign({}, root.days);
@@ -182,7 +185,7 @@ Item {
             root.days = nd;
         }
         if (previous) {
-            var renamed = Model.resolveAppName(previous, root.appAliases);
+            var renamed = Model.resolveAppName(previous, map);
             if (renamed !== previous)
                 root.activeApp = renamed;
             root.activeStart = now;

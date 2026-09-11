@@ -137,13 +137,16 @@ test("resetAll wipes days, months and archive, then persists", () => {
 })
 
 test("changed aliases refold today and rename the live bucket", () => {
-  assert.match(service, /function refoldToday\(\)/)
-  const refold = service.match(/function refoldToday\(\) \{[\s\S]*?\n    \}/)
+  assert.match(service, /function refoldToday\(aliases\)/)
+  const refold = service.match(
+    /function refoldToday\(aliases\) \{[\s\S]*?\n    \}/,
+  )
   assert(refold, "refoldToday block exists")
+  assert(refold[0].includes("var map = aliases || root.appAliases"))
   assert(refold[0].includes("root.commitElapsed(now)"))
-  assert(refold[0].includes("Model.refoldDay(root.today, root.appAliases)"))
+  assert(refold[0].includes("Model.refoldDay(root.today, map)"))
   assert(refold[0].includes("nd[root.todayKey] = root.today"))
-  assert(refold[0].includes("Model.resolveAppName(previous, root.appAliases)"))
+  assert(refold[0].includes("Model.resolveAppName(previous, map)"))
   assert(refold[0].includes("root.persist()"))
   // setTrackingPrefs refolds only when the alias map actually changed.
   assert.match(

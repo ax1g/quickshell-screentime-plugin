@@ -120,7 +120,16 @@ Panel {
         root.writeSetting("appAliases", Model.aliasesWith(root.prefs.appAliases, from, to));
     }
     function removeAlias(from) {
+        // Unfold before forgetting: the removed pair inverts today's
+        // aliased time back to the original name from here on. The
+        // prefs roundtrip later refolds with the new map (a no-op).
+        var to = root.appAliases[from] || "";
         root.writeSetting("appAliases", Model.aliasesWithout(root.prefs.appAliases, from));
+        if (to && root.service && typeof root.service.refoldToday === "function") {
+            var inverse = {};
+            inverse[String(to).toLowerCase()] = from;
+            root.service.refoldToday(inverse);
+        }
     }
 
     // Retention window (30/95/365d) with a storage-footprint readout.
