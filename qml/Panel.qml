@@ -96,6 +96,22 @@ Panel {
     onIgnoredListChanged: root.pushTrackingPrefs()
     onAppAliasesChanged: root.pushTrackingPrefs()
 
+    // Settings-menu list editing: prefs store comma strings, the menu
+    // shows one row per entry with a save box and remove buttons.
+    readonly property var aliasEntries: Model.aliasPairs(root.prefs.appAliases)
+    function addIgnored(name) {
+        root.writeSetting("ignoredApps", Model.ignoredWith(root.ignoredList, name).join(", "));
+    }
+    function removeIgnored(name) {
+        root.writeSetting("ignoredApps", Model.ignoredWithout(root.ignoredList, name).join(", "));
+    }
+    function addAlias(from, to) {
+        root.writeSetting("appAliases", Model.aliasesWith(root.prefs.appAliases, from, to));
+    }
+    function removeAlias(from) {
+        root.writeSetting("appAliases", Model.aliasesWithout(root.prefs.appAliases, from));
+    }
+
     // Retention window (30/95/365d) with a storage-footprint readout.
     readonly property var keepDaysOptions: [30, 95, 365]
     readonly property int keepDays: Model.parseKeepDays(root.prefs.keepDays)
@@ -465,8 +481,8 @@ Panel {
                             recordColorOptions: root.recordColorOptions
                             heroColor: root.heroColor
                             heroColorOptions: root.heroColorOptions
-                            ignoredText: Array.isArray(root.prefs.ignoredApps) ? root.prefs.ignoredApps.join(", ") : String(root.prefs.ignoredApps || "")
-                            aliasesText: String(root.prefs.appAliases || "")
+                            ignoredEntries: root.ignoredList
+                            aliasEntries: root.aliasEntries
                             dailyGoalHours: root.dailyGoalHours
                             dailyGoalOptions: root.dailyGoalOptions
                             keepDays: root.keepDays
@@ -484,11 +500,17 @@ Panel {
                             onHeroColorSelected: function (color) {
                                 root.selectHeroColor(color);
                             }
-                            onIgnoredEdited: function (text) {
-                                root.writeSetting("ignoredApps", text);
+                            onIgnoredAdded: function (name) {
+                                root.addIgnored(name);
                             }
-                            onAliasesEdited: function (text) {
-                                root.writeSetting("appAliases", text);
+                            onIgnoredRemoved: function (name) {
+                                root.removeIgnored(name);
+                            }
+                            onAliasAdded: function (from, to) {
+                                root.addAlias(from, to);
+                            }
+                            onAliasRemoved: function (from) {
+                                root.removeAlias(from);
                             }
                             onDailyGoalSelected: function (hours) {
                                 if (hours !== root.dailyGoalHours)

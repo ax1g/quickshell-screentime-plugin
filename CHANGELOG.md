@@ -31,9 +31,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   readout of days, month lumps and archived entries.
 - First-run onboarding: coach marks under the hero until anything is
   tracked, explaining coverage and where settings live.
+- Settings lists for ignored apps and renames: type a name and hit ADD
+  (or Enter) to append it below, × removes an entry; saving a rename
+  for an existing name updates its target.
 
 ### Fixed
 
+- App renames match raw, canonical and display names (plus whole
+  dash/dot/underscore segments), so e.g. zen=browser catches zen-bin
+  and zen-browser instead of only the exact window class.
 - Future month lumps no longer inflate the year total and month bars: a lump
   beyond the current month (e.g. from a clock jump forward and back) is
   excluded like future days, so the header, bars and retro cards agree.
@@ -46,9 +52,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Settings page groups prefs into labeled sections (Display, Colors,
-  Trend & History, Daily Goal, Tracking, Danger Zone) with full-width
-  labels that wrap instead of truncating, and larger option targets.
+- Settings page groups prefs into tinted section cards (Display, Colors,
+  Trend & History, Daily Goal, Tracking, and a red Danger Zone) with
+  full-width labels that wrap instead of truncating, and larger targets.
 - Week trend window is now 4, 8 or 12 weeks instead of 4, 8 or 13. A stored
   13 keeps the maximum window (12); retention (95 days) already covers it.
 
