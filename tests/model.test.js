@@ -2010,3 +2010,54 @@ test("every leap-year day round-trips through keys and weeks", () => {
   }
   assert.equal(count, 366)
 })
+
+test("v1.5.0 history loads without modification", () => {
+  const days = {
+    "2026-08-19": { total: 490875, apps: { zen: 313349, opencode: 148706 } },
+    "2026-08-18": { total: 3600000, apps: { zen: 3600000 } },
+  }
+  const months = { "2026-07": 9823400 }
+  const years = { 2026: { "2026-06-01": 1800000 } }
+  const clean = Model.sanitizeHistory(days, months, years)
+  assert.equal(clean.days, days)
+  assert.equal(clean.months, months)
+  assert.equal(clean.years, years)
+})
+
+test("upgrading retention preserves every millisecond", () => {
+  const today = new Date()
+  const days = {}
+  let n = 0
+  for (let back = 119; back >= 0; back--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back)
+    const key = Model.dayKey(d)
+    const total = 3600000 + back * 1000
+    days[key] = { total: total, apps: { zen: total } }
+    n++
+  }
+  assert.equal(Object.keys(days).length, 120)
+  const months = { "2026-07": 9823400 }
+  const todayKey = Model.dayKey(today)
+  const year = today.getFullYear()
+  const years = {}
+  years[year] = {}
+  const before =
+    Object.keys(days).reduce((t, k) => t + days[k].total, 0) +
+    months["2026-07"]
+  const ret = Model.applyRetention(days, years, todayKey, 95, year)
+  assert.equal(ret.pruned, true)
+  const afterDays = Object.keys(ret.days).reduce(
+    (t, k) => t + ret.days[k].total,
+    0,
+  )
+  const afterArchive = Object.keys(ret.years[year]).reduce(
+    (t, k) => t + ret.years[year][k],
+    0,
+  )
+  assert.equal(afterDays + afterArchive + months["2026-07"], before)
+  // Nothing older than the window survives as day detail.
+  const cutoff = Model.dayKey(
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() - 94),
+  )
+  for (const k of Object.keys(ret.days)) assert.ok(k >= cutoff, k)
+})
