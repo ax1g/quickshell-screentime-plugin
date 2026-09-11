@@ -101,7 +101,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   week beats every older week on record.
 - Steam wrappers: non-Steam shortcuts like Battle.net report a slug instead
   of an AppID, so the resolver falls back to the live window title
-  (contributed by @DoctahW via PR #8).
+  (contributed via PR #8).
 
 ### Changed
 
