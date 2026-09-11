@@ -319,6 +319,10 @@ Panel {
             id: keyCatcher
             anchors.fill: parent
             clip: true
+            // Inline editors must receive keys normally: the catcher
+            // runs BeforeItem and would otherwise swallow Enter, Space
+            // and h/j/k/l/x out of every settings text field.
+            blocked: configMenu.editing
             onMoveRequested: function (dx, dy) {
                 if (dy !== 0)
                     root.scrollBy(-dy * Style.space(24));
@@ -532,6 +536,7 @@ Panel {
                         spacing: Style.space(10)
 
                         ConfigMenu {
+                            id: configMenu
                             foreground: root.contentForeground
                             fontFamily: root.contentFontFamily
                             accent: Color.accent

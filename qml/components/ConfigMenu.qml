@@ -61,6 +61,10 @@ Column {
     width: parent.width
     spacing: Style.space(12)
 
+    // True while any settings text field holds focus; the panel binds
+    // its key catcher to this so typed keys reach the editor.
+    readonly property bool editing: ignoredInput.activeFocus || aliasFromInput.activeFocus || aliasToInput.activeFocus
+
     function activate(kind) {
         if (kind === "yearly")
             root.yearlyToggled();

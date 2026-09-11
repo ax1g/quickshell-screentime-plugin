@@ -612,3 +612,12 @@ test("busiest month earns a gold trophy in the month list", () => {
   assert.match(monthRow, /text: "\\uf091"/i)
   assert.match(monthRow, /color: "#FFD700"/)
 })
+
+test("settings editors receive keys instead of panel shortcuts", () => {
+  assert.match(
+    menu,
+    /readonly property bool editing: ignoredInput\.activeFocus \|\| aliasFromInput\.activeFocus \|\| aliasToInput\.activeFocus/,
+  )
+  assert.match(panel, /id: configMenu/)
+  assert.match(panel, /blocked: configMenu\.editing/)
+})
