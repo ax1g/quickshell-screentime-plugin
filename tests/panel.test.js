@@ -573,8 +573,8 @@ test("about shows the manifest version", () => {
   assert.match(menu, /Know where your time goes/)
 })
 
-test("settings header reads Setting with a content subtitle", () => {
-  assert.match(panel, /text: "Setting"/)
+test("settings header reads Settings with a content subtitle", () => {
+  assert.match(panel, /text: "Settings"/)
   assert.match(panel, /Display, tracking, goals & data/)
   assert.doesNotMatch(panel, /text: "Screen Time"/)
 })

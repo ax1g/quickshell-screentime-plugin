@@ -482,7 +482,7 @@ Panel {
                         spacing: 0
 
                         Text {
-                            text: "Setting"
+                            text: "Settings"
                             color: root.contentForeground
                             font.family: root.contentFontFamily
                             font.pixelSize: Style.fontPx(1.5)
