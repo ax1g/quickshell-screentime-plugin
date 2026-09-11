@@ -692,3 +692,34 @@ test("tab cycles through the settings inputs", () => {
   assert.match(menu, /KeyNavigation\.backtab: aliasFromInput/)
   assert.match(menu, /KeyNavigation\.backtab: aliasToInput/)
 })
+
+test("hint mode toggles on f and routes letters", () => {
+  assert.match(panel, /property bool hintMode: false/)
+  assert.match(panel, /if \(t === "f" \|\| t === "F"\)/)
+  assert.match(panel, /function activateHint\(tag\)/)
+  for (const route of [
+    'tag === "y"',
+    'tag === "c"',
+    'tag === "m"',
+    'tag === "b"',
+    'tag === "n"',
+    'tag === "t"',
+    'tag >= "1" && tag <= "7"',
+  ]) {
+    assert.match(panel, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
+  }
+  assert.match(panel, /root\.hintMode = false/)
+  // Esc exits hint mode instead of closing the panel.
+  assert.match(panel, /if \(root\.hintMode\)\s*\n\s*root\.hintMode = false/)
+})
+
+test("hint badge contracts to zero when hidden", () => {
+  const badge = comp("HintBadge.qml")
+  assert.match(badge, /required property string label/)
+  assert.match(badge, /required property string fontFamily/)
+  assert.match(badge, /required property color accent/)
+  assert.match(badge, /required property color foreground/)
+  assert.match(badge, /required property bool show/)
+  assert.match(badge, /width: visible \? implicitWidth : 0/)
+  assert.match(badge, /height: visible \? implicitHeight : 0/)
+})

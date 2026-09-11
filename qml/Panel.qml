@@ -178,6 +178,9 @@ Panel {
     property bool expanded: false
     property bool calendarOpen: false
     property bool configOpen: false
+    // Hint mode (f): letter badges over the main panel's pressables.
+    // j/k keep scrolling — the catcher eats them before text keys.
+    property bool hintMode: false
     property int weekOffset: 0
     // True while an older week holds data (enables the prev pager).
     readonly property bool hasPrevWeekData: root.weekView ? root.weekView.hasPrev : false
@@ -273,8 +276,46 @@ Panel {
             root.selectedKey = key;
     }
 
+    // Hint-mode dispatch: fixed single-letter tags for the main panel's
+    // pressables (y yearly, c config, m show more, b/n week pagers,
+    // t week total, 1-7 weekday bars). Only currently actionable items
+    // fire; anything else (or a drawer opening underneath) leaves the
+    // mode untouched, and a handled tag always exits it.
+    function activateHint(tag) {
+        var handled = false;
+        if (tag === "y" && !root.hideYearly) {
+            root.openCalendar(true);
+            handled = true;
+        } else if (tag === "c") {
+            root.openConfig(true);
+            handled = true;
+        } else if (tag === "m") {
+            root.toggleExpanded();
+            handled = true;
+        } else if (tag === "b" && root.expanded && root.weekOffset < root.maxWeekOffset && root.hasPrevWeekData) {
+            root.weekOffset = Math.min(root.maxWeekOffset, root.weekOffset + 1);
+            handled = true;
+        } else if (tag === "n" && root.expanded && root.weekOffset > 0) {
+            root.weekOffset = Math.max(0, root.weekOffset - 1);
+            handled = true;
+        } else if (tag === "t" && root.expanded) {
+            root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct);
+            handled = true;
+        } else if (tag >= "1" && tag <= "7" && root.expanded) {
+            var days = root.visibleWeek ? root.visibleWeek.days : [];
+            var day = days[Number(tag) - 1];
+            if (day && !day.isFuture && (Number(day.ms) || 0) > 0) {
+                root.selectDay(day.key);
+                handled = true;
+            }
+        }
+        if (handled)
+            root.hintMode = false;
+    }
+
     // Slide animates on toggle only; layout moves snap. Opens expanded.
     function openCalendar(open) {
+        root.hintMode = false;
         calendarDrawer.sliding = true;
         // The two drawers never overlap: opening one closes the other.
         if (open)
@@ -294,6 +335,7 @@ Panel {
     // Like the yearly drawer, it opens expanded: settings get the full
     // panel even from SHOW LESS mode.
     function openConfig(open) {
+        root.hintMode = false;
         configDrawer.sliding = true;
         if (open) {
             // Claim the flag first: the calendar close below must not read
@@ -344,11 +386,25 @@ Panel {
                 if (dy !== 0)
                     root.scrollBy(-dy * Style.space(24));
             }
-            onCloseRequested: root.close()
+            onCloseRequested: {
+                if (root.hintMode)
+                    root.hintMode = false;
+                else
+                    root.close();
+            }
             onTabRequested: function (direction) {
                 root.switchPanel(direction);
             }
             onTextKey: function (t) {
+                if (t === "f" || t === "F") {
+                    if (!root.calendarOpen && !root.configOpen)
+                        root.hintMode = !root.hintMode;
+                    return;
+                }
+                if (root.hintMode) {
+                    root.activateHint(String(t).toLowerCase());
+                    return;
+                }
                 if (t === "p" || t === "P")
                     root.toggleExpanded();
             }
@@ -830,6 +886,7 @@ Panel {
         target: root.controller
         function onOpenChanged() {
             if (!root.controller.open) {
+                root.hintMode = false;
                 root.selectedKey = "";
                 root.openCalendar(false);
                 root.weekOffset = 0;
