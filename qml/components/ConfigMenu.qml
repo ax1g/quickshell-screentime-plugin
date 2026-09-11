@@ -298,8 +298,9 @@ Column {
 
                         Text {
                             id: resetTrophyGlyph
-                            text: "\uf021"
-                            color: chosen ? root.accent : Qt.darker(root.foreground, 1.4)
+                            text: "\uf0e2"
+                            color: chosen ? root.accent : root.foreground
+                            opacity: chosen ? 1.0 : 0.6
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.title
                             anchors.centerIn: parent
@@ -404,8 +405,9 @@ Column {
 
                         Text {
                             id: resetHeroGlyph
-                            text: "\uf021"
-                            color: chosen ? root.accent : Qt.darker(root.foreground, 1.4)
+                            text: "\uf0e2"
+                            color: chosen ? root.accent : root.foreground
+                            opacity: chosen ? 1.0 : 0.6
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.title
                             anchors.centerIn: parent

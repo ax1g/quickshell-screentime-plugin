@@ -374,9 +374,12 @@ test("color rows offer a reset glyph at the right", () => {
   assert.match(menu, /root\.heroColor === root\.heroDefaultColor/)
   assert.match(panel, /recordDefaultColor: root\.recordDefaultColor/)
   assert.match(panel, /heroDefaultColor: root\.heroDefaultColor/)
-  const resets = menu.match(/text: "\\uf021"/g)
+  const resets = menu.match(/text: "\\uf0e2"/g)
   assert(resets && resets.length === 2, "reset glyph in both color rows")
   assert.doesNotMatch(menu, /text: "R"/)
+  // Idle glyphs use the theme foreground at reduced opacity, never a
+  // darkened shade that vanishes on dark themes.
+  assert.doesNotMatch(menu, /Qt\.darker\(root\.foreground, 1\.4\)/)
 })
 
 test("navigation celebrates through the header icons", () => {
