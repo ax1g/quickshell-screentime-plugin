@@ -287,6 +287,15 @@ function goalProgress(totalMs, goalHours) {
   }
 }
 
+// Retention floor for a week-trend window: the window plus the same
+// 11-day slack the 95-day default keeps over 12 weeks, so the visible
+// trend always stays fully detailed no matter the stored preset.
+function minKeepDays(weekCount) {
+  var w = Math.floor(Number(weekCount))
+  if (!isFinite(w) || w < 1) return 95
+  return w * 7 + 11
+}
+
 // Retention window presets in days; 95 covers the 12-week trend + slack.
 var KEEP_DAYS_OPTIONS = [30, 95, 365]
 function parseKeepDays(value) {
@@ -1736,6 +1745,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     goalProgress: goalProgress,
     KEEP_DAYS_OPTIONS: KEEP_DAYS_OPTIONS,
     parseKeepDays: parseKeepDays,
+    minKeepDays: minKeepDays,
     storageSummary: storageSummary,
     storageLabel: storageLabel,
     isHexColor: isHexColor,

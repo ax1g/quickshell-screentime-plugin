@@ -33,11 +33,12 @@ Panel {
     readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
-    // Week presets; retention (95d) already covers the largest one.
-    readonly property var weekOptions: [4, 8, 12]
+    // Week presets, up to 20 weeks back. Retention always covers the
+    // visible window (see effectiveKeepDays below).
+    readonly property var weekOptions: [4, 8, 12, 16, 20]
     readonly property int weekCount: {
         var n = Number(root.prefs.weekCount);
-        // Stored 13s predate the 12-week max; keep those users on max.
+        // Stored 13s predate the 12-week max; keep those users on 12.
         if (n === 13)
             return 12;
         return root.weekOptions.indexOf(n) >= 0 ? n : 12;
@@ -95,11 +96,12 @@ Panel {
         if (root.service && typeof root.service.setTrackingPrefs === "function")
             root.service.setTrackingPrefs(root.ignoredList, root.appAliases);
         if (root.service && typeof root.service.setKeepDays === "function")
-            root.service.setKeepDays(root.keepDays);
+            root.service.setKeepDays(root.effectiveKeepDays);
     }
     onServiceChanged: root.pushTrackingPrefs()
     onIgnoredListChanged: root.pushTrackingPrefs()
     onAppAliasesChanged: root.pushTrackingPrefs()
+    onWeekCountChanged: root.pushTrackingPrefs()
 
     // Settings-menu list editing: prefs store comma strings, the menu
     // shows one row per entry with a save box and remove buttons.
@@ -118,8 +120,11 @@ Panel {
     }
 
     // Retention window (30/95/365d) with a storage-footprint readout.
+    // The service never keeps less than the visible trend needs, so a
+    // wide window can't show hollow weeks older than the preset.
     readonly property var keepDaysOptions: [30, 95, 365]
     readonly property int keepDays: Model.parseKeepDays(root.prefs.keepDays)
+    readonly property int effectiveKeepDays: Math.max(root.keepDays, Model.minKeepDays(root.weekCount))
     onKeepDaysChanged: root.pushTrackingPrefs()
     readonly property var storageSummary: Model.storageSummary(root.days, root.months, root.years)
     readonly property string storageLabel: Model.storageLabel(root.storageSummary)

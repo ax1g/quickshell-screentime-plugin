@@ -49,8 +49,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Settings page groups prefs into tinted section cards (Display, Colors,
   Trend & History, Daily Goal, Tracking, and a red Danger Zone) with
   full-width labels that wrap instead of truncating, and larger targets.
-- Week trend window is now 4, 8 or 12 weeks instead of 4, 8 or 13. A stored
-  13 keeps the maximum window (12); retention (95 days) already covers it.
+- Week trend window is now 4, 8, 12, 16 or 20 weeks instead of 4, 8 or
+  13. A stored 13 keeps 12, and retention automatically covers the
+  chosen window so far-back weeks never render hollow.
 
 ## [1.6.0] - 2026-09-10
 

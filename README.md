@@ -6,7 +6,7 @@
 
 Know where your time goes. A lightweight service tracks focused time per app,
 shows today's total in the bar, and breaks your history into a donut chart, a
-12-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
+20-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
 local.
 
 ## Features
@@ -24,7 +24,7 @@ local.
 - Donut chart: six biggest apps + "Other", day total in the centre. Hover a
   slice or legend row to spotlight that app; Show More expands the full
   scrollable list.
-- 12-week trend: paginated Mon–Sun pages with date-range headers
+- 20-week trend: paginated Mon–Sun pages with date-range headers
   (`Aug 31 – Sep 6, 2026 · W36`); click any day to inspect it, click again
   for today. Header total flips between time and share of the week's
   168 hours.

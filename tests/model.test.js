@@ -1793,3 +1793,11 @@ test("pickSwatch keeps any valid stored hex, else the default", () => {
   assert.equal(Model.pickSwatch("", "fb"), "fb")
   assert.equal(Model.pickSwatch(undefined, "fb"), "fb")
 })
+
+test("minKeepDays covers the window plus slack", () => {
+  assert.equal(Model.minKeepDays(12), 95)
+  assert.equal(Model.minKeepDays(20), 151)
+  assert.equal(Model.minKeepDays(4), 39)
+  assert.equal(Model.minKeepDays(undefined), 95)
+  assert.equal(Model.minKeepDays(0), 95)
+})

@@ -29,7 +29,7 @@ const hero = comp("HeroHeader.qml")
 const menu = comp("ConfigMenu.qml")
 
 test("week window is configurable, never hardcoded", () => {
-  assert.match(panel, /weekOptions: \[4, 8, 12\]/)
+  assert.match(panel, /weekOptions: \[4, 8, 12, 16, 20\]/)
   assert.match(
     panel,
     /Model\.weekView\(root\.days, root\.todayKey, root\.weekCount/,
@@ -309,14 +309,18 @@ test("wipe-all needs four conscious clicks and names the blast radius", () => {
 test("retention window threads from prefs to the service with a readout", () => {
   assert.match(service, /property int keepDays: 95/)
   assert.match(service, /function setKeepDays\(days\)/)
-  assert.match(service, /Model\.parseKeepDays\(days\)/)
+  assert.match(service, /Math\.floor\(Number\(days\)\)/)
   assert.match(panel, /Model\.parseKeepDays\(root\.prefs\.keepDays\)/)
+  // The service never keeps less than the visible trend needs, so wide
+  // windows cannot show hollow weeks older than the preset.
+  assert.match(panel, /Model\.minKeepDays\(root\.weekCount\)/)
+  assert.match(panel, /Math\.max\(root\.keepDays, Model\.minKeepDays\(root\.weekCount\)\)/)
   assert.match(
     panel,
     /Model\.storageSummary\(root\.days, root\.months, root\.years\)/,
   )
   assert.match(panel, /Model\.storageLabel\(root\.storageSummary\)/)
-  assert.match(panel, /root\.service\.setKeepDays\(root\.keepDays\)/)
+  assert.match(panel, /root\.service\.setKeepDays\(root\.effectiveKeepDays\)/)
   assert.match(menu, /required property int keepDays/)
   assert.match(menu, /required property var keepDaysOptions/)
   assert.match(menu, /required property string storageLabel/)
@@ -472,4 +476,8 @@ test("only the danger buttons arm reset, never their labels", () => {
   assert.match(menu, /anchors\.fill: resetBox/)
   assert.match(menu, /anchors\.fill: wipeBox/)
   assert.doesNotMatch(menu, /id: resetRow[\s\S]*?anchors\.fill: parent/)
+})
+
+test("the week window repushes retention", () => {
+  assert.match(panel, /onWeekCountChanged: root\.pushTrackingPrefs\(\)/)
 })
