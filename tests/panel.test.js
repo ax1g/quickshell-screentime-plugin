@@ -706,7 +706,10 @@ test("hint mode toggles on f and routes letters", () => {
     'tag === "t"',
     'tag >= "1" && tag <= "7"',
   ]) {
-    assert.match(panel, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
+    assert.match(
+      panel,
+      new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    )
   }
   assert.match(panel, /root\.hintMode = false/)
   // Esc exits hint mode instead of closing the panel.
