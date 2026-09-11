@@ -14,7 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Hero icon color: swatches starting with black and white recolor the
   hourglass, the yearly hero and the settings glyph together.
 - Ignored apps: banish launchers and portals from tracking and history —
-  type a name, hit ADD, and remove it anytime with ×.
+  type a name, hit ADD, and remove it anytime with ×. Ignoring the
+  focused app stops its clock immediately.
 - Custom app names: call apps what you want (zen becomes browser), with
   forgiving matching across window classes; re-saving a name updates it,
   and adding one folds today's earlier time into the new name.

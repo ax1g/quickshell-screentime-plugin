@@ -150,6 +150,15 @@ Item {
         root.appAliases = nextAliases;
         if (refold)
             root.refoldToday();
+        // An app ignored mid-focus stops accruing now, not at the next
+        // focus switch.
+        if (root.ready && root.activeApp && Model.isIgnoredApp(root.activeApp, root.ignoredApps)) {
+            var now = Date.now();
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.activeApp = "";
+            root.activeStart = 0;
+            root.persist();
+        }
     }
 
     // Fold today's stored time through the current alias map: adding

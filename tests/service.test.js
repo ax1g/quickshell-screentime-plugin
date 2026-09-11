@@ -169,3 +169,17 @@ test("pre-ready focus opens no bucket and load failure re-keys today", () => {
   assert(failed, "onHistoryLoadFailed block exists")
   assert(failed[0].includes("root.todayKey = Model.dayKey(new Date())"))
 })
+
+test("ignoring the focused app evicts its live bucket", () => {
+  const prefs = service.match(
+    /function setTrackingPrefs\(ignored, aliases\) \{[\s\S]*?\n    \}/,
+  )
+  assert(prefs, "setTrackingPrefs block exists")
+  assert(
+    prefs[0].includes(
+      "Model.isIgnoredApp(root.activeApp, root.ignoredApps)",
+    ),
+  )
+  assert(prefs[0].includes("State.closeActiveBucket"))
+  assert(prefs[0].includes('root.activeApp = ""'))
+})
