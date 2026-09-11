@@ -244,7 +244,7 @@ Column {
                 Row {
                     id: trophySwatches
                     spacing: Style.space(8)
-                    anchors.right: parent.right
+                    anchors.left: parent.left
 
                     // R resets to the default color.
                     Rectangle {
@@ -332,7 +332,7 @@ Column {
                 Row {
                     id: heroSwatches
                     spacing: Style.space(8)
-                    anchors.right: parent.right
+                    anchors.left: parent.left
 
                     // R resets to the default (the theme foreground).
                     Rectangle {

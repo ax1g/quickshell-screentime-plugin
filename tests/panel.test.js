@@ -326,7 +326,13 @@ test("staged rows size explicitly so a fill mousearea cannot collapse them", () 
 })
 
 test("option pills align left under their labels", () => {
-  for (const id of ["weekBoxes", "keepBoxes", "goalBoxes"]) {
+  for (const id of [
+    "weekBoxes",
+    "keepBoxes",
+    "goalBoxes",
+    "trophySwatches",
+    "heroSwatches",
+  ]) {
     const row = menu.match(
       new RegExp(
         "id: " + id + "[\\s\\S]*?anchors\\.(left|right): parent\\.(left|right)",
