@@ -193,6 +193,64 @@ function goalProgress(totalMs, goalHours) {
   }
 }
 
+// Retention window presets in days; 95 covers the 12-week trend + slack.
+var KEEP_DAYS_OPTIONS = [30, 95, 365]
+function parseKeepDays(value) {
+  var n = Math.floor(Number(value))
+  if (KEEP_DAYS_OPTIONS.indexOf(n) >= 0) return n
+  return 95
+}
+
+// Storage footprint over the three disjoint stores: { dayCount,
+// monthCount, archiveDays, totalMs }. Pruned days already live in the
+// archive, so shrinking the window archives detail instead of deleting it.
+function storageSummary(days, months, years) {
+  var dayCount = 0
+  var totalMs = 0
+  var d = days && typeof days === "object" ? days : {}
+  for (var dk in d) {
+    if (!Object.prototype.hasOwnProperty.call(d, dk)) continue
+    dayCount++
+    totalMs += Number(d[dk] && d[dk].total) || 0
+  }
+  var monthCount = 0
+  var m = months && typeof months === "object" ? months : {}
+  for (var mk in m) {
+    if (!Object.prototype.hasOwnProperty.call(m, mk)) continue
+    monthCount++
+    totalMs += Number(m[mk]) || 0
+  }
+  var archiveDays = 0
+  var y = years && typeof years === "object" ? years : {}
+  for (var yk in y) {
+    if (!Object.prototype.hasOwnProperty.call(y, yk)) continue
+    var arch = y[yk] && typeof y[yk] === "object" ? y[yk] : {}
+    for (var ak in arch) {
+      if (!Object.prototype.hasOwnProperty.call(arch, ak)) continue
+      archiveDays++
+      totalMs += Number(arch[ak]) || 0
+    }
+  }
+  return {
+    dayCount: dayCount,
+    monthCount: monthCount,
+    archiveDays: archiveDays,
+    totalMs: totalMs,
+  }
+}
+
+function storageLabel(summary) {
+  var s = summary || { dayCount: 0, monthCount: 0, archiveDays: 0 }
+  return (
+    (Number(s.dayCount) || 0) +
+    " days \u00b7 " +
+    (Number(s.monthCount) || 0) +
+    " months \u00b7 " +
+    (Number(s.archiveDays) || 0) +
+    " archived"
+  )
+}
+
 // Malformed history sections fall back to empty; arrays are rejected.
 function isPlainObject(v) {
   return !!v && typeof v === "object" && !Array.isArray(v)
@@ -1539,6 +1597,10 @@ if (typeof module !== "undefined" && module && module.exports) {
     DAILY_GOAL_PRESETS: DAILY_GOAL_PRESETS,
     parseDailyGoalHours: parseDailyGoalHours,
     goalProgress: goalProgress,
+    KEEP_DAYS_OPTIONS: KEEP_DAYS_OPTIONS,
+    parseKeepDays: parseKeepDays,
+    storageSummary: storageSummary,
+    storageLabel: storageLabel,
     sanitizeHistory: sanitizeHistory,
     sanitizeDay: sanitizeDay,
     numMs: numMs,

@@ -35,8 +35,17 @@ Item {
     // Terminals report the window class; resolve the pty foreground instead.
     readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty", "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st", "org.omarchy.terminal"]
 
-    // Pruned past keepDays; sized for the 12-week trend plus slack.
-    readonly property int keepDays: 95
+    // Retention window in days; the default covers the 12-week trend plus
+    // slack. The panel pushes the user pref; resizing re-runs retention,
+    // which archives pruned day detail instead of deleting it.
+    property int keepDays: 95
+    function setKeepDays(days) {
+        var n = Model.parseKeepDays(days);
+        if (n === root.keepDays)
+            return;
+        root.keepDays = n;
+        root.persist();
+    }
 
     // A tick later than this means the loop froze: suspend or clock jump.
     readonly property int suspendGapMs: 30 * 1000

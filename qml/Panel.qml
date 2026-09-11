@@ -87,10 +87,19 @@ Panel {
     function pushTrackingPrefs() {
         if (root.service && typeof root.service.setTrackingPrefs === "function")
             root.service.setTrackingPrefs(root.ignoredList, root.appAliases);
+        if (root.service && typeof root.service.setKeepDays === "function")
+            root.service.setKeepDays(root.keepDays);
     }
     onServiceChanged: root.pushTrackingPrefs()
     onIgnoredListChanged: root.pushTrackingPrefs()
     onAppAliasesChanged: root.pushTrackingPrefs()
+
+    // Retention window (30/95/365d) with a storage-footprint readout.
+    readonly property var keepDaysOptions: [30, 95, 365]
+    readonly property int keepDays: Model.parseKeepDays(root.prefs.keepDays)
+    onKeepDaysChanged: root.pushTrackingPrefs()
+    readonly property var storageSummary: Model.storageSummary(root.days, root.months, root.years)
+    readonly property string storageLabel: Model.storageLabel(root.storageSummary)
 
     // Empty selection = live today; everything derives from activeDay.
     // Ignored apps are stripped for display so the donut, legend and
@@ -453,6 +462,9 @@ Panel {
                             aliasesText: String(root.prefs.appAliases || "")
                             dailyGoalHours: root.dailyGoalHours
                             dailyGoalOptions: root.dailyGoalOptions
+                            keepDays: root.keepDays
+                            keepDaysOptions: root.keepDaysOptions
+                            storageLabel: root.storageLabel
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
@@ -474,6 +486,10 @@ Panel {
                             onDailyGoalSelected: function (hours) {
                                 if (hours !== root.dailyGoalHours)
                                     root.writeSetting("dailyGoalHours", hours);
+                            }
+                            onKeepDaysSelected: function (days) {
+                                if (days !== root.keepDays)
+                                    root.writeSetting("keepDays", days);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                             onTrophyToggled: root.writeSetting("hideRecordTrophy", !root.hideRecordTrophy)

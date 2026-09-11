@@ -31,6 +31,9 @@ Column {
     required property string aliasesText
     required property int dailyGoalHours
     required property var dailyGoalOptions
+    required property int keepDays
+    required property var keepDaysOptions
+    required property string storageLabel
 
     signal yearlyToggled
     signal dailyInsightsToggled
@@ -44,6 +47,7 @@ Column {
     signal ignoredEdited(string text)
     signal aliasesEdited(string text)
     signal dailyGoalSelected(int hours)
+    signal keepDaysSelected(int days)
     signal resetRequested
     signal wipeRequested
 
@@ -269,6 +273,81 @@ Column {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.dailyGoalSelected(modelData)
+                    }
+                }
+            }
+        }
+    }
+
+    // Retention window in days; shrinking it archives day detail instead
+    // of deleting it, and the readout shows the stored footprint.
+    Item {
+        width: root.width
+        height: Math.max(keepLabel.implicitHeight, keepBoxes.implicitHeight) + Style.space(8)
+
+        Column {
+            id: keepLabel
+            anchors.left: parent.left
+            anchors.right: keepBoxes.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+
+            Text {
+                text: "Keeps history"
+                color: root.foreground
+                opacity: 0.6
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: root.storageLabel
+                color: root.foreground
+                opacity: 0.4
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                width: parent.width
+                elide: Text.ElideRight
+            }
+        }
+
+        Row {
+            id: keepBoxes
+            spacing: Style.space(6)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+
+            Repeater {
+                model: root.keepDaysOptions
+
+                Rectangle {
+                    required property int modelData
+                    readonly property bool chosen: modelData === root.keepDays
+                    width: Style.space(48)
+                    height: Style.space(24)
+                    radius: Style.space(4)
+                    color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
+                    border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+                    border.width: 1
+
+                    Text {
+                        text: modelData + "d"
+                        color: chosen ? root.accent : root.foreground
+                        opacity: chosen ? 1.0 : 0.6
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: chosen
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.keepDaysSelected(modelData)
                     }
                 }
             }

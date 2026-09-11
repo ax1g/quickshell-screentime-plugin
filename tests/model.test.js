@@ -1675,3 +1675,24 @@ test("goalProgress reports pct, remaining and reached", () => {
   assert.equal(over.remainingMs, 0)
   assert.equal(over.reached, true)
 })
+
+test("parseKeepDays keeps known presets, else 95", () => {
+  assert.equal(Model.parseKeepDays(30), 30)
+  assert.equal(Model.parseKeepDays(95), 95)
+  assert.equal(Model.parseKeepDays(365), 365)
+  assert.equal(Model.parseKeepDays(60), 95)
+  assert.equal(Model.parseKeepDays(undefined), 95)
+})
+
+test("storageSummary counts days, months and archived entries", () => {
+  const days = { "2026-08-19": { total: 3600000, apps: {} } }
+  const months = { "2026-07": 7200000 }
+  const years = { 2026: { "2026-06-01": 1800000 } }
+  const summary = Model.storageSummary(days, months, years)
+  assert.equal(summary.dayCount, 1)
+  assert.equal(summary.monthCount, 1)
+  assert.equal(summary.archiveDays, 1)
+  assert.equal(summary.totalMs, 12600000)
+  assert.equal(Model.storageLabel(summary), "1 days · 1 months · 1 archived")
+  assert.equal(Model.storageLabel(null), "0 days · 0 months · 0 archived")
+})

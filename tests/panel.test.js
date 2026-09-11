@@ -258,3 +258,22 @@ test("wipe-all needs four conscious clicks and names the blast radius", () => {
   assert.match(menu, /root\.wipeRequested\(\)/)
   assert.match(panel, /root\.service\.resetAll\(\)/)
 })
+
+test("retention window threads from prefs to the service with a readout", () => {
+  assert.match(service, /property int keepDays: 95/)
+  assert.match(service, /function setKeepDays\(days\)/)
+  assert.match(service, /Model\.parseKeepDays\(days\)/)
+  assert.match(panel, /Model\.parseKeepDays\(root\.prefs\.keepDays\)/)
+  assert.match(
+    panel,
+    /Model\.storageSummary\(root\.days, root\.months, root\.years\)/,
+  )
+  assert.match(panel, /Model\.storageLabel\(root\.storageSummary\)/)
+  assert.match(panel, /root\.service\.setKeepDays\(root\.keepDays\)/)
+  assert.match(menu, /required property int keepDays/)
+  assert.match(menu, /required property var keepDaysOptions/)
+  assert.match(menu, /required property string storageLabel/)
+  assert.match(menu, /signal keepDaysSelected\(int days\)/)
+  assert.match(menu, /root\.keepDaysSelected\(modelData\)/)
+  assert.match(panel, /writeSetting\("keepDays", days\)/)
+})

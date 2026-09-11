@@ -22,6 +22,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   UNDO! → WIPE!, 5s auto-disarm) that erases every day, month lump and
   archive entry with no backup, also reachable via
   `quickshell ipc call agx.screen-time resetAll`.
+- Configurable history retention: 30/95/365-day presets (shorter windows
+  archive day detail instead of deleting it) with a stored-footprint
+  readout of days, month lumps and archived entries.
 
 ### Fixed
 
