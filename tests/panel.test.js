@@ -364,7 +364,7 @@ test("option pills align left under their labels", () => {
 })
 
 test("color rows offer a reset glyph at the right", () => {
-  assert.match(panel, /readonly property string recordDefaultColor: "#FFD700"/)
+  assert.match(panel, /readonly property string recordDefaultColor: "#ffd700"/)
   assert.match(panel, /readonly property string heroDefaultColor: ""/)
   assert.match(menu, /required property string recordDefaultColor/)
   assert.match(menu, /required property string heroDefaultColor/)

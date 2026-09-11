@@ -299,7 +299,7 @@ Column {
                         Text {
                             id: resetTrophyGlyph
                             text: "\uf0e2"
-                            color: chosen ? root.accent : root.foreground
+                            color: root.accent
                             opacity: chosen ? 1.0 : 0.6
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.title
@@ -406,7 +406,7 @@ Column {
                         Text {
                             id: resetHeroGlyph
                             text: "\uf0e2"
-                            color: chosen ? root.accent : root.foreground
+                            color: root.accent
                             opacity: chosen ? 1.0 : 0.6
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.title

@@ -57,7 +57,7 @@ Panel {
     // Busiest Week Trophy swatches, derived from the live theme; gold is
     // the default so old installs keep it. A stored pick stays selected
     // across theme switches (the menu shows it as a custom slot).
-    readonly property string recordDefaultColor: "#FFD700"
+    readonly property string recordDefaultColor: "#ffd700"
     readonly property var recordColorOptions: Model.themeSwatches(Color.accent, Color.foreground, Color.muted)
     readonly property string recordColor: Model.pickSwatch(root.prefs.recordColor, root.recordDefaultColor)
 
