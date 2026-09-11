@@ -1064,7 +1064,9 @@ Column {
         width: root.width
         height: helpBody.implicitHeight + Style.space(24)
         radius: Style.space(8)
-        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.05)
+        color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.07)
+        border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
+        border.width: 1
 
         Column {
             id: helpBody
@@ -1076,35 +1078,132 @@ Column {
 
             Text {
                 text: "HELP"
-                color: root.foreground
-                opacity: 0.45
+                color: root.accent
+                opacity: 0.9
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 font.letterSpacing: 1.5
             }
 
-            // The repo link hides under "Github" and opens in a browser.
-            Text {
-                id: helpText
-                textFormat: Text.RichText
-                text: "Found a bug, have an idea, or want to contribute? Head to <a href=\"https://github.com/ax1g/quickshell-screentime-plugin\"><font color=\"" + root.accent + "\">Github</font></a>."
-                color: root.foreground
-                opacity: 0.75
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
+            // Private by design: everything lives in one local file.
+            Item {
                 width: parent.width
-                wrapMode: Text.WordWrap
-                onLinkActivated: function (link) {
-                    Qt.openUrlExternally(link);
+                height: Math.max(lockGlyph.implicitHeight, lockLabel.implicitHeight)
+
+                Text {
+                    id: lockGlyph
+                    text: "\uf023"
+                    color: root.accent
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    id: lockLabel
+                    text: "Private by design — one local file, nothing leaves this machine"
+                    color: root.foreground
+                    opacity: 0.6
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    anchors.left: lockGlyph.right
+                    anchors.leftMargin: Style.space(10)
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    wrapMode: Text.WordWrap
                 }
             }
 
-            MouseArea {
-                anchors.fill: helpText
-                acceptedButtons: Qt.NoButton
-                hoverEnabled: true
-                cursorShape: helpText.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            // Outer-id reads are idiomatic in delegates, covered by the
+            // file-wide suppression at the top.
+            Repeater {
+                model: [
+                    {
+                        glyph: "\uf188",
+                        label: "Report a bug",
+                        sub: "Something broken? Tell us here",
+                        url: "https://github.com/ax1g/quickshell-screentime-plugin/issues/new"
+                    },
+                    {
+                        glyph: "\uf0eb",
+                        label: "Share an idea",
+                        sub: "A feature you wish existed",
+                        url: "https://github.com/ax1g/quickshell-screentime-plugin/issues"
+                    },
+                    {
+                        glyph: "\uf126",
+                        label: "Contribute",
+                        sub: "Pull requests welcome",
+                        url: "https://github.com/ax1g/quickshell-screentime-plugin"
+                    }
+                ]
+
+                Item {
+                    required property var modelData
+                    width: parent.width
+                    height: Math.max(helpRowLabels.implicitHeight, helpOpen.implicitHeight, helpRowGlyph.implicitHeight) + Style.space(4)
+
+                    Text {
+                        id: helpRowGlyph
+                        text: modelData.glyph
+                        color: root.accent
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Column {
+                        id: helpRowLabels
+                        anchors.left: helpRowGlyph.right
+                        anchors.leftMargin: Style.space(10)
+                        anchors.right: helpOpen.left
+                        anchors.rightMargin: Style.space(8)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 0
+
+                        Text {
+                            text: modelData.label
+                            color: root.foreground
+                            opacity: helpRowMouse.containsMouse ? 1.0 : 0.75
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            width: parent.width
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: modelData.sub
+                            color: root.foreground
+                            opacity: 0.45
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    Text {
+                        id: helpOpen
+                        text: "\uf08e"
+                        color: root.foreground
+                        opacity: helpRowMouse.containsMouse ? 0.9 : 0.4
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    MouseArea {
+                        id: helpRowMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Qt.openUrlExternally(modelData.url)
+                    }
+                }
             }
         }
     }

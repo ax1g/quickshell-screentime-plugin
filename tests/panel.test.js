@@ -500,8 +500,13 @@ test("settings header icon returns to the main panel", () => {
   )
 })
 
-test("help section links to the repo under Github", () => {
+test("help section links out with icons and a privacy note", () => {
   assert.match(menu, /text: "HELP"/)
+  assert.match(menu, /Private by design/)
+  assert.match(menu, /issues\/new/)
+  assert.match(menu, /"Report a bug"/)
+  assert.match(menu, /"Share an idea"/)
+  assert.match(menu, /"Contribute"/)
+  assert.match(menu, /Qt\.openUrlExternally\(modelData\.url\)/)
   assert.match(menu, /github\.com\/ax1g\/quickshell-screentime-plugin/)
-  assert.match(menu, /Qt\.openUrlExternally\(link\)/)
 })
