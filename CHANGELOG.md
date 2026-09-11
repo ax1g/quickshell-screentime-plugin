@@ -32,6 +32,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Focus events before history loads no longer open untracked buckets, and
+  a failed load re-keys today instead of billing into yesterday.
 - Rapid focus switches no longer defer the history write indefinitely:
   the debounced save starts once instead of restarting, bounding crash
   loss to the debounce window.

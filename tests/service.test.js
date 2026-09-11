@@ -158,3 +158,14 @@ test("debounced saves cannot starve under focus flapping", () => {
   assert(schedule[0].includes("if (!saveTimer.running)"))
   assert(!schedule[0].includes("saveTimer.restart()"))
 })
+
+test("pre-ready focus opens no bucket and load failure re-keys today", () => {
+  const sw = service.match(/function switchActive\(\) \{[\s\S]*?\n    \}/)
+  assert(sw, "switchActive block exists")
+  assert(sw[0].includes("if (!root.ready)"))
+  const failed = service.match(
+    /function onHistoryLoadFailed\(\) \{[\s\S]*?\n    \}/,
+  )
+  assert(failed, "onHistoryLoadFailed block exists")
+  assert(failed[0].includes("root.todayKey = Model.dayKey(new Date())"))
+})

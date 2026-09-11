@@ -196,6 +196,10 @@ Item {
     }
 
     function switchActive() {
+        // Pre-ready focus events open unguarded buckets (and defeat the
+        // lastTick baseline); the load handlers call back once ready.
+        if (!root.ready)
+            return;
         var now = Date.now();
         applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
         root.persist();
@@ -389,6 +393,7 @@ Item {
         }
         if (!root.ready) {
             root.days = {};
+            root.todayKey = Model.dayKey(new Date());
             root.ready = true;
             root.startupPhase = false;
             root.lastTick = Date.now();
@@ -482,6 +487,9 @@ Item {
     }
 
     // Kill hung resolvers so refresh can start a fresh process.
+    // No generation bump needed: every switchActive clears
+    // resolveInFlight, and beginResolve re-syncs the tokens, so a late
+    // exit only ever matches a live run of the same terminal.
     Timer {
         id: resolveWatchdog
         interval: 10000
