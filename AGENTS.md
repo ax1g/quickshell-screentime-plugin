@@ -116,6 +116,21 @@ Visual check (lint is not enough):
 - Destructive actions need staged confirmation (arm → confirm → execute)
   with auto-disarm, and must scope their blast radius in code *and* in tests.
 
+## Data safety
+
+- History is append-only in spirit: retention moves day detail into the
+  archive with millisecond conservation (pinned by test), never deletes.
+  Only the user's own staged reset/wipe destroys data.
+- Loads never mutate: `sanitize*` returns inputs by identity when clean,
+  warns when discarding, and corrupt files move aside (without depending
+  on python3) before tracking resumes.
+- Writes are atomic (`FileView atomicWrites`), gated on the backup, and
+  bounded under flapping (`start`, never `restart`); save failures back
+  off and suspend after 6.
+- New prefs default to current behavior and settings writes never drop
+  stored keys. Downgrades may drop newer pref keys (the no-drop guard
+  shipped in 1.6.0) — schema sections are never renamed for this reason.
+
 ## Tests
 
 - Put behavior in `Model.js`/`State.js` so `node --test` can reach it.
