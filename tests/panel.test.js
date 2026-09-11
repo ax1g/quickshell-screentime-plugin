@@ -314,7 +314,10 @@ test("retention window threads from prefs to the service with a readout", () => 
   // The service never keeps less than the visible trend needs, so wide
   // windows cannot show hollow weeks older than the preset.
   assert.match(panel, /Model\.minKeepDays\(root\.weekCount\)/)
-  assert.match(panel, /Math\.max\(root\.keepDays, Model\.minKeepDays\(root\.weekCount\)\)/)
+  assert.match(
+    panel,
+    /Math\.max\(root\.keepDays, Model\.minKeepDays\(root\.weekCount\)\)/,
+  )
   assert.match(
     panel,
     /Model\.storageSummary\(root\.days, root\.months, root\.years\)/,
