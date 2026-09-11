@@ -419,6 +419,22 @@ function pickSwatch(stored, fallback) {
   return c || fallback
 }
 
+// Parse a day key into a local Date, or null when malformed or rolled
+// over ("2026-02-30" is not a date). Every key reader below funnels
+// through here instead of trusting the Date constructor's rollover.
+function keyToDate(key) {
+  var p = String(key || "").split("-")
+  if (p.length !== 3) return null
+  var y = Number(p[0])
+  var m = Number(p[1])
+  var d = Number(p[2])
+  if (!isFinite(y) || !isFinite(m) || !isFinite(d)) return null
+  var dt = new Date(y, m - 1, d)
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d)
+    return null
+  return dt
+}
+
 // True for real padded calendar days ("2026-08-19"). Rolled-over
 // overflow ("2026-02-30", "2026-13-01") and garbage fail, so unpadded
 // keys can never reintroduce lexicographic mis-compares downstream.
@@ -667,11 +683,8 @@ function totalFor(days, key) {
 }
 
 function prevKey(key) {
-  if (!key) return ""
-  var parts = String(key).split("-")
-  if (parts.length !== 3) return ""
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-  if (isNaN(d.getTime())) return ""
+  var d = keyToDate(key)
+  if (!d) return ""
   d.setDate(d.getDate() - 1)
   return dayKey(d)
 }
@@ -694,22 +707,16 @@ var MONTH_NAMES = [
 
 // Full date label for a dayKey, e.g. "Aug 15".
 function formatDate(key) {
-  if (!key) return ""
-  var parts = String(key).split("-")
-  if (parts.length !== 3) return ""
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-  if (isNaN(d.getTime())) return ""
+  var d = keyToDate(key)
+  if (!d) return ""
   return MONTH_NAMES[d.getMonth()] + " " + d.getDate()
 }
 
 // Short weekday name for any key, e.g. "Mon".  Unlike relativeDayLabel
 // this never returns "Today" or "Yesterday".
 function weekdayLabel(key) {
-  if (!key) return ""
-  var parts = String(key).split("-")
-  if (parts.length !== 3) return ""
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-  if (isNaN(d.getTime())) return ""
+  var d = keyToDate(key)
+  if (!d) return ""
   return WEEKDAY_NAMES[d.getDay()]
 }
 
@@ -720,16 +727,12 @@ function relativeDayLabel(key, todayKey) {
   if (!key) return ""
   if (key === todayKey) return "Today"
   if (key === prevKey(todayKey)) return "Yesterday"
-  var parts = String(key).split("-")
-  if (parts.length !== 3) return ""
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-  if (isNaN(d.getTime())) return ""
-  return WEEKDAY_NAMES[d.getDay()]
+  return weekdayLabel(key)
 }
 
 // Last 7 day keys ending at todayKey, oldest first.
 function weekKeys(todayKey) {
-  if (!todayKey) return []
+  if (!keyToDate(todayKey)) return []
   var keys = []
   var key = todayKey
   for (var i = 0; i < 7; i++) {
@@ -755,23 +758,16 @@ function busiestWeekDay(days, todayKey) {
 // { key, ms, label, isToday } where label is the consistent 3-letter
 // weekday; today is told apart by its full-accent bar instead.
 function weekTrend(days, todayKey) {
-  if (!todayKey) return []
   var keys = weekKeys(todayKey)
+  if (!keys.length) return []
   var out = []
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i]
-    var parts = String(key).split("-")
+    var d = keyToDate(key)
     out.push({
       key: key,
       ms: totalFor(days, key),
-      label:
-        WEEKDAY_NAMES[
-          new Date(
-            Number(parts[0]),
-            Number(parts[1]) - 1,
-            Number(parts[2]),
-          ).getDay()
-        ],
+      label: d ? WEEKDAY_NAMES[d.getDay()] : "",
       isToday: key === todayKey,
     })
   }
@@ -1040,11 +1036,8 @@ function arcSegments(apps) {
 
 // Returns the Monday of the ISO week containing `key`.
 function weekStartMonday(key) {
-  if (!key) return ""
-  var parts = String(key).split("-")
-  if (parts.length !== 3) return ""
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-  if (isNaN(d.getTime())) return ""
+  var d = keyToDate(key)
+  if (!d) return ""
   var day = d.getDay()
   var diff = (day === 0 ? -6 : 1) - day
   d.setDate(d.getDate() + diff)
@@ -1054,10 +1047,8 @@ function weekStartMonday(key) {
 // ISO-8601 week number (Mon=1 .. Sun=7 weeks, W1 holds the first Thursday).
 // Returns 0 for input that does not parse as a YYYY-MM-DD key.
 function isoWeekNumber(key) {
-  var parts = String(key).split("-")
-  if (parts.length !== 3) return 0
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-  if (isNaN(d.getTime())) return 0
+  var d = keyToDate(key)
+  if (!d) return 0
   // Shift to the week's Thursday: ISO years are identified by that day.
   var target = new Date(d.valueOf())
   target.setDate(target.getDate() - ((d.getDay() + 6) % 7) + 3)
@@ -1162,7 +1153,9 @@ function weekRangeLabel(week) {
   if (!days || days.length !== 7) return ""
   var startKey = days[0] && days[0].key ? String(days[0].key) : ""
   var endKey = days[6] && days[6].key ? String(days[6].key) : ""
+  if (!keyToDate(startKey) || !keyToDate(endKey)) return ""
   var sp = startKey.split("-")
+  var ep = endKey.split("-")
   var ep = endKey.split("-")
   if (sp.length !== 3 || ep.length !== 3) return ""
   var sy = Number(sp[0])
@@ -1504,8 +1497,8 @@ function longestBreak(dayTotals) {
 // Monday key of the Mon–Sun week a "YYYY-MM-DD" date belongs to (local
 // days, same week definition as the trend graph).
 function mondayKey(key) {
-  var p = String(key).split("-")
-  var dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]))
+  var dt = keyToDate(key)
+  if (!dt) return ""
   var mon = new Date(
     dt.getFullYear(),
     dt.getMonth(),
@@ -1531,6 +1524,7 @@ function busiestSpan(dayTotals) {
     var ms = Number(entry.ms) || 0
     if (ms <= 0) continue
     var mon = mondayKey(String(entry.date))
+    if (!mon) continue
     sums[mon] = (sums[mon] || 0) + ms
   }
   var best = null
@@ -1894,6 +1888,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     normalizeHex: normalizeHex,
     isDayKey: isDayKey,
     isMonthKey: isMonthKey,
+    keyToDate: keyToDate,
     themeSwatches: themeSwatches,
     pickSwatch: pickSwatch,
     sanitizeHistory: sanitizeHistory,
@@ -1947,11 +1942,13 @@ if (typeof module !== "undefined" && module && module.exports) {
     MIN_ACTIVE_DAY_MS: MIN_ACTIVE_DAY_MS,
     monthCoverage: monthCoverage,
     pctStr: pctStr,
+    yearHours: yearHours,
     yearDayTotals: yearDayTotals,
     activeDayCount: activeDayCount,
     streakStats: streakStats,
     longestBreak: longestBreak,
     busiestSpan: busiestSpan,
+    mondayKey: mondayKey,
     weekdayPattern: weekdayPattern,
     trackedDays: trackedDays,
     rollupArchive: rollupArchive,

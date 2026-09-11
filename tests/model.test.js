@@ -1958,3 +1958,55 @@ test("rollupArchive only rolls real day keys", () => {
   assert.deepEqual(Object.keys(out["2026"]), ["2026-08-18"])
   assert.equal({}.polluted, undefined)
 })
+
+test("overflow keys never parse as dates", () => {
+  assert.equal(Model.formatDate("2026-13-01"), "")
+  assert.equal(Model.formatDate("2026-02-30"), "")
+  assert.equal(Model.weekdayLabel("2026-02-30"), "")
+  assert.equal(Model.prevKey("2026-13-01"), "")
+  assert.equal(Model.weekStartMonday("2026-02-30"), "")
+  assert.equal(Model.mondayKey("2026-02-30"), "")
+  assert.equal(Model.isoWeekNumber("2026-13-01"), 0)
+  assert.deepEqual(Model.weekKeys("garbage"), [])
+  assert.deepEqual(Model.weekTrend({}, "garbage"), [])
+  assert.equal(Model.weekRangeLabel({ days: [{ key: "2026-13-01" }] }), "")
+})
+
+test("leap days round-trip through every key reader", () => {
+  assert.equal(Model.prevKey("2024-03-01"), "2024-02-29")
+  assert.equal(Model.formatDate("2024-02-29"), "Feb 29")
+  assert.ok(Model.isDayKey("2024-02-29"))
+  assert.equal(Model.weekdayLabel("2024-02-29"), "Thu")
+  assert.equal(Model.mondayKey("2024-02-29"), "2024-02-26")
+})
+
+test("iso weeks anchor W52 and year-boundary Thursdays", () => {
+  assert.equal(Model.isoWeekNumber("2025-12-28"), 52)
+  assert.equal(Model.isoWeekNumber("2024-12-31"), 1)
+  assert.equal(Model.isoWeekNumber("2025-12-31"), 1)
+})
+
+test("century years follow Gregorian leap rules", () => {
+  assert.equal(Model.yearHours(1900), 8760)
+  assert.equal(Model.yearHours(2000), 8784)
+})
+
+test("every leap-year day round-trips through keys and weeks", () => {
+  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  var d = new Date(2024, 0, 1)
+  var count = 0
+  while (d.getTime() < new Date(2025, 0, 1).getTime()) {
+    const key = Model.dayKey(d)
+    assert.ok(Model.isDayKey(key), key)
+    assert.ok(names.includes(Model.weekdayLabel(key)), key)
+    assert.ok(Model.formatDate(key).length > 0, key)
+    const mon = Model.mondayKey(key)
+    assert.ok(Model.isDayKey(mon), mon)
+    assert.equal(Model.mondayKey(mon), mon)
+    const weekNo = Model.isoWeekNumber(key)
+    assert.ok(weekNo >= 1 && weekNo <= 53, key)
+    count++
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+  }
+  assert.equal(count, 366)
+})
