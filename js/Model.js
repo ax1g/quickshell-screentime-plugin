@@ -1859,10 +1859,15 @@ function yearView(days, months, years, year, todayKey, accentHex) {
   year = Number(year)
   var summary = yearSummary(days, months, years, year, todayKey)
   var facts = yearFactsFromSummary(summary, year, todayKey, accentHex)
+  var monthsActive = 0
+  for (var m = 0; m < summary.months.length; m++) {
+    if (summary.months[m].ms > 0) monthsActive++
+  }
   return {
     totalMs: summary.total,
     totalLabel: Math.round(summary.total / 3600000) + "h",
     months: summary.months,
+    monthsActive: monthsActive,
     facts: facts,
   }
 }

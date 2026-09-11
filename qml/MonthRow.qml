@@ -43,16 +43,8 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
     }
 
-    // Empty months show label + 0h only, no track.
-    Rectangle {
-        visible: month.ratio > 0
-        x: month.labelW + month.labelGap
-        width: month.availW
-        height: parent.height
-        radius: Style.space(2)
-        color: Qt.rgba(month.foreground.r, month.foreground.g, month.foreground.b, 0.07)
-    }
-
+    // Bars float on the drawer background with no track: a faint full
+    // row behind a partial bar reads as loading, not progress.
     Rectangle {
         id: monthBar
         x: month.labelW + month.labelGap

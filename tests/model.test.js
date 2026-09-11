@@ -2085,3 +2085,15 @@ test("upgrading retention preserves every millisecond", () => {
   )
   for (const k of Object.keys(ret.days)) assert.ok(k >= cutoff, k)
 })
+
+test("yearView counts active months for the hero caption", () => {
+  const months = { "2026-03": 10 * HOUR_MS_VIEW, "2026-01": 2 * HOUR_MS_VIEW }
+  assert.equal(
+    Model.yearView({}, months, {}, 2026, "2026-12-24", "#e45b93").monthsActive,
+    2,
+  )
+  assert.equal(
+    Model.yearView({}, {}, {}, 2026, "2026-12-24", "#e45b93").monthsActive,
+    0,
+  )
+})

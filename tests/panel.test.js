@@ -589,3 +589,13 @@ test("trophy needs two weeks of tracked data", () => {
     /isRecord: offset === bestWeekOffset\(weeks\) && dataWeeks >= 2/,
   )
 })
+
+test("year hero shows a tracked-months caption over the pager", () => {
+  const drawer = qml("YearDrawer.qml")
+  assert.match(drawer, /required property int monthsActive/)
+  assert.match(drawer, /Tracked " \+ root\.monthsActive \+ " of 12 months/)
+  assert.match(
+    panel,
+    /monthsActive: root\.yearView \? root\.yearView\.monthsActive : 0/,
+  )
+})

@@ -376,6 +376,7 @@ Panel {
                     currentYearOffset: root.currentYearOffset
                     oldestDataYear: root.oldestDataYear
                     calendarYearTotal: root.calendarYearTotal
+                    monthsActive: root.yearView ? root.yearView.monthsActive : 0
                     yearFacts: root.yearFacts
                     hideYearInsights: root.hideYearInsights
                     yearMonths: root.yearMonths

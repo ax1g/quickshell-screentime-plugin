@@ -19,6 +19,7 @@ Item {
     required property int currentYearOffset
     required property int oldestDataYear
     required property string calendarYearTotal
+    required property int monthsActive
     required property var yearFacts
     required property bool hideYearInsights
     // Playful-extras kill switch, like the main hero: the entry swing
@@ -137,6 +138,16 @@ Item {
                 width: parent.width
             }
 
+            Text {
+                text: "Tracked " + root.monthsActive + " of 12 months"
+                color: Qt.darker(root.foreground, 1.4)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                elide: Text.ElideRight
+                width: parent.width
+            }
+
             Row {
                 width: parent.width
                 spacing: Style.space(10)
@@ -146,7 +157,7 @@ Item {
                     active: root.currentYear > root.oldestDataYear
                     foreground: root.foreground
                     fontFamily: root.fontFamily
-                    fontSize: Style.font.caption
+                    fontSize: Style.font.bodySmall
                     onClicked: root.prevYearRequested()
                 }
 
@@ -155,7 +166,7 @@ Item {
                     text: String(root.currentYear)
                     color: Qt.darker(root.foreground, 1.4)
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
+                    font.pixelSize: Style.font.bodySmall
                     font.bold: true
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -165,7 +176,7 @@ Item {
                     active: root.currentYearOffset > 0
                     foreground: root.foreground
                     fontFamily: root.fontFamily
-                    fontSize: Style.font.caption
+                    fontSize: Style.font.bodySmall
                     onClicked: root.nextYearRequested()
                 }
             }
