@@ -56,7 +56,7 @@ Panel {
 
     // Busiest Week Trophy swatches; neutrals first, gold is the default
     // so old installs keep it.
-    readonly property var recordColorOptions: ["#000000", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
+    readonly property var recordColorOptions: ["#2b2b2b", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
     readonly property string recordColor: {
         var c = String(root.prefs.recordColor || "");
         return root.recordColorOptions.indexOf(c) >= 0 ? c : "#FFD700";
@@ -70,7 +70,7 @@ Panel {
     // Hero icon color for the hourglass, the yearly hero and the settings
     // glyph. Empty follows the theme foreground, so old installs keep it;
     // the menu only offers concrete circles now (no Auto to go back to).
-    readonly property var heroColorOptions: ["#000000", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
+    readonly property var heroColorOptions: ["#2b2b2b", "#FFFFFF", "#FFD700", "#e45b93", "#4ecdc4", "#58a6ff", "#b392f0"]
     readonly property string heroColor: {
         var c = String(root.prefs.heroColor || "");
         return root.heroColorOptions.indexOf(c) >= 0 ? c : "";

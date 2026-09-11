@@ -222,7 +222,7 @@ Column {
                     radius: Style.space(10)
                     color: modelData
                     border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                    border.width: chosen ? 2 : 1
+                    border.width: chosen ? 3 : 1
 
                     MouseArea {
                         anchors.fill: parent
@@ -282,7 +282,7 @@ Column {
                     radius: Style.space(10)
                     color: modelData
                     border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                    border.width: chosen ? 2 : 1
+                    border.width: chosen ? 3 : 1
 
                     MouseArea {
                         anchors.fill: parent

@@ -12,9 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   toggle to hide the trophy, both persisted across restarts.
 - Hero icon color: swatches recolor the hourglass, the yearly hero and the
   settings glyph together.
-- Busiest Week Trophy and hero icon swatches start with black and white
-  circles; the hero Auto pill is gone (old installs without a stored
-  hero color keep following the theme foreground).
+- Busiest Week Trophy and hero icon swatches start with soft-black and
+  white circles with thicker selection rings; the hero Auto pill is gone
+  (old installs without a stored hero color keep following the theme
+  foreground).
 - Ignored apps: comma-separated names that are never tracked and are hidden
   from history views (matches raw, canonical and display names).
 - Custom app names: comma-separated from=to renames applied before the
