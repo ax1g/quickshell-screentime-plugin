@@ -1058,6 +1058,57 @@ Column {
         }
     }
 
+    // ---- Help ---------------------------------------------------------
+
+    Rectangle {
+        width: root.width
+        height: helpBody.implicitHeight + Style.space(24)
+        radius: Style.space(8)
+        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.05)
+
+        Column {
+            id: helpBody
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: Style.space(12)
+            spacing: Style.space(10)
+
+            Text {
+                text: "HELP"
+                color: root.foreground
+                opacity: 0.45
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                font.letterSpacing: 1.5
+            }
+
+            // The repo link hides under "Github" and opens in a browser.
+            Text {
+                id: helpText
+                textFormat: Text.RichText
+                text: "Found a bug, have an idea, or want to contribute? Head to <a href=\"https://github.com/ax1g/quickshell-screentime-plugin\"><font color=\"" + root.accent + "\">Github</font></a>."
+                color: root.foreground
+                opacity: 0.75
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                width: parent.width
+                wrapMode: Text.WordWrap
+                onLinkActivated: function (link) {
+                    Qt.openUrlExternally(link);
+                }
+            }
+
+            MouseArea {
+                anchors.fill: helpText
+                acceptedButtons: Qt.NoButton
+                hoverEnabled: true
+                cursorShape: helpText.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+        }
+    }
+
     // ---- Danger zone --------------------------------------------------
 
     Rectangle {
@@ -1278,57 +1329,6 @@ Column {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    // ---- Help ---------------------------------------------------------
-
-    Rectangle {
-        width: root.width
-        height: helpBody.implicitHeight + Style.space(24)
-        radius: Style.space(8)
-        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.05)
-
-        Column {
-            id: helpBody
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: Style.space(12)
-            spacing: Style.space(10)
-
-            Text {
-                text: "HELP"
-                color: root.foreground
-                opacity: 0.45
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                font.letterSpacing: 1.5
-            }
-
-            // The repo link hides under "Github" and opens in a browser.
-            Text {
-                id: helpText
-                textFormat: Text.RichText
-                text: "Found a bug, have an idea, or want to contribute? Head to <a href=\"https://github.com/ax1g/quickshell-screentime-plugin\"><font color=\"" + root.accent + "\">Github</font></a>."
-                color: root.foreground
-                opacity: 0.75
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                width: parent.width
-                wrapMode: Text.WordWrap
-                onLinkActivated: function (link) {
-                    Qt.openUrlExternally(link);
-                }
-            }
-
-            MouseArea {
-                anchors.fill: helpText
-                acceptedButtons: Qt.NoButton
-                hoverEnabled: true
-                cursorShape: helpText.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
             }
         }
     }
