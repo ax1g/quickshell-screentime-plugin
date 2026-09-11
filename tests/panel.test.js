@@ -343,7 +343,7 @@ test("option pills align left under their labels", () => {
   }
 })
 
-test("color rows offer an R reset to the default", () => {
+test("color rows offer a reset glyph at the right", () => {
   assert.match(panel, /readonly property string recordDefaultColor: "#FFD700"/)
   assert.match(panel, /readonly property string heroDefaultColor: ""/)
   assert.match(menu, /required property string recordDefaultColor/)
@@ -354,6 +354,9 @@ test("color rows offer an R reset to the default", () => {
   assert.match(menu, /root\.heroColor === root\.heroDefaultColor/)
   assert.match(panel, /recordDefaultColor: root\.recordDefaultColor/)
   assert.match(panel, /heroDefaultColor: root\.heroDefaultColor/)
+  const resets = menu.match(/text: "\\uf021"/g)
+  assert(resets && resets.length === 2, "reset glyph in both color rows")
+  assert.doesNotMatch(menu, /text: "R"/)
 })
 
 test("navigation celebrates through the header icons", () => {

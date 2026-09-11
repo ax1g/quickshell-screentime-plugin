@@ -246,34 +246,6 @@ Column {
                     spacing: Style.space(8)
                     anchors.left: parent.left
 
-                    // R resets to the default color.
-                    Rectangle {
-                        readonly property bool chosen: root.recordColor === root.recordDefaultColor
-                        width: Style.space(28)
-                        height: Style.space(20)
-                        radius: Style.space(10)
-                        color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
-                        border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                        border.width: chosen ? 3 : 1
-
-                        Text {
-                            text: "R"
-                            color: chosen ? root.accent : root.foreground
-                            opacity: chosen ? 1.0 : 0.6
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.bodySmall
-                            font.bold: chosen
-                            anchors.centerIn: parent
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.recordColorSelected(root.recordDefaultColor)
-                        }
-                    }
-
                     Repeater {
                         model: root.recordColorOptions
 
@@ -293,6 +265,31 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.recordColorSelected(modelData)
                             }
+                        }
+                    }
+
+                    // Reset glyph at the right; restores the default color.
+                    Item {
+                        width: resetTrophyGlyph.implicitWidth
+                        height: Style.space(20)
+
+                        readonly property bool chosen: root.recordColor === root.recordDefaultColor
+
+                        Text {
+                            id: resetTrophyGlyph
+                            text: "\uf021"
+                            color: chosen ? root.accent : Qt.darker(root.foreground, 1.4)
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.title
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -Style.space(6)
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.recordColorSelected(root.recordDefaultColor)
                         }
                     }
                 }
@@ -334,34 +331,6 @@ Column {
                     spacing: Style.space(8)
                     anchors.left: parent.left
 
-                    // R resets to the default (the theme foreground).
-                    Rectangle {
-                        readonly property bool chosen: root.heroColor === root.heroDefaultColor
-                        width: Style.space(28)
-                        height: Style.space(20)
-                        radius: Style.space(10)
-                        color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
-                        border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                        border.width: chosen ? 3 : 1
-
-                        Text {
-                            text: "R"
-                            color: chosen ? root.accent : root.foreground
-                            opacity: chosen ? 1.0 : 0.6
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.bodySmall
-                            font.bold: chosen
-                            anchors.centerIn: parent
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.heroColorSelected(root.heroDefaultColor)
-                        }
-                    }
-
                     Repeater {
                         model: root.heroColorOptions
 
@@ -381,6 +350,32 @@ Column {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.heroColorSelected(modelData)
                             }
+                        }
+                    }
+
+                    // Reset glyph at the right; restores the default
+                    // (the theme foreground).
+                    Item {
+                        width: resetHeroGlyph.implicitWidth
+                        height: Style.space(20)
+
+                        readonly property bool chosen: root.heroColor === root.heroDefaultColor
+
+                        Text {
+                            id: resetHeroGlyph
+                            text: "\uf021"
+                            color: chosen ? root.accent : Qt.darker(root.foreground, 1.4)
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.title
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -Style.space(6)
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.heroColorSelected(root.heroDefaultColor)
                         }
                     }
                 }
