@@ -1696,3 +1696,59 @@ test("storageSummary counts days, months and archived entries", () => {
   assert.equal(Model.storageLabel(summary), "1 days · 1 months · 1 archived")
   assert.equal(Model.storageLabel(null), "0 days · 0 months · 0 archived")
 })
+
+test("resolveAppName matches canonical and display names, not just raw", () => {
+  assert.equal(Model.resolveAppName("zen-bin", { zen: "browser" }), "browser")
+  assert.equal(
+    Model.resolveAppName("com.github.user.Codium", { codium: "work" }),
+    "work",
+  )
+})
+
+test("resolveAppName falls back to a contained key", () => {
+  assert.equal(
+    Model.resolveAppName("zen-browser", { zen: "browser" }),
+    "browser",
+  )
+  assert.equal(Model.resolveAppName("foot", { foo: "bar" }), "foot")
+})
+
+test("resolveAppName prefers exact matches over contained keys", () => {
+  assert.equal(
+    Model.resolveAppName("code", { code: "work", cod: "play" }),
+    "work",
+  )
+})
+
+test("ignoredWith appends normalized names without duplicates", () => {
+  assert.deepEqual(Model.ignoredWith(["foot"], " Kitty "), ["foot", "kitty"])
+  assert.deepEqual(Model.ignoredWith(["foot"], "FOOT"), ["foot"])
+  assert.deepEqual(Model.ignoredWith(["foot"], "  "), ["foot"])
+})
+
+test("ignoredWithout drops one normalized name", () => {
+  assert.deepEqual(Model.ignoredWithout(["foot", "kitty"], "FOOT"), ["kitty"])
+  assert.deepEqual(Model.ignoredWithout(["foot"], "nope"), ["foot"])
+})
+
+test("aliasPairs round-trips through serializeAliases", () => {
+  const pairs = Model.aliasPairs("foot=terminal, code=work")
+  assert.deepEqual(pairs, [
+    { from: "foot", to: "terminal" },
+    { from: "code", to: "work" },
+  ])
+  assert.equal(
+    Model.serializeAliases({ foot: "terminal", code: "work" }),
+    "foot=terminal, code=work",
+  )
+})
+
+test("aliasesWith upserts and aliasesWithout deletes", () => {
+  assert.equal(Model.aliasesWith("", " Zen ", "browser"), "zen=browser")
+  assert.equal(Model.aliasesWith("zen=browser", "zen", "web"), "zen=web")
+  assert.equal(Model.aliasesWith("zen=browser", "", "web"), "zen=browser")
+  assert.equal(
+    Model.aliasesWithout("zen=browser, code=work", "ZEN"),
+    "code=work",
+  )
+})

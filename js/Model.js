@@ -139,10 +139,40 @@ function aliasApp(name, aliases) {
 }
 
 // User alias first, then the built-in canonical fold, so a custom rename
-// is never silently re-folded back into a browser bucket.
+// is never silently re-folded back into a browser bucket. The key matches
+// raw, canonical and display names, so "zen=browser" catches "zen-bin" as
+// well as "zen"; exact matches win, otherwise a key matching a whole
+// dash/dot/underscore segment matches ("zen" in "zen-browser", never
+// "foo" in "foot"). Values fold like any name.
 function resolveAppName(name, aliases) {
   if (!name) return ""
-  return canonicalApp(aliasApp(name, aliases))
+  if (aliases) {
+    var candidates = [
+      String(name).trim().toLowerCase(),
+      String(canonicalApp(name)).toLowerCase(),
+      String(displayName(name)).toLowerCase(),
+    ]
+    var i = 0
+    var j = 0
+    var s = 0
+    for (i = 0; i < candidates.length; i++) {
+      if (
+        candidates[i] &&
+        Object.prototype.hasOwnProperty.call(aliases, candidates[i])
+      )
+        return canonicalApp(aliases[candidates[i]])
+    }
+    for (var k in aliases) {
+      if (!k || !Object.prototype.hasOwnProperty.call(aliases, k)) continue
+      for (j = 0; j < candidates.length; j++) {
+        var segments = String(candidates[j]).split(/[^a-z0-9]+/)
+        for (s = 0; s < segments.length; s++) {
+          if (segments[s] === k) return canonicalApp(aliases[k])
+        }
+      }
+    }
+  }
+  return canonicalApp(name)
 }
 
 // Strip ignored apps from a stored day for display; the total recomputes
@@ -168,6 +198,70 @@ function filterIgnoredDay(day, ignoredList) {
   }
   if (!dropped) return day
   return { total: total, apps: clean }
+}
+
+// List editing for the settings menu: the prefs store comma strings while
+// the menu shows one row per entry with a remove button and a save box.
+function ignoredWith(list, name) {
+  var out = parseIgnoredApps(list)
+  var n = String(name || "")
+    .trim()
+    .toLowerCase()
+  if (n && out.indexOf(n) === -1) out.push(n)
+  return out
+}
+
+function ignoredWithout(list, name) {
+  var n = String(name || "")
+    .trim()
+    .toLowerCase()
+  var out = []
+  var cur = parseIgnoredApps(list)
+  for (var i = 0; i < cur.length; i++) {
+    if (cur[i] !== n) out.push(cur[i])
+  }
+  return out
+}
+
+// Alias pairs in stored order: [{ from, to }].
+function aliasPairs(value) {
+  var obj = parseAppAliases(value)
+  var out = []
+  for (var k in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, k))
+      out.push({ from: k, to: obj[k] })
+  }
+  return out
+}
+
+function serializeAliases(obj) {
+  var parts = []
+  var src = obj && typeof obj === "object" ? obj : {}
+  for (var k in src) {
+    if (Object.prototype.hasOwnProperty.call(src, k))
+      parts.push(k + "=" + src[k])
+  }
+  return parts.join(", ")
+}
+
+function aliasesWith(value, from, to) {
+  var obj = parseAppAliases(value)
+  var f = String(from || "")
+    .trim()
+    .toLowerCase()
+  var t = String(to || "").trim()
+  if (f && t) obj[f] = t
+  return serializeAliases(obj)
+}
+
+function aliasesWithout(value, from) {
+  var obj = parseAppAliases(value)
+  delete obj[
+    String(from || "")
+      .trim()
+      .toLowerCase()
+  ]
+  return serializeAliases(obj)
 }
 
 // Daily screen-time goal in whole hours; 0 (or unparseable) means off.
@@ -1594,6 +1688,12 @@ if (typeof module !== "undefined" && module && module.exports) {
     aliasApp: aliasApp,
     resolveAppName: resolveAppName,
     filterIgnoredDay: filterIgnoredDay,
+    ignoredWith: ignoredWith,
+    ignoredWithout: ignoredWithout,
+    aliasPairs: aliasPairs,
+    serializeAliases: serializeAliases,
+    aliasesWith: aliasesWith,
+    aliasesWithout: aliasesWithout,
     DAILY_GOAL_PRESETS: DAILY_GOAL_PRESETS,
     parseDailyGoalHours: parseDailyGoalHours,
     goalProgress: goalProgress,
