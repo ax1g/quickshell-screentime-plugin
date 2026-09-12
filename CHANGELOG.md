@@ -13,6 +13,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `t` week total, `1`–`7` days); the settings menu takes two-letter
   tags for every row, and staged confirmations advance one step like
   a pointer click. `j`/`k` keep scrolling, `Esc` exits.
+- Settings revamp: one "Weekly graph" control (12/24/36/52 weeks) sizes
+  the Mon–Sun pages, while "Forever totals" spells out what never
+  expires — every recorded year's totals and insights stay for good,
+  only per-app detail is kept a year.
 
 ### Changed
 

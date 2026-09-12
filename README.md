@@ -24,7 +24,7 @@ local.
 - Donut chart: six biggest apps + "Other", day total in the centre. Hover a
   slice or legend row to spotlight that app; Show More expands the full
   scrollable list.
-- 20-week trend: paginated Mon–Sun pages with date-range headers
+- 52-week trend: paginated Mon–Sun pages with date-range headers
   (`Aug 31 – Sep 6, 2026 · W36`); click any day to inspect it, click again
   for today. Header total flips between time and share of the week's
   168 hours.
@@ -34,12 +34,12 @@ local.
 - Usage patterns: top app, vs yesterday, and busiest day of the week you're
   looking at. Insight and retro colours follow your theme.
 - Configurable: the gear next to SHOW MORE opens sectioned prefs that
-  persist — hide the yearly overview or insights, set the week trend to
-  4/8/12/16/20 weeks, rename apps and ignore the noisy ones, tune
-  retention with a stored-footprint readout, recolor the trophy and hero
-  icons from theme swatches, mute the playful extras, triple-confirmed
-  reset today (archives untouched), or four-click wipe everything
-  (no undo).
+  persist — hide the yearly overview or insights, set the weekly graph to
+  12/24/36/52 weeks, rename apps and ignore the noisy ones, see the
+  storage footprint and the totals that never expire, recolor the trophy
+  and hero icons from theme swatches, mute the playful extras,
+  triple-confirmed reset today (archives untouched), or four-click wipe
+  everything (no undo).
 - Daily goal: set Off/4/6/8h; a ✓ badge lands in the bar when the day
   reaches it, with remaining time in the tooltip and a progress bar
   under the hero total.
@@ -149,12 +149,13 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
 - A session spanning midnight splits there, so each day keeps its own
   seconds.
-- Daily detail older than the retention window (30/95/365 days, always
-  covering the chosen week trend) is pruned, but its total folds into a
-  per-day archive first — the current and previous calendar year's day
-  totals survive as `"years"`, so the yearly overview keeps day counts,
-  streaks, and peak days even though raw app detail is forgotten. Older
-  years live on as per-month aggregates. Delete the file to reset.
+- Per-app detail is kept for a full year, always covering the chosen
+  weekly graph. As days age past it, each one's total folds into an
+  ever-growing per-day archive in `"years"` — day counts, streaks, peak
+  days, top months, insights and every yearly total are derived from it
+  forever, so every recorded year stays browsable for as long as the
+  file exists. Only the app breakdown is ever forgotten. Deleting the
+  file is the only way to lose history.
 
 ## Development
 
