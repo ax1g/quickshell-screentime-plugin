@@ -40,6 +40,15 @@ Item {
             calendarSwing.restart();
     }
 
+    // Keyboard scrolling for the year overview. Duplicates the panel's
+    // flickable math instead of reaching up: drawers never read parents.
+    function scrollBy(dy) {
+        var flick = calendarScroll;
+        if (!flick || flick.contentHeight <= flick.height)
+            return;
+        flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY + dy));
+    }
+
     Rectangle {
         anchors.fill: parent
         color: root.panelBackground

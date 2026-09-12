@@ -843,3 +843,13 @@ test("year drawer badges back and year pagers", () => {
   assert.match(panel, /root\.currentYearOffset \+= 1/)
   assert.match(panel, /root\.currentYearOffset -= 1/)
 })
+
+test("keyboard scroll follows the visible surface", () => {
+  assert.match(panel, /function scrollFlickable\(flick, dy\)/)
+  assert.match(panel, /root\.scrollFlickable\(configScroll, dy\)/)
+  assert.match(panel, /root\.scrollFlickable\(panelScroll, dy\)/)
+  const drawer = qml("YearDrawer.qml")
+  assert.match(drawer, /function scrollBy\(dy\)/)
+  assert.match(drawer, /calendarScroll/)
+  assert.match(panel, /yearDrawer\.scrollBy\(dy\)/)
+})

@@ -260,11 +260,21 @@ Panel {
         return false;
     }
 
-    function scrollBy(dy) {
-        var flick = panelScroll;
+    function scrollFlickable(flick, dy) {
         if (!flick || flick.contentHeight <= flick.height)
             return;
         flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY + dy));
+    }
+
+    // hjkl scroll the visible surface: the open drawer when one covers
+    // the panel, the main column otherwise.
+    function scrollBy(dy) {
+        if (root.calendarOpen)
+            yearDrawer.scrollBy(dy);
+        else if (root.configOpen)
+            root.scrollFlickable(configScroll, dy);
+        else
+            root.scrollFlickable(panelScroll, dy);
     }
 
     function toggleExpanded() {
