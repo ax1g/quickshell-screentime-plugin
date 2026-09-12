@@ -35,10 +35,9 @@ Item {
     // Terminals report the window class; resolve the pty foreground instead.
     readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty", "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st", "org.omarchy.terminal"]
 
-    // Retention window in days; the default covers the 12-week trend plus
-    // slack. The panel pushes the user pref raised to the visible trend's
-    // floor, so wide windows stay fully detailed; shrinking it archives
-    // day detail instead of deleting it.
+    // App-detail window in days; the panel raises it to the visible
+    // week trend's floor, so wide graphs stay fully detailed. Days that
+    // age past it roll their totals into the perpetual per-day archive.
     property int keepDays: 365
     function setKeepDays(days) {
         var n = Math.floor(Number(days));

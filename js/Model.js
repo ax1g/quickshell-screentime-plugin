@@ -348,7 +348,8 @@ function minKeepDays(weekCount) {
 
 // Storage footprint over the three disjoint stores: { dayCount,
 // monthCount, archiveDays, totalMs }. Pruned days already live in the
-// archive, so shrinking the window archives detail instead of deleting it.
+// archive, so the footprint shows the year of app detail plus the
+// ever-growing day archive.
 function storageSummary(days, months, years) {
   var dayCount = 0
   var totalMs = 0
