@@ -43,14 +43,65 @@ local.
 - Daily goal: set Off/4/6/8h; a ✓ badge lands in the bar when the day
   reaches it, with remaining time in the tooltip and a progress bar
   under the hero total.
-- Keyboard-first and keybind-friendly: `Esc` closes, `j`/`k` and arrows
-  scroll, wheel works; summon and control the panel via the
-  `agx.screen-time` IPC target (`open`, `toggle`, `resetToday`,
-  `resetAll`, `status`).
+- Keyboard-first: the panel opens, closes, scrolls and triggers every
+  control from the keyboard — see [Keybinds & hints](#keybinds--hints)
+  below. Summon and control the panel via the `agx.screen-time` IPC
+  target (`open`, `toggle`, `resetToday`, `resetAll`, `status`).
 - Private by design: one local JSON file; old days roll into a two-year
   per-day archive, then monthly totals.
 - Hourglass easter egg: flips over on the hour; gold sparkles on hover;
   header icons spin as you navigate (mute it all with Playful extras).
+
+## Keybinds & hints
+
+The panel is keyboard-first: every control can be reached from the
+keyboard without touching the mouse, and the scroll wheel works
+anywhere a list overflows.
+
+### Navigation
+
+| Key | Action |
+|---|---|
+| `f` | Toggle hint mode — every pressable gets a key badge |
+| `j` / `↓` | Scroll down (follows the open view) |
+| `k` / `↑` | Scroll up (follows the open view) |
+| `Esc` | First exit hint mode; a second press closes the panel |
+| `Tab` / `Shift+Tab` | Jump to the next / previous bar panel |
+| `p` | Expand / collapse Show More |
+
+### Hint mode
+
+Press `f` and the panel badges every pressable with its key — a single
+letter on the home panel and yearly view, a two-letter tag on the
+settings menu (it has far more controls than letters). Typing the key
+performs that action and exits hint mode; the badges disappear on any
+other press.
+
+**Home panel**
+
+| Badge | Action |
+|---|---|
+| `y` | Open the yearly overview |
+| `c` | Open the settings |
+| `m` | Expand / collapse Show More |
+| `b` / `n` | Previous / next week in the trend |
+| `t` | Flip the week total between logged time and % of 168h |
+| `1`–`7` | Inspect that weekday's bar (focus its data) |
+
+**Yearly overview**
+
+| Badge | Action |
+|---|---|
+| `b` / `n` | Previous / next year |
+| `m` | Back to the home panel |
+
+**Settings**
+
+Every row carries a two-letter tag, starting with `aa` on the back
+button and flowing down the menu in render order. Typing a tag triggers
+its control — toggles flip, swatches recolor, and the staged
+destructive confirmations (reset / wipe) advance one step per press,
+just like a click.
 
 ## Install
 
