@@ -154,8 +154,12 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
   ever-growing per-day archive in `"years"` — day counts, streaks, peak
   days, top months, insights and every yearly total are derived from it
   forever, so every recorded year stays browsable for as long as the
-  file exists. Only the app breakdown is ever forgotten. Deleting the
-  file is the only way to lose history.
+  file exists. Only the app breakdown is ever forgotten.
+- `months` only appears in files written by older versions: current
+  writes persist `days` and `years`, and readers keep honoring any
+  legacy month lumps.
+- The Wipe-all control in Settings, or deleting the file, is the only
+  way to lose history.
 
 ## Development
 
