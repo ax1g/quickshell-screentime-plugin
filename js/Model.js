@@ -1221,7 +1221,6 @@ function weekRangeLabel(week) {
   if (!keyToDate(startKey) || !keyToDate(endKey)) return ""
   var sp = startKey.split("-")
   var ep = endKey.split("-")
-  var ep = endKey.split("-")
   if (sp.length !== 3 || ep.length !== 3) return ""
   var sy = Number(sp[0])
   var sm = Number(sp[1]) - 1
@@ -1254,18 +1253,19 @@ function weekRangeLabel(week) {
       ", " +
       sy
   } else {
+    // Cross-year weeks keep both years, abbreviated to two digits.
     range =
       MONTH_NAMES[sm] +
       " " +
       sDate.getDate() +
       ", " +
-      sy +
+      String(sy).slice(-2) +
       " – " +
       MONTH_NAMES[em] +
       " " +
       eDate.getDate() +
       ", " +
-      ey
+      String(ey).slice(-2)
   }
   // Every day in a Mon–Sun week shares the ISO week number; Thursday is the
   // ISO reference day, with Monday as fallback.

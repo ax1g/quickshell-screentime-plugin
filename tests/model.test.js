@@ -1307,7 +1307,7 @@ test("weekRangeLabel names both years across New Year", () => {
   assert.equal(weeks[0].days[0].key, "2025-12-29")
   assert.equal(
     Model.weekRangeLabel(weeks[0]),
-    "Dec 29, 2025 – Jan 4, 2026 · W1",
+    "Dec 29, 25 – Jan 4, 26 · W1",
   )
 })
 
@@ -2238,4 +2238,13 @@ test("weekdayNumber maps Monday to Sunday as 1 to 7", () => {
   assert.equal(Model.weekdayNumber("garbage"), 0)
   assert.equal(Model.weekdayNumber(""), 0)
   assert.equal(Model.weekdayNumber(null), 0)
+})
+
+test("weekRangeLabel shortens to three cases", () => {
+  const sameMonth = Model.monSunWeeks({}, "2026-08-19", 1)
+  assert.equal(Model.weekRangeLabel(sameMonth[0]), "Aug 17 – 23, 2026 · W34")
+  const crossMonth = Model.monSunWeeks({}, "2026-09-06", 1)
+  assert.equal(Model.weekRangeLabel(crossMonth[0]), "Aug 31 – Sep 6, 2026 · W36")
+  const crossYear = Model.monSunWeeks({}, "2027-01-01", 1)
+  assert.equal(Model.weekRangeLabel(crossYear[0]), "Dec 28, 26 – Jan 3, 27 · W53")
 })
