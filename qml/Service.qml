@@ -39,7 +39,7 @@ Item {
     // slack. The panel pushes the user pref raised to the visible trend's
     // floor, so wide windows stay fully detailed; shrinking it archives
     // day detail instead of deleting it.
-    property int keepDays: 95
+    property int keepDays: 365
     function setKeepDays(days) {
         var n = Math.floor(Number(days));
         if (!isFinite(n) || n < 7 || n > 730)
@@ -339,7 +339,7 @@ Item {
         var merged = Object.assign({}, root.days);
         merged[root.todayKey] = root.today;
         // Pruned days roll into the per-day archive; months lumps stay untouched.
-        var ret = Model.applyRetention(merged, root.years, root.todayKey, root.keepDays, Number(String(root.todayKey).split("-")[0]));
+        var ret = Model.applyRetention(merged, root.years, root.todayKey, root.keepDays);
         if (ret.pruned) {
             root.years = ret.years;
             historyAdapter.years = ret.years;
@@ -368,7 +368,7 @@ Item {
         var d = clean.days;
         var m = clean.months;
         // Load-time drops feed the archive too.
-        var ret = Model.applyRetention(d, clean.years, Model.dayKey(new Date()), root.keepDays, new Date().getFullYear());
+        var ret = Model.applyRetention(d, clean.years, Model.dayKey(new Date()), root.keepDays);
         if (ret.pruned)
             historyAdapter.years = ret.years;
         var y = ret.years;

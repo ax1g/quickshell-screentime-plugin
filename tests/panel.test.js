@@ -315,7 +315,7 @@ test("wipe-all needs four conscious clicks and names the blast radius", () => {
 })
 
 test("retention window threads from prefs to the service with a readout", () => {
-  assert.match(service, /property int keepDays: 95/)
+  assert.match(service, /property int keepDays: 365/)
   assert.match(service, /function setKeepDays\(days\)/)
   assert.match(service, /Math\.floor\(Number\(days\)\)/)
   assert.match(panel, /Model\.parseKeepDays\(root\.prefs\.keepDays\)/)
