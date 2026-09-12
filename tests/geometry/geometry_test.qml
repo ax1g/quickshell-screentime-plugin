@@ -42,8 +42,6 @@ TestCase {
         ]
         dailyGoalHours: 6
         dailyGoalOptions: [0, 4, 6, 8]
-        keepDays: 95
-        keepDaysOptions: [30, 95, 365]
         storageLabel: "1 days · 2 months · 3 archived"
         pluginVersion: "1.6.0"
         hintMode: false

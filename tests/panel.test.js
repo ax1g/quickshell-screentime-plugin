@@ -313,30 +313,30 @@ test("wipe-all needs four conscious clicks and names the blast radius", () => {
   assert.match(panel, /root\.service\.resetAll\(\)/)
 })
 
-test("retention window threads from prefs to the service with a readout", () => {
+test("app detail is a year and the service never keeps less than the trend", () => {
   assert.match(service, /property int keepDays: 365/)
   assert.match(service, /function setKeepDays\(days\)/)
   assert.match(service, /Math\.floor\(Number\(days\)\)/)
-  assert.match(panel, /Model\.parseKeepDays\(root\.prefs\.keepDays\)/)
   // The service never keeps less than the visible trend needs, so wide
   // windows cannot show hollow weeks older than the preset.
   assert.match(panel, /Model\.minKeepDays\(root\.weekCount\)/)
   assert.match(
     panel,
-    /Math\.max\(root\.keepDays, Model\.minKeepDays\(root\.weekCount\)\)/,
+    /Math\.max\(Model\.APP_DETAIL_DAYS, Model\.minKeepDays\(root\.weekCount\)\)/,
   )
+  // Totals live on forever; the footprint readout stays on the menu.
   assert.match(
     panel,
     /Model\.storageSummary\(root\.days, root\.months, root\.years\)/,
   )
   assert.match(panel, /Model\.storageLabel\(root\.storageSummary\)/)
   assert.match(panel, /root\.service\.setKeepDays\(root\.effectiveKeepDays\)/)
-  assert.match(menu, /required property int keepDays/)
-  assert.match(menu, /required property var keepDaysOptions/)
   assert.match(menu, /required property string storageLabel/)
-  assert.match(menu, /signal keepDaysSelected\(int days\)/)
-  assert.match(menu, /root\.keepDaysSelected\(modelData\)/)
-  assert.match(panel, /writeSetting\("keepDays", days\)/)
+  assert.match(menu, /text: "Forever totals"/)
+  assert.match(menu, /never deleted; nothing here deletes hours/)
+  assert.doesNotMatch(menu, /keepDaysSelected/)
+  assert.doesNotMatch(menu, /required property int keepDays/)
+  assert.doesNotMatch(panel, /prefs\.keepDays/)
 })
 
 test("first-run onboarding shows coach marks until anything is tracked", () => {
@@ -398,7 +398,6 @@ test("danger buttons center vertically beside early-wrapping labels", () => {
 test("option pills align left under their labels", () => {
   for (const id of [
     "weekBoxes",
-    "keepBoxes",
     "goalBoxes",
     "trophySwatches",
     "heroSwatches",
@@ -822,7 +821,6 @@ test("settings registry covers every pressable in order", () => {
     "hero-custom",
     "hero-reset",
     "weeks",
-    "keep",
     "goal",
     "field-ignored",
     "add-ignored",

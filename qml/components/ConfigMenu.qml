@@ -35,8 +35,6 @@ Column {
     required property var aliasEntries
     required property int dailyGoalHours
     required property var dailyGoalOptions
-    required property int keepDays
-    required property var keepDaysOptions
     required property string storageLabel
     required property string pluginVersion
     required property bool hintMode
@@ -55,7 +53,6 @@ Column {
     signal aliasAdded(string from, string to)
     signal aliasRemoved(string from)
     signal dailyGoalSelected(int hours)
-    signal keepDaysSelected(int days)
     signal resetRequested
     signal wipeRequested
     signal backRequested
@@ -121,8 +118,6 @@ Column {
         add("hero-reset", 0);
         for (var w = 0; w < root.weekOptions.length; w++)
             add("weeks", root.weekOptions[w]);
-        for (var k = 0; k < root.keepDaysOptions.length; k++)
-            add("keep", root.keepDaysOptions[k]);
         for (var g = 0; g < root.dailyGoalOptions.length; g++)
             add("goal", root.dailyGoalOptions[g]);
         add("field-ignored", 0);
@@ -181,8 +176,6 @@ Column {
             root.heroColorSelected(root.heroDefaultColor);
         else if (kind === "weeks")
             root.weekWindowSelected(sub);
-        else if (kind === "keep")
-            root.keepDaysSelected(sub);
         else if (kind === "goal")
             root.dailyGoalSelected(sub);
         else if (kind === "field-ignored")
@@ -698,7 +691,8 @@ Column {
                 font.letterSpacing: 1.5
             }
 
-            // Week window option boxes; retention already covers the largest one.
+            // Week window option boxes; app detail always stretches to cover the
+            // largest one, so the pages never show hollow weeks.
             Column {
                 width: parent.width
                 spacing: Style.space(6)
@@ -708,7 +702,7 @@ Column {
                     spacing: Style.space(2)
 
                     Text {
-                        text: "Weeks of history"
+                        text: "Weekly graph"
                         color: root.foreground
                         opacity: 0.75
                         font.family: root.fontFamily
@@ -718,7 +712,7 @@ Column {
                     }
 
                     Text {
-                        text: "Paginated Mon–Sun pages back from the current week"
+                        text: "How far back the Mon–Sun pages reach — always fully detailed, app detail stretches to cover it"
                         color: root.foreground
                         opacity: 0.45
                         font.family: root.fontFamily
@@ -777,8 +771,9 @@ Column {
                 }
             }
 
-            // Retention window in days; shrinking it archives day detail
-            // instead of deleting it, and the readout shows the footprint.
+            // Totals outlive the app detail forever: only the per-app
+            // breakdown is forgotten after a year, and the readout
+            // shows the current footprint.
             Column {
                 width: parent.width
                 spacing: Style.space(6)
@@ -788,7 +783,7 @@ Column {
                     spacing: Style.space(2)
 
                     Text {
-                        text: "Keeps history"
+                        text: "Forever totals"
                         color: root.foreground
                         opacity: 0.75
                         font.family: root.fontFamily
@@ -798,7 +793,7 @@ Column {
                     }
 
                     Text {
-                        text: root.storageLabel
+                        text: "Per-app detail is kept for a year. Day, month and year totals — and every year's insights — are never deleted; nothing here deletes hours."
                         color: root.foreground
                         opacity: 0.45
                         font.family: root.fontFamily
@@ -808,52 +803,14 @@ Column {
                     }
                 }
 
-                Row {
-                    id: keepBoxes
-                    spacing: Style.space(6)
-                    anchors.left: parent.left
-
-                    Repeater {
-                        model: root.keepDaysOptions
-
-                        Rectangle {
-                            required property int modelData
-                            readonly property bool chosen: modelData === root.keepDays
-                            width: Style.space(52)
-                            height: Style.space(28)
-                            radius: Style.space(4)
-                            color: chosen ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
-                            border.color: chosen ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
-                            border.width: 1
-
-                            Text {
-                                text: modelData + "d"
-                                color: chosen ? root.accent : root.foreground
-                                opacity: chosen ? 1.0 : 0.6
-                                font.family: root.fontFamily
-                                font.pixelSize: Style.font.bodySmall
-                                font.bold: chosen
-                                anchors.centerIn: parent
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.keepDaysSelected(modelData)
-                            }
-
-                            HintBadge {
-                                readonly property string tag: root.hintTag(root.hintItems, "keep", modelData)
-                                label: tag
-                                fontFamily: root.fontFamily
-                                accent: root.accent
-                                show: root.hintMode && tag !== ""
-                                anchors.top: parent.top
-                                anchors.right: parent.right
-                            }
-                        }
-                    }
+                Text {
+                    text: root.storageLabel
+                    color: root.foreground
+                    opacity: 0.45
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    width: parent.width
+                    wrapMode: Text.WordWrap
                 }
             }
         }

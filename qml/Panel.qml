@@ -126,13 +126,10 @@ Panel {
         }
     }
 
-    // Retention window (30/95/365d) with a storage-footprint readout.
-    // The service never keeps less than the visible trend needs, so a
-    // wide window can't show hollow weeks older than the preset.
-    readonly property var keepDaysOptions: [30, 95, 365]
-    readonly property int keepDays: Model.parseKeepDays(root.prefs.keepDays)
-    readonly property int effectiveKeepDays: Math.max(root.keepDays, Model.minKeepDays(root.weekCount))
-    onKeepDaysChanged: root.pushTrackingPrefs()
+    // App detail is always kept a full year; the service never keeps
+    // less than the visible trend needs. Week totals and months beyond
+    // that live on forever as the per-day archive.
+    readonly property int effectiveKeepDays: Math.max(Model.APP_DETAIL_DAYS, Model.minKeepDays(root.weekCount))
     readonly property var storageSummary: Model.storageSummary(root.days, root.months, root.years)
     readonly property string storageLabel: Model.storageLabel(root.storageSummary)
 
@@ -678,8 +675,6 @@ Panel {
                             aliasEntries: root.aliasEntries
                             dailyGoalHours: root.dailyGoalHours
                             dailyGoalOptions: root.dailyGoalOptions
-                            keepDays: root.keepDays
-                            keepDaysOptions: root.keepDaysOptions
                             storageLabel: root.storageLabel
                             pluginVersion: root.pluginVersion
                             hintMode: root.hintMode
@@ -710,10 +705,6 @@ Panel {
                             onDailyGoalSelected: function (hours) {
                                 if (hours !== root.dailyGoalHours)
                                     root.logGoalChange(hours);
-                            }
-                            onKeepDaysSelected: function (days) {
-                                if (days !== root.keepDays)
-                                    root.writeSetting("keepDays", days);
                             }
                             onWeekTotalModeToggled: root.writeSetting("weekTotalAsPct", !root.weekTotalAsPct)
                             onTrophyToggled: root.writeSetting("hideRecordTrophy", !root.hideRecordTrophy)
