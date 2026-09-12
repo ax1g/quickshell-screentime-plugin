@@ -11,10 +11,13 @@ import "../../qml/components"
 TestCase {
     name: "ConfigMenuGeometry"
     width: 340
-    height: 2000
+    height: menu.height
+    when: windowShown
+    visible: true
 
     ConfigMenu {
         id: menu
+        width: parent.width
         foreground: "#ffffff"
         fontFamily: "monospace"
         accent: "#e45b93"
@@ -45,6 +48,45 @@ TestCase {
         storageLabel: "1 days · 2 months · 3 archived"
         pluginVersion: "1.6.0"
         hintMode: false
+    }
+
+    SignalSpy {
+        id: resetSpy
+        target: menu
+        signalName: "resetRequested"
+    }
+
+    SignalSpy {
+        id: wipeSpy
+        target: menu
+        signalName: "wipeRequested"
+    }
+
+    function test_confirmationClicks_data() {
+        return [
+            {
+                tag: "reset",
+                labels: ["RESET", "SURE?", "REALLY?"],
+                spy: resetSpy
+            },
+            {
+                tag: "wipe",
+                labels: ["WIPE ALL", "SURE?", "CAN'T UNDO!", "WIPE!"],
+                spy: wipeSpy
+            }
+        ];
+    }
+
+    function test_confirmationClicks(data) {
+        data.spy.clear();
+        for (var i = 0; i < data.labels.length; i++) {
+            var label = findText(data.labels[i]);
+            verify(label !== null, "confirmation label " + data.labels[i]);
+            compare(data.spy.count, 0, "no destructive signal before final confirmation");
+            mouseClick(label.parent, label.parent.width - 2, label.parent.height / 2);
+        }
+        compare(data.spy.count, 1, "final click emits exactly once");
+        verify(findText(data.labels[0]) !== null, "confirmation returns to idle");
     }
 
     function collect(item, out) {

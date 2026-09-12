@@ -1673,27 +1673,26 @@ Column {
                             anchors.top: parent.top
                             anchors.right: parent.right
                         }
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: resetBox
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (resetRow.stage >= 2) {
-                            resetRow.stage = 0;
-                            resetRevertTimer.stop();
-                            root.resetRequested();
-                        } else {
-                            resetRow.stage++;
-                            resetRevertTimer.restart();
-                        }
-                    }
-                    onContainsMouseChanged: {
-                        if (!containsMouse && resetRow.stage > 0) {
-                            resetRow.stage = 0;
-                            resetRevertTimer.stop();
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (resetRow.stage >= 2) {
+                                    resetRow.stage = 0;
+                                    resetRevertTimer.stop();
+                                    root.resetRequested();
+                                } else {
+                                    resetRow.stage++;
+                                    resetRevertTimer.restart();
+                                }
+                            }
+                            onContainsMouseChanged: {
+                                if (!containsMouse && resetRow.stage > 0) {
+                                    resetRow.stage = 0;
+                                    resetRevertTimer.stop();
+                                }
+                            }
                         }
                     }
                 }
@@ -1780,27 +1779,26 @@ Column {
                             anchors.top: parent.top
                             anchors.right: parent.right
                         }
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: wipeBox
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (wipeRow.stage >= 3) {
-                            wipeRow.stage = 0;
-                            wipeRevertTimer.stop();
-                            root.wipeRequested();
-                        } else {
-                            wipeRow.stage++;
-                            wipeRevertTimer.restart();
-                        }
-                    }
-                    onContainsMouseChanged: {
-                        if (!containsMouse && wipeRow.stage > 0) {
-                            wipeRow.stage = 0;
-                            wipeRevertTimer.stop();
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (wipeRow.stage >= 3) {
+                                    wipeRow.stage = 0;
+                                    wipeRevertTimer.stop();
+                                    root.wipeRequested();
+                                } else {
+                                    wipeRow.stage++;
+                                    wipeRevertTimer.restart();
+                                }
+                            }
+                            onContainsMouseChanged: {
+                                if (!containsMouse && wipeRow.stage > 0) {
+                                    wipeRow.stage = 0;
+                                    wipeRevertTimer.stop();
+                                }
+                            }
                         }
                     }
                 }
