@@ -55,6 +55,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   larger year pager, month bars lose their background tracks, and top
   months take gold, silver and bronze medals over middle dots.
 - Busiest Week Trophy needs two weeks of tracked data before it appears.
+- Codebase refactored for maintainability: repeated panel code was
+  extracted into small single-purpose components (donut, legend, week
+  bars, pager, cards, drawers) and display logic into a shared model,
+  slimming the largest file — Panel.qml — by over 40%.
+- Agent-ready development workflow: a contributor guide (`AGENTS.md`)
+  codifies the project structure, conventions, data-safety contracts and
+  test gates, so agent-assisted changes land at the same quality bar as
+  manual ones.
 
 ### Fixes
 
