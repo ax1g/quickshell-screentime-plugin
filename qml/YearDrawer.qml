@@ -245,7 +245,8 @@ Item {
 
         Column {
             id: calendarColumn
-            width: calendarScroll.width
+            // Gutter for the scrollbar so the bar never covers rows.
+            width: calendarScroll.width - Style.space(8)
             spacing: Style.space(10)
 
             // Month bars scale to the busiest month; hover for exact total.
@@ -397,5 +398,19 @@ Item {
                 }
             }
         }
+    }
+
+    // Thin scrollbar on the right edge, same idiom as the settings
+    // menu: only visible while the year content overflows.
+    Rectangle {
+        property real ratio: calendarScroll.contentHeight > 0 ? calendarScroll.height / calendarScroll.contentHeight : 0
+        visible: calendarScroll.contentHeight > calendarScroll.height
+        width: 2
+        height: Math.max(Style.space(16), calendarScroll.height * ratio)
+        radius: width / 2
+        color: root.foreground
+        opacity: 0.25
+        anchors.right: calendarScroll.right
+        y: calendarScroll.y + (calendarScroll.height - height) * (calendarScroll.contentHeight > calendarScroll.height ? calendarScroll.contentY / (calendarScroll.contentHeight - calendarScroll.height) : 0)
     }
 }

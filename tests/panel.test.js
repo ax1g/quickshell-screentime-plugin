@@ -433,6 +433,21 @@ test("color rows offer a reset glyph at the right", () => {
   assert.doesNotMatch(menu, /Qt\.darker\(root\.foreground, 1\.4\)/)
 })
 
+test("year scrollbar mirrors the settings idiom", () => {
+  const drawer = qml("YearDrawer.qml")
+  assert.match(drawer, /calendarScroll\.width - Style\.space\(8\)/)
+  assert.match(drawer, /property real ratio: calendarScroll\.contentHeight > 0/)
+  assert.match(
+    drawer,
+    /visible: calendarScroll\.contentHeight > calendarScroll\.height/,
+  )
+  assert.match(drawer, /anchors\.right: calendarScroll\.right/)
+  assert.match(
+    drawer,
+    /calendarScroll\.contentY \/ \(calendarScroll\.contentHeight - calendarScroll\.height\)/,
+  )
+})
+
 test("navigation celebrates through the header icons", () => {
   const drawer = qml("YearDrawer.qml")
   // Home gear sweeps a full turn as settings opens.
