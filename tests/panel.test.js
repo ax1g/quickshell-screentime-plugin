@@ -868,3 +868,59 @@ test("day columns number Mon-Sun above the hint slot", () => {
   assert.match(trend, /height: Style\.space\(114\) \+ Style\.space\(20\)/)
   assert.match(tick, /parent\.height - Style\.space\(48\)/)
 })
+
+test("hint badges only set declared props", () => {
+  const badge = comp("HintBadge.qml")
+  const declared = new Set(
+    [...badge.matchAll(/required property \w+ (\w+)/g)].map((m) => m[1]),
+  )
+  assert.ok(!declared.has("foreground"), "no stale foreground prop expected")
+  const files = [
+    "Panel.qml",
+    "WeekTrend.qml",
+    "YearDrawer.qml",
+    "components/HeroHeader.qml",
+    "components/WeekDayBar.qml",
+    "components/ConfigMenu.qml",
+  ]
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(__dirname, "..", "qml", f), "utf8")
+    let i = 0
+    while (true) {
+      const j = src.indexOf("HintBadge {", i)
+      if (j === -1) break
+      let depth = 0
+      let p = src.indexOf("{", j)
+      const topBindings = []
+      while (true) {
+        const ch = src[p]
+        if (ch === "{") depth++
+        else if (ch === "}") {
+          depth--
+          if (depth === 0) break
+        } else if (depth === 1) {
+          const m = src.slice(p).match(/^\s*([A-Za-z_][\w.]*)\s*:/)
+          if (m) {
+            const lineStart = src.lastIndexOf("\n", p) + 1
+            const lineEnd = src.indexOf("\n", p)
+            const line = src.slice(lineStart, lineEnd)
+            // Local property declarations (per-badge tag aliases)
+            // are fine; only real assignments must be declared.
+            if (!/\bproperty\b/.test(line)) topBindings.push(m[1])
+            p += m[0].length - 1
+          }
+        }
+        p++
+      }
+      for (const b of topBindings) {
+        const root = b.split(".")[0]
+        assert.ok(
+          declared.has(root) ||
+            ["anchors", "width", "height", "x", "y", "visible"].includes(root),
+          f + " sets undeclared HintBadge prop: " + b,
+        )
+      }
+      i = p + 1
+    }
+  }
+})

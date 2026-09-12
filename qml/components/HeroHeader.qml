@@ -102,7 +102,6 @@ Item {
         label: "y"
         fontFamily: heroHeader.fontFamily
         accent: heroHeader.accent
-        foreground: heroHeader.foreground
         show: heroHeader.hintMode && heroHeader.calendarEnabled
         anchors.top: heroIcon.top
         anchors.left: heroIcon.left
@@ -182,7 +181,6 @@ Item {
         label: "c"
         fontFamily: heroHeader.fontFamily
         accent: heroHeader.accent
-        foreground: heroHeader.foreground
         show: heroHeader.hintMode
         anchors.top: configGear.top
         anchors.right: configGear.right
@@ -225,7 +223,6 @@ Item {
         label: "m"
         fontFamily: heroHeader.fontFamily
         accent: heroHeader.accent
-        foreground: heroHeader.foreground
         show: heroHeader.hintMode
         anchors.top: showMoreCorner.top
         anchors.right: showMoreCorner.right

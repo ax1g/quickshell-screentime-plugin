@@ -176,7 +176,6 @@ Item {
                     label: "b"
                     fontFamily: root.fontFamily
                     accent: root.accent
-                    foreground: root.foreground
                     show: root.hintMode && root.currentYear > root.oldestDataYear
                     anchors.top: prevYearArrow.top
                     anchors.left: prevYearArrow.left
@@ -206,7 +205,6 @@ Item {
                     label: "n"
                     fontFamily: root.fontFamily
                     accent: root.accent
-                    foreground: root.foreground
                     show: root.hintMode && root.currentYearOffset > 0
                     anchors.top: nextYearArrow.top
                     anchors.left: nextYearArrow.left
@@ -227,7 +225,6 @@ Item {
             label: "m"
             fontFamily: root.fontFamily
             accent: root.accent
-            foreground: root.foreground
             show: root.hintMode
             anchors.top: backCorner.top
             anchors.right: backCorner.right

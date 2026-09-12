@@ -57,7 +57,6 @@ Column {
                 label: "b"
                 fontFamily: root.fontFamily
                 accent: root.accent
-                foreground: root.foreground
                 show: root.hintMode && root.weekOffset < root.maxOffset && root.hasPrevWeekData
                 anchors.top: prevArrow.top
                 anchors.left: prevArrow.left
@@ -89,7 +88,6 @@ Column {
                 label: "n"
                 fontFamily: root.fontFamily
                 accent: root.accent
-                foreground: root.foreground
                 show: root.hintMode && root.weekOffset > 0
                 anchors.top: nextArrow.top
                 anchors.left: nextArrow.left
@@ -142,7 +140,6 @@ Column {
                 label: "t"
                 fontFamily: root.fontFamily
                 accent: root.accent
-                foreground: root.foreground
                 show: root.hintMode
                 anchors.top: weekTotalLabel.top
                 anchors.right: weekTotalLabel.right

@@ -346,7 +346,6 @@ Column {
                         label: tag
                         fontFamily: root.fontFamily
                         accent: root.accent
-                        foreground: root.foreground
                         show: root.hintMode && tag !== ""
                         anchors.top: toggleSwitch.top
                         anchors.right: toggleSwitch.right
@@ -449,7 +448,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.top: parent.top
                                 anchors.right: parent.right
@@ -482,7 +480,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -519,7 +516,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -589,7 +585,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.top: parent.top
                                 anchors.right: parent.right
@@ -621,7 +616,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -659,7 +653,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -766,7 +759,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.top: parent.top
                                 anchors.right: parent.right
@@ -847,7 +839,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.top: parent.top
                                 anchors.right: parent.right
@@ -956,7 +947,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.top: parent.top
                                 anchors.right: parent.right
@@ -1065,7 +1055,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -1107,7 +1096,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -1176,7 +1164,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1256,7 +1243,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -1315,7 +1301,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -1359,7 +1344,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -1448,7 +1432,6 @@ Column {
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
-                                foreground: root.foreground
                                 show: root.hintMode && tag !== ""
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1607,7 +1590,6 @@ Column {
                         label: tag
                         fontFamily: root.fontFamily
                         accent: root.accent
-                        foreground: root.foreground
                         show: root.hintMode && tag !== ""
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
@@ -1730,7 +1712,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
@@ -1838,7 +1819,6 @@ Column {
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
-                            foreground: root.foreground
                             show: root.hintMode && tag !== ""
                             anchors.top: parent.top
                             anchors.right: parent.right
