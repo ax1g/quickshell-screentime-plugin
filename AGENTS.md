@@ -155,6 +155,54 @@ Visual check (lint is not enough):
 - No internals in user-facing lines: no file names, no pref keys, no
   function names (typed IPC commands are the exception — users run them).
 
+## Release and marketplace verification
+
+After a release PR lands, ship the tag and refresh the marketplace listing:
+
+1. **Create the GitHub release** on `main` with the changelog in the body
+   (mirror the full `CHANGELOG.md` section — no "see CHANGELOG.md" pointer):
+   ```bash
+   gh release create vX.Y.Z --repo ax1g/quickshell-screentime-plugin \
+     --target main --title vX.Y.Z --notes-file /tmp/release-body.md
+   ```
+2. **The Omarchy marketplace** (`plugins.omarchy.org`) lists this plugin as
+   `agx.screen-time`, category Productivity, tags `bar hyprland quickshell`.
+   Its listing is *snapshot-verified* against one exact commit
+   (`listingValidatedCommit` in `registry.json` of the marketplace repo).
+   A release leaves the page showing "Update unverified" until the new
+   exact commit is verified and promoted.
+
+3. **Push the update verification** as an issue on the marketplace repo:
+   ```bash
+   gh issue create --repo omacom/omarchy-plugin-marketplace \
+     --title "[Verify]: agx.screen-time — review and publish vX.Y.Z" \
+     --body 'Verification action:
+   Verify and publish a newer upstream commit
+
+   - **Plugin ID:** agx.screen-time
+   - **Repository URL:** https://github.com/ax1g/quickshell-screentime-plugin
+   - **Target commit:** <full 40-char SHA of main after the release merge>
+
+   - [x] I understand that only the exact target commit can become a verified marketplace snapshot and that verification is not a security audit.'
+   ```
+   - The canonical repo is `omacom/omarchy-plugin-marketplace`;
+     `HANCORE-linux/omarchy-plugin-marketplace` is an alias/redirect — issues
+     must target `omacom`.
+   - The `verify-plugin.yml` issue template requires four fields: the action
+     ("Verify and publish a newer upstream commit"), the exact plugin id,
+     the repo root URL, and the full 40-character target SHA, plus the
+     checked acknowledgment. Workflows then run an exact-commit scan and an
+     automated security baseline; a maintainer's approved-and-verified
+     decision is required before the snapshot updates.
+   - Verification is **not** a security audit, and only the EXACT target
+     commit (the vX.Y.Z merge on `main`) becomes the verified snapshot —
+     always reference `main`'s SHA, never a stale tag or branch pointer.
+
+4. Nothing further is needed: installs are bound to the exact verified
+   snapshot, and `omarchy plugin update` pulls the plugin's own git remote,
+   not the marketplace. A brand-new (never-listed) plugin instead uses the
+   separate submission issue flow.
+
 ## QA traps
 
 - `tests/geometry/run.sh` instantiates the real components headlessly
