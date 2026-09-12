@@ -80,7 +80,17 @@ TestCase {
         verify(label.width < label.implicitWidth, "long label elides");
     }
 
-    function test_arrowsHoldPosition() {
+    function test_nextArrowHugsLabel() {
+        var arrows = findArrows();
+        verify(arrows.length === 2, "two pager arrows");
+        var label = findText("W36");
+        verify(label !== null, "range label exists");
+        var next = arrows[0].x < arrows[1].x ? arrows[1] : arrows[0];
+        verify(next.x >= label.x + label.width, "next arrow sits after the range text");
+        verify(next.x - (label.x + label.width) <= 8, "gap stays a single space");
+    }
+
+    function test_arrowsStayClearOfTotal() {
         var arrows = findArrows();
         verify(arrows.length === 2, "two pager arrows");
         var total = findText("5h");

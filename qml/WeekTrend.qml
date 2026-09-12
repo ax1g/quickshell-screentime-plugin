@@ -32,10 +32,9 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    // Header row: nav label stretches between the arrows while
-    // the total hugs the right edge; the trophy floats between.
-    // (The label elides, so any string length leaves the arrows
-    // and the week total exactly where they belong.)
+    // Header row: the next arrow hugs the range text one space along,
+    // so a short range stays together; a long one elides rather than
+    // reaching the week total on the right.
     Item {
         width: parent.width
         height: Math.max(navRow.height, weekTotalLabel.implicitHeight)
@@ -76,10 +75,9 @@ Column {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 elide: Text.ElideRight
+                width: Math.min(implicitWidth, navRow.width - prevArrow.width - nextArrow.width - Style.space(14))
                 anchors.left: prevArrow.right
                 anchors.leftMargin: Style.space(10)
-                anchors.right: nextArrow.left
-                anchors.rightMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -90,7 +88,8 @@ Column {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
-                anchors.right: parent.right
+                anchors.left: weekLabel.right
+                anchors.leftMargin: Style.space(4)
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: root.nextWeekRequested()
             }
