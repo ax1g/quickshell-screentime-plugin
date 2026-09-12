@@ -497,9 +497,16 @@ test("config opens expanded like the yearly drawer", () => {
 })
 
 test("only the danger buttons arm reset, never their labels", () => {
-  assert.match(menu, /anchors\.fill: resetBox/)
-  assert.match(menu, /anchors\.fill: wipeBox/)
-  assert.doesNotMatch(menu, /id: resetRow[\s\S]*?anchors\.fill: parent/)
+  for (const button of ["resetBox", "wipeBox"]) {
+    assert.match(
+      menu,
+      new RegExp(
+        "id: " +
+          button +
+          "[\\s\\S]*?MouseArea\\s*\\{\\s*id: \\w+\\s*\\n\\s*anchors\\.fill: parent",
+      ),
+    )
+  }
 })
 
 test("the week window repushes retention", () => {
@@ -639,6 +646,13 @@ test("settings editors receive keys instead of panel shortcuts", () => {
   )
   assert.match(panel, /id: configMenu/)
   assert.match(panel, /blocked: configMenu\.editing/)
+})
+
+test("config drawer blocker stays behind the menu actions", () => {
+  assert.match(
+    panel,
+    /id: configDrawer[\s\S]*?MouseArea\s*\{\s*z: -1\s*\n\s*anchors\.fill: parent/,
+  )
 })
 
 test("alias row flows from, arrow, to, save", () => {

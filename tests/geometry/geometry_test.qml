@@ -89,6 +89,21 @@ TestCase {
         verify(findText(data.labels[0]) !== null, "confirmation returns to idle");
     }
 
+    function test_dangerButtonsWarnOnHover() {
+        mouseMove(menu, 0, 0);
+        wait(1);
+        var labels = ["RESET", "WIPE ALL"];
+        for (var i = 0; i < labels.length; i++) {
+            var label = labels[i];
+            var button = findText(label);
+            verify(button !== null, label + " exists");
+            verify(!button.parent.warning, label + " is neutral while idle");
+            mouseMove(button.parent, button.parent.width / 2, button.parent.height / 2);
+            verify(button.parent.warning, label + " warns on hover");
+        }
+        mouseMove(menu, 0, 0);
+    }
+
     function collect(item, out) {
         out.push(item);
         for (var i = 0; i < item.children.length; i++)

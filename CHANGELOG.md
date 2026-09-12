@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Reset today and Wipe all history buttons now respond to clicks in Settings.
 
+### Changed
+
+- Reset and wipe controls stay neutral until you hover or begin confirmation.
+
 ## [1.6.0] - 2026-09-12
 
 ### Feat

@@ -529,8 +529,11 @@ Panel {
                     radius: Style.space(6)
                 }
 
-                // Swallow hover/clicks so they don't reach the panel beneath.
+                // Swallow hover/clicks so they don't reach the panel beneath,
+                // but stay behind the interactive menu content so actual
+                // controls are still clickable.
                 MouseArea {
+                    z: -1
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: function (mouse) {
