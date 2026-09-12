@@ -9,8 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Feat
 
 - Introducing the Settings panel — the gear beside SHOW MORE/LESS opens a
-  sectioned, keyboard-first menu where every choice persists across
-  restarts:
+  keyboard-first menu grouped into tinted sections (Display, Colors,
+  Trend & History, Daily Goal, Tracking, Contribution, About with the
+  version, and a red Danger Zone last) with full-width labels and larger
+  click targets. Every choice persists across restarts:
   1. Weekly graph reach: 12, 24, 36 or 52 weeks of Mon–Sun pages, always
      fully detailed.
   2. Forever totals: day, month and year totals — plus every year's
@@ -18,6 +20,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
      year, with a readout of what's stored.
   3. Daily goal: Off/4/6/8h presets with a check badge in the bar,
      remaining time in the tooltip, and a progress bar under the hero.
+     It counts from the day you set it, so past days never show it as
+     reached.
   4. Ignored apps and custom names: banish launchers and portals (the
      focused app's clock stops immediately), or call apps what you want
      (zen becomes browser).
@@ -38,18 +42,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Settings prefs are grouped into tinted sections (Display, Colors,
-  Trend & History, Daily Goal, Tracking, Contribution, About with the
-  version, and a red Danger Zone last) with full-width wrapped labels
-  and larger click targets.
 - Header icons celebrate navigation: the settings gear sweeps, the
   yearly calendar swings, and the hourglass turns a full circle on the
   way home — all mute with Playful extras.
 - Yearly overview polish: hero trimmed to letter-spaced hours above a
   larger year pager, month bars lose their background tracks, and top
   months take gold, silver and bronze medals over middle dots.
-- Daily goal counts from the day it is set: past days never show it as
-  reached, and each day keeps the goal it had.
 - Busiest Week Trophy needs two weeks of tracked data before it appears.
 
 ### Fixes
