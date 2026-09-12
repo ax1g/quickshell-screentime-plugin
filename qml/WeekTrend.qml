@@ -32,16 +32,20 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    // Prev arrow fades at the oldest page.
+    // Header row: nav label stretches between the arrows while
+    // the total hugs the right edge; the trophy floats between.
+    // (The label elides, so any string length leaves the arrows
+    // and the week total exactly where they belong.)
     Item {
         width: parent.width
-        implicitHeight: Math.max(navRow.implicitHeight, weekTotalLabel.implicitHeight)
-
-        Row {
+        height: Math.max(navRow.height, weekTotalLabel.implicitHeight)
+        Item {
             id: navRow
-            spacing: Style.space(10)
             anchors.left: parent.left
+            anchors.right: weekTotalLabel.left
+            anchors.rightMargin: recordTrophy.visible ? recordTrophy.implicitWidth + Style.space(12) : Style.space(8)
             anchors.verticalCenter: parent.verticalCenter
+            height: Math.max(weekLabel.implicitHeight, Math.max(prevArrow.implicitHeight, nextArrow.implicitHeight))
 
             PagerArrow {
                 id: prevArrow
@@ -50,6 +54,8 @@ Column {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
                 onClicked: root.prevWeekRequested()
             }
 
@@ -63,14 +69,17 @@ Column {
             }
 
             Text {
+                id: weekLabel
                 text: root.visibleWeek ? Model.weekRangeLabel(root.visibleWeek) : ""
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 elide: Text.ElideRight
-                // Cap width so long labels elide instead of overlapping.
-                width: Math.max(40, Math.min(implicitWidth, root.width - weekTotalLabel.implicitWidth - Style.space(76)))
+                anchors.left: prevArrow.right
+                anchors.leftMargin: Style.space(10)
+                anchors.right: nextArrow.left
+                anchors.rightMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -81,6 +90,8 @@ Column {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
                 onClicked: root.nextWeekRequested()
             }
 
@@ -97,6 +108,7 @@ Column {
         // Busiest Week Trophy: gold by default, configurable and
         // hideable via the settings.
         Text {
+            id: recordTrophy
             visible: root.recordWeek && root.showRecordTrophy
             text: "\uF091"
             color: root.recordColor

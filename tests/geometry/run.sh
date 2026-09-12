@@ -12,4 +12,5 @@ if [ -z "$BIN" ]; then
   echo "SKIP: qmltestrunner not found"
   exit 0
 fi
-QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/geometry_test.qml"
+QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/geometry_test.qml" || exit $?
+QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/weektrend_test.qml"

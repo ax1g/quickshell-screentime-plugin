@@ -974,3 +974,12 @@ test("repeater index is never read inside delegates", () => {
     }
   }
 })
+
+test("week header label stretches between fixed arrows", () => {
+  assert.match(trend, /anchors\.right: weekTotalLabel\.left/)
+  assert.match(trend, /anchors\.left: prevArrow\.right/)
+  assert.match(trend, /anchors\.right: nextArrow\.left/)
+  assert.match(trend, /id: recordTrophy/)
+  assert.match(trend, /recordTrophy\.visible \? recordTrophy\.implicitWidth/)
+  assert.doesNotMatch(trend, /space\(76\)/)
+})
