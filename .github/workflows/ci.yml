@@ -48,14 +48,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Both tools live in qt6-declarative-dev-tools (NOT
+      # qmllint/qmlformat live in qt6-declarative-dev-tools (NOT
       # qt6-declarative-tools) and land in /usr/lib/qt6/bin, off PATH.
+      # The QtQuick/Controls runtime modules must be installed too, or
+      # qmllint can't import them and flags every type unresolved.
       # Shell/framework imports resolve via lint/ (see lint/README.md),
       # and .qmllint.ini fails on any remaining warning (MaxWarnings=0).
       - name: Install Qt declarative tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq qt6-declarative-dev-tools
+          sudo apt-get install -y -qq \
+            qt6-declarative-dev-tools \
+            qml6-module-qtquick \
+            qml6-module-qtquick-controls
           echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
       - name: Lint QML files
         run: qmllint -I lint qml/*.qml qml/components/*.qml
