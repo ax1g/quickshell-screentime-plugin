@@ -1041,14 +1041,6 @@ Column {
                             id: ignoredInput
                             KeyNavigation.tab: aliasFromInput
                             KeyNavigation.backtab: aliasToInput
-                            cursorVisible: activeFocus
-                            // A bare delegate collapses to zero width, so the
-                            // caret never renders. Size it explicitly.
-                            cursorDelegate: Rectangle {
-                                width: 2
-                                height: ignoredInput.height
-                                color: root.foreground
-                            }
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             color: root.foreground
@@ -1236,14 +1228,6 @@ Column {
                             id: aliasFromInput
                             KeyNavigation.tab: aliasToInput
                             KeyNavigation.backtab: ignoredInput
-                            cursorVisible: activeFocus
-                            // See ignoredInput: a bare cursor delegate is
-                            // invisible, so size it explicitly.
-                            cursorDelegate: Rectangle {
-                                width: 2
-                                height: aliasFromInput.height
-                                color: root.foreground
-                            }
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             color: root.foreground
@@ -1292,14 +1276,6 @@ Column {
                             id: aliasToInput
                             KeyNavigation.tab: ignoredInput
                             KeyNavigation.backtab: aliasFromInput
-                            cursorVisible: activeFocus
-                            // See ignoredInput: a bare cursor delegate is
-                            // invisible, so size it explicitly.
-                            cursorDelegate: Rectangle {
-                                width: 2
-                                height: aliasToInput.height
-                                color: root.foreground
-                            }
                             anchors.fill: parent
                             anchors.margins: Style.space(8)
                             color: root.foreground

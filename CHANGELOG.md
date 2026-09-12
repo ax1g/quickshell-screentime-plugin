@@ -27,8 +27,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Settings text inputs show their caret again while editing — the
-  custom cursor had collapsed to zero width.
+- Settings text inputs show a real, blinking caret again: the hand-rolled
+  cursor rendered frozen and stayed visible without focus.
 - Long week-range labels no longer push the pager arrows into the week
   total: the label stretches between the fixed arrows and elides.
 - Corrupt history files are preserved aside even without python3

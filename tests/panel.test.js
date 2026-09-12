@@ -690,13 +690,11 @@ test("hourglass brightens on hover like the other heroes", () => {
   assert.match(hero, /heroIconMouse\.containsMouse \? heroHeader\.foreground/)
 })
 
-test("settings inputs show a theme-colored cursor on focus", () => {
-  const cursors = menu.match(/cursorVisible: activeFocus/g)
-  assert(cursors && cursors.length === 3, "cursor in all three inputs")
-  const delegates = menu.match(
-    /width: 2\s*\n\s*height: (ignoredInput|aliasFromInput|aliasToInput)\.height\s*\n\s*color: root\.foreground/g,
-  )
-  assert(delegates && delegates.length === 3, "sized theme cursor in all three")
+test("settings inputs use Qt's real cursor, not a hand-rolled one", () => {
+  // The custom delegate rendered frozen and stayed visible without focus;
+  // the default caret blinks and hides with focus.
+  assert.doesNotMatch(menu, /cursorDelegate/)
+  assert.doesNotMatch(menu, /cursorVisible/)
 })
 
 test("tab cycles through the settings inputs", () => {
