@@ -56,14 +56,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Screen time no longer accrues while the session is locked or the
   screensaver is up, and tracking resumes on return (reported by
   @88srzh, contributed by @fgrehm via PR #12).
-- Settings text inputs are clickable across the whole box and show a
-  real, blinking caret.
 - Long week-range labels no longer push the pager arrows into the week
   total: the label stretches between the arrows and elides.
 - Corrupt history files are preserved aside before tracking resumes,
   even without python3 installed.
-- Settings writes never drop stored keys: toggles made before the shell
-  delivers settings queue up and flush over the delivered entry.
 - Busiest Week Trophy follows the viewed week, not just the leading one.
 - Tracking is safer under pressure: focus events before history loads
   open no untracked buckets, and rapid focus switches bound crash-loss
