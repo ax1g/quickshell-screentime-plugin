@@ -39,14 +39,8 @@ Panel {
 
     // Week presets, up to 20 weeks back. Retention always covers the
     // visible window (see effectiveKeepDays below).
-    readonly property var weekOptions: [4, 8, 12, 16, 20]
-    readonly property int weekCount: {
-        var n = Number(root.prefs.weekCount);
-        // Stored 13s predate the 12-week max; keep those users on 12.
-        if (n === 13)
-            return 12;
-        return root.weekOptions.indexOf(n) >= 0 ? n : 12;
-    }
+    readonly property var weekOptions: Model.WEEK_COUNT_OPTIONS
+    readonly property int weekCount: Model.parseWeekCount(root.prefs.weekCount)
     readonly property int maxWeekOffset: root.weekCount - 1
 
     function writeSetting(key, value) {

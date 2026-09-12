@@ -23,7 +23,7 @@ TestCase {
         hideDailyInsights: false
         hideYearInsights: false
         weekCount: 12
-        weekOptions: [4, 8, 12, 16, 20]
+        weekOptions: [12, 24, 36, 52]
         weekTotalAsPct: false
         hideEasterEggs: false
         hideRecordTrophy: false
@@ -34,7 +34,12 @@ TestCase {
         heroColorOptions: ["#ffffff", "#e45b93"]
         heroDefaultColor: ""
         ignoredEntries: ["launcher"]
-        aliasEntries: [{ from: "zen", to: "browser" }]
+        aliasEntries: [
+            {
+                from: "zen",
+                to: "browser"
+            }
+        ]
         dailyGoalHours: 6
         dailyGoalOptions: [0, 4, 6, 8]
         keepDays: 95
