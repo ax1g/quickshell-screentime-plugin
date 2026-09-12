@@ -87,7 +87,7 @@ TestCase {
         verify(label !== null, "range label exists");
         var next = arrows[0].x < arrows[1].x ? arrows[1] : arrows[0];
         verify(next.x >= label.x + label.width, "next arrow sits after the range text");
-        verify(next.x - (label.x + label.width) <= 8, "gap stays a single space");
+        verify(next.x - (label.x + label.width) <= 10, "gap matches the left arrow spacing");
     }
 
     function test_arrowsStayClearOfTotal() {

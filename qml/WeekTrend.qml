@@ -75,7 +75,7 @@ Column {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 elide: Text.ElideRight
-                width: Math.min(implicitWidth, navRow.width - prevArrow.width - nextArrow.width - Style.space(14))
+                width: Math.min(implicitWidth, navRow.width - prevArrow.width - nextArrow.width - Style.space(20))
                 anchors.left: prevArrow.right
                 anchors.leftMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
@@ -89,7 +89,7 @@ Column {
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
                 anchors.left: weekLabel.right
-                anchors.leftMargin: Style.space(4)
+                anchors.leftMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: root.nextWeekRequested()
             }
