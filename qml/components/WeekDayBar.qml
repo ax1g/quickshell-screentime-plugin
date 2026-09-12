@@ -1,9 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// One week-chart day column: bar, weekday label, day number, hint.
-// Bottom stack uses explicit heights (badge slot 20, number 12,
-// label 14) so the axis gridlines stay aligned in every mode.
+// One week-chart day column: bar, weekday label, hint.
+// Bottom stack uses explicit heights (badge slot 20, label 14)
+// so the axis gridlines stay aligned in every mode.
 // Outer reads are layout-parent geometry; muted file-wide like Service.
 // qmllint disable unqualified
 
@@ -60,20 +60,6 @@ Item {
         font.bold: day.isActive
         width: day.width
         height: Style.space(14)
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        anchors.bottom: dayNumberLabel.top
-    }
-
-    Text {
-        id: dayNumberLabel
-        text: String(day.dayNumber)
-        color: day.foreground
-        opacity: 0.45
-        font.family: day.fontFamily
-        font.pixelSize: Style.font.caption
-        width: day.width
-        height: Style.space(12)
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         anchors.bottom: badgeSlot.top

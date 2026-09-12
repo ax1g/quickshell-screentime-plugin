@@ -179,8 +179,8 @@ Column {
     // Day bars on the drawer background; no plate.
     Item {
         width: parent.width
-        // Inner column grew for the number + badge rows below the
-        // weekday labels; the 12px top pad and 8px clearance stand.
+        // Inner column grew for the badge row below the weekday
+        // labels; the 12px top pad and 8px clearance stand.
         height: Style.space(114) + Style.space(20)
         clip: true
 

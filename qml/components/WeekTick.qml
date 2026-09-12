@@ -18,7 +18,7 @@ Item {
     z: 1
     // Bottom offset mirrors the day delegate's stack below the bars:
     // badge slot 20 + number 12 + weekday label 14 + 2px bar gap.
-    y: tick.axisMaxMs > 0 ? (parent.height - Style.space(48) - Style.space(64) * Number(tick.modelData) / tick.axisMaxMs) : parent.height
+    y: tick.axisMaxMs > 0 ? (parent.height - Style.space(36) - Style.space(64) * Number(tick.modelData) / tick.axisMaxMs) : parent.height
 
     // Gridlines stop before the y-axis labels.
     Rectangle {
