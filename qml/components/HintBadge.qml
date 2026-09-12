@@ -1,16 +1,16 @@
 import QtQuick
 import qs.Commons
 
-// Hint-mode key badge in the selected-pill idiom: solid accent box with
-// a bold letter. Zero-size while hidden so panel geometry never shifts
-// under it. Positioned by the parent, near its pressable's corner; it
-// owns no MouseArea so clicks pass straight through.
+// Hint-mode key badge: solid accent box with ink picked from the
+// accent's own lightness, so the letter reads on any theme (white
+// vanishes on gold). Zero-size while hidden so panel geometry never
+// shifts under it. Positioned by the parent, near its pressable's
+// corner; it owns no MouseArea so clicks pass straight through.
 Item {
     id: root
     required property string label
     required property string fontFamily
     required property color accent
-    required property color foreground
     required property bool show
 
     visible: root.show
@@ -27,7 +27,7 @@ Item {
         Text {
             id: hintLabel
             text: root.label
-            color: root.foreground
+            color: root.accent.hslLightness >= 0.45 ? "#232323" : "#f2f2f2"
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             font.bold: true

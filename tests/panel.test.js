@@ -721,10 +721,11 @@ test("hint badge contracts to zero when hidden", () => {
   assert.match(badge, /required property string label/)
   assert.match(badge, /required property string fontFamily/)
   assert.match(badge, /required property color accent/)
-  assert.match(badge, /required property color foreground/)
   assert.match(badge, /required property bool show/)
   assert.match(badge, /width: visible \? implicitWidth : 0/)
   assert.match(badge, /height: visible \? implicitHeight : 0/)
+  // Ink follows accent lightness so the letter reads on any theme.
+  assert.match(badge, /root\.accent\.hslLightness >= 0\.45/)
 })
 
 test("main surfaces badge hint letters", () => {
