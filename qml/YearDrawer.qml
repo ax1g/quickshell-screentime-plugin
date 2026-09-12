@@ -149,7 +149,7 @@ Item {
 
             Row {
                 width: parent.width
-                spacing: Style.space(10)
+                spacing: Style.space(5)
 
                 PagerArrow {
                     id: prevYearArrow
