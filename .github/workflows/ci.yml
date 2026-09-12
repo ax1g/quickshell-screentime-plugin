@@ -64,14 +64,6 @@ jobs:
             qml6-module-qtquick-templates \
             qml6-module-qtqml
           echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
-      - name: Debug qmllint categories
-        run: |
-          qmllint --version
-          mkdir -p /tmp/lc && cd /tmp/lc && qmllint --write-defaults >/dev/null 2>&1 || true
-          echo "=== defaults ==="
-          cat /tmp/lc/.qmllint.ini 2>/dev/null || true
-          echo "=== QtQuick tree ==="
-          find /usr/lib/x86_64-linux-gnu/qt6/qml/QtQuick -maxdepth 1 -mindepth 1 | sort | head -40
       - name: Lint QML files
         run: qmllint -I lint qml/*.qml qml/components/*.qml
       - name: Format check

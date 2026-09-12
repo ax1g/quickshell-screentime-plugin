@@ -1,11 +1,12 @@
-// Functions and handlers cross-reference sibling ids; muted for the linter.
-// qmllint disable unqualified
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import "../js/Model.js" as Model
 import "../js/State.js" as State
+
+// Functions and handlers cross-reference sibling ids; muted for the linter.
+// qmllint disable unqualified
 
 // Screen-time tracker: accrues focused time per app into per-day records.
 // Persisted as { "<YYYY-MM-DD>": { total, apps } }; 60s commits bound
@@ -438,26 +439,25 @@ Item {
         }
 
         // FileViewAdapter is C++-only in Quickshell: complete at runtime,
-        // incomplete to the linter. Muted here, nowhere else.
-        // qmllint disable unresolved-type
+        // incomplete to the linter. Muted via the ini (UnresolvedType/
+        // TypeError) instead of a scoped directive, because that directive
+        // name is unknown to qmllint 6.4.
         JsonAdapter {
             id: historyAdapter
             property var days: ({})
             property var months: ({})
             property var years: ({})
         }
-        // qmllint enable unresolved-type
     }
 
     // QProcess::ExitStatus never loads into lint; handlers take no args.
-    // qmllint disable signal-handler-parameters
+    // Muted via the ini (BadSignalHandler/Parameters), see .qmllint.ini.
     Process {
         id: ensureDirProc
         environment: root.procEnv
         command: ["bash", "-c", "mkdir -p \"$HOME/.config/omarchy/screen-time\"; f=\"$HOME/.config/omarchy/screen-time/history.json\"; [[ -f \"$f\" ]] || printf '{}\\n' > \"$f\""]
         onExited: historyFile.reload()
     }
-    // qmllint enable signal-handler-parameters
 
     // Polls for missed focus events; real switches are event-driven.
     Timer {
@@ -478,7 +478,6 @@ Item {
     // it: without python an unreadable file is still preserved aside
     // instead of being overwritten on the next save.
     property bool backupAttempted: false
-    // qmllint disable signal-handler-parameters
     Process {
         id: backupProc
         environment: root.procEnv
@@ -489,7 +488,6 @@ Item {
             root.persist();
         }
     }
-    // qmllint enable signal-handler-parameters
 
     // Foreground can change without compositor notice; re-resolve live.
     Timer {
@@ -518,7 +516,6 @@ Item {
 
     // Empty stdout falls back to rawApp; stderr is logged so breakage is visible.
     // sh wrapper: missing python3 still exits 0 instead of stalling to watchdog.
-    // qmllint disable signal-handler-parameters
     Process {
         id: resolverProc
         command: ["sh", "-c", "command -v python3 >/dev/null 2>&1 && exec python3 \"$1\" || exit 0", "sh", root.resolverPath]
@@ -537,7 +534,6 @@ Item {
             root.applyResolvedApp(resolverOut.text.trim());
         }
     }
-    // qmllint enable signal-handler-parameters
 
     // ---- Session pause (lock / screensaver) ----------------------------------
     // Lock state comes from omarchy.lock at the source instead of polling
