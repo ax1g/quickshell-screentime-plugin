@@ -26,7 +26,8 @@ Panel {
 
     // Config-menu prefs (BarWidget settings, pushed via injectPanel).
     // Missing keys behave as today, so old installs need no migration.
-    // The `in` probe keeps this safe if the shell ever withholds settings.
+    // Read-only probe: with settings absent, prefs resolve to {} instead
+    // of failing.
     readonly property var prefs: ("settings" in root) && root.settings ? root.settings : ({})
     readonly property bool hideYearly: root.prefs.hideYearly === true
     readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
@@ -163,8 +164,8 @@ Panel {
     readonly property var axisTicks: Model.weekAxisTicks(root.visibleWeekMax)
     readonly property double axisMaxMs: root.axisTicks.length ? root.axisTicks[root.axisTicks.length - 1] : 0
     readonly property double visibleWeekTotalMs: root.weekView ? root.weekView.totalMs : 0
-    // The Busiest Week Trophy follows the viewed week at any page: it
-    // marks the unique best week on record, not just a leading current week.
+    // The Busiest Week Trophy marks the unique best week on record and
+    // follows the viewed week at any page.
     readonly property bool recordWeek: serviceReady ? (root.weekView ? root.weekView.isRecord : false) : false
     property bool expanded: false
     property bool calendarOpen: false

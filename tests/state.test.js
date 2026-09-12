@@ -325,9 +325,8 @@ test("rolloverIfNeeded carries previous day data into today", () => {
 // ---- advanceRollover -------------------------------------------------------
 // One transition owns the whole midnight moment: close the open bucket
 // onto the day it started, carry the live day forward, reopen the bucket.
-// Service.qml used to do this as close -> patch -> reopen across three
-// applyState calls with a pre-close app snapshot; any ordering slip there
-// silently misattributes the straddling seconds.
+// Any ordering slip between those steps silently misattributes the
+// straddling seconds, so the contract is pinned as a single patch.
 
 test("dayMinus returns the unmirrored per-app remainder", () => {
   const result = State.dayMinus(

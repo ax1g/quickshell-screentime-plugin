@@ -452,7 +452,7 @@ function keyToDate(key) {
 
 // True for real padded calendar days ("2026-08-19"). Rolled-over
 // overflow ("2026-02-30", "2026-13-01") and garbage fail, so unpadded
-// keys can never reintroduce lexicographic mis-compares downstream.
+// keys never mis-compare against padded ones downstream.
 function isDayKey(key) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(key || ""))) return false
   var p = String(key).split("-")
@@ -1844,8 +1844,8 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     var span = trackedDays(dayTotals, year, todayKey)
 
     // Day-scale cards are computed over real days only ("daySum"), never the
-    // year total: month lumps from before the archive kept no per-day detail,
-    // so folding them in would inflate "per active day" and the weekday mix.
+    // year total: month lumps carry no per-day detail, so folding them in
+    // would inflate "per active day" and the weekday mix.
     var daySum = 0
     for (var l = 0; l < dayTotals.length; l++) daySum += dayTotals[l].ms
 
