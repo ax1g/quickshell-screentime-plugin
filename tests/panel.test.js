@@ -781,6 +781,7 @@ test("settings registry covers every pressable in order", () => {
   assert.match(menu, /onHintModeChanged/)
   assert.match(menu, /root\.buildHintItems\(\)/)
   for (const kind of [
+    "back",
     "toggle",
     "trophy-swatch",
     "trophy-custom",
@@ -841,6 +842,16 @@ test("settings badges follow the registry", () => {
   assert.match(menu, /root\.hintTag\(root\.hintItems, "add-alias", 0\)/)
   assert.match(menu, /root\.hintTag\(root\.hintItems, "reset", 0\)/)
   assert.match(menu, /root\.hintTag\(root\.hintItems, "wipe", 0\)/)
+})
+
+test("settings back button floats its hint over the header", () => {
+  assert.match(panel, /configMenu\.hintTag\(configMenu\.hintItems, "back", 0\)/)
+  assert.match(panel, /anchors\.top: configBack\.top/)
+  assert.match(panel, /anchors\.right: configBack\.right/)
+  assert.match(panel, /onBackRequested: root\.openConfig\(false\)/)
+  assert.match(menu, /signal backRequested/)
+  assert.match(menu, /add\("back", 0\)/)
+  assert.match(menu, /root\.backRequested\(\)/)
 })
 
 test("year drawer badges back and year pagers", () => {

@@ -58,6 +58,7 @@ Column {
     signal keepDaysSelected(int days)
     signal resetRequested
     signal wipeRequested
+    signal backRequested
 
     width: parent.width
     spacing: Style.space(12)
@@ -84,10 +85,11 @@ Column {
     // Hint-mode registry: ordered { tag, kind, sub } entries covering
     // every pressable in render order, rebuilt whenever hint mode starts
     // so dynamic lists (removes, custom slots) freeze for the session.
-    // Tags are two letters (aa-az, ba-zz); single letters would starve
-    // past the first two dozen rows. Staged confirmations (reset, wipe)
-    // advance one click step like a pointer click; alias removal fires
-    // whole because re-adding the alias fully restores it.
+    // The settings back button is the first pressable (aa); tags are two
+    // letters (aa-az, ba-zz); single letters would starve past the first
+    // two dozen rows. Staged confirmations (reset, wipe) advance one
+    // click step like a pointer click; alias removal fires whole because
+    // re-adding the alias fully restores it.
     property var hintItems: []
 
     function hintTagFor(n) {
@@ -103,6 +105,7 @@ Column {
                 sub: sub
             });
         }
+        add("back", 0);
         var toggleKinds = ["yearly", "daily", "retro", "weektotal", "trophy", "easter"];
         for (var t = 0; t < toggleKinds.length; t++)
             add("toggle", toggleKinds[t]);
@@ -204,6 +207,8 @@ Column {
             root.aliasRemoved(sub);
         else if (kind === "help")
             Qt.openUrlExternally(sub);
+        else if (kind === "back")
+            root.backRequested();
         else if (kind === "reset") {
             if (resetRow.stage >= 2) {
                 resetRow.stage = 0;

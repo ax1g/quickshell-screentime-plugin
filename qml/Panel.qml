@@ -629,6 +629,17 @@ Panel {
                         fontFamily: root.contentFontFamily
                         onClicked: root.openConfig(false)
                     }
+
+                    // Back keyhint floats over the button's corner, like
+                    // the year drawer's; a direct sibling keeps it on top.
+                    HintBadge {
+                        label: configMenu.hintTag(configMenu.hintItems, "back", 0)
+                        fontFamily: root.contentFontFamily
+                        accent: Color.accent
+                        show: root.hintMode && label !== ""
+                        anchors.top: configBack.top
+                        anchors.right: configBack.right
+                    }
                 }
 
                 Flickable {
@@ -655,6 +666,7 @@ Panel {
                             fontFamily: root.contentFontFamily
                             accent: Color.accent
                             urgent: Color.urgent
+                            onBackRequested: root.openConfig(false)
                             hideYearly: root.hideYearly
                             hideDailyInsights: root.hideDailyInsights
                             hideYearInsights: root.hideYearInsights
