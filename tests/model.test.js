@@ -964,15 +964,6 @@ test("rollupArchive keeps only per-day totals, never app maps", () => {
   assert.deepEqual(base, { 2026: { "2026-08-03": 1000 } })
 })
 
-test("pruneArchive keeps the current and previous calendar year", () => {
-  const years = { 2024: { a: 1 }, 2025: { b: 2 }, 2026: { c: 3 } }
-  assert.deepEqual(Model.pruneArchive(years, 2026), {
-    2025: { b: 2 },
-    2026: { c: 3 },
-  })
-  assert.deepEqual(Model.pruneArchive({}, 2026), {})
-})
-
 test("yearDayTotals unions archive and live days, capped at todayKey", () => {
   const years = { 2026: { "2026-01-02": 2 * HOUR_MS, "2026-12-25": HOUR_MS } }
   const days = {
@@ -1246,16 +1237,29 @@ test("applyRetention prunes days into the archive in one step", () => {
     "2026-01-01": { total: HOUR_MS, apps: {} },
     "2026-08-15": { total: 2 * HOUR_MS, apps: {} },
   }
-  const r = Model.applyRetention(days, {}, "2026-08-15", 95, 2026)
+  const r = Model.applyRetention(days, {}, "2026-08-15", 95)
   assert.equal(r.pruned, true)
   assert.deepEqual(Object.keys(r.days), ["2026-08-15"])
   assert.deepEqual(r.years, { 2026: { "2026-01-01": HOUR_MS } })
 })
 
+test("applyRetention grows the archive across many calendar years", () => {
+  const days = {
+    "2023-02-10": { total: HOUR_MS, apps: {} },
+    "2024-06-20": { total: 2 * HOUR_MS, apps: {} },
+    "2026-08-15": { total: HOUR_MS, apps: {} },
+  }
+  const r = Model.applyRetention(days, {}, "2026-08-15", 365)
+  assert.deepEqual(r.years, {
+    2023: { "2023-02-10": HOUR_MS },
+    2024: { "2024-06-20": 2 * HOUR_MS },
+  })
+})
+
 test("applyRetention returns inputs untouched when nothing is pruned", () => {
   const days = { "2026-08-15": { total: HOUR_MS, apps: {} } }
   const years = { 2026: { "2026-01-02": HOUR_MS } }
-  const r = Model.applyRetention(days, years, "2026-08-15", 95, 2026)
+  const r = Model.applyRetention(days, years, "2026-08-15", 95)
   assert.equal(r.pruned, false)
   assert.equal(r.days, days)
   assert.equal(r.years, years)
@@ -1700,12 +1704,23 @@ test("goalProgress reports pct, remaining and reached", () => {
   assert.equal(over.reached, true)
 })
 
-test("parseKeepDays keeps known presets, else 95", () => {
-  assert.equal(Model.parseKeepDays(30), 30)
-  assert.equal(Model.parseKeepDays(95), 95)
-  assert.equal(Model.parseKeepDays(365), 365)
-  assert.equal(Model.parseKeepDays(60), 95)
-  assert.equal(Model.parseKeepDays(undefined), 95)
+test("parseWeekCount keeps presets, rounds legacy up, defaults to 12", () => {
+  assert.equal(Model.parseWeekCount(12), 12)
+  assert.equal(Model.parseWeekCount(24), 24)
+  assert.equal(Model.parseWeekCount(36), 36)
+  assert.equal(Model.parseWeekCount(52), 52)
+  assert.equal(Model.parseWeekCount(4), 12)
+  assert.equal(Model.parseWeekCount(8), 12)
+  assert.equal(Model.parseWeekCount(16), 24)
+  assert.equal(Model.parseWeekCount(20), 24)
+  assert.equal(Model.parseWeekCount(undefined), 12)
+  assert.equal(Model.parseWeekCount(0), 12)
+})
+
+test("app detail is a full year; options line up in weeks", () => {
+  assert.equal(Model.APP_DETAIL_DAYS, 365)
+  assert.deepEqual(Model.WEEK_COUNT_OPTIONS, [12, 24, 36, 52])
+  assert.ok(Model.WEEK_COUNT_OPTIONS.includes(Model.parseWeekCount(undefined)))
 })
 
 test("storageSummary counts days, months and archived entries", () => {
@@ -1820,8 +1835,9 @@ test("pickSwatch keeps any valid stored hex, else the default", () => {
 
 test("minKeepDays covers the window plus slack", () => {
   assert.equal(Model.minKeepDays(12), 95)
-  assert.equal(Model.minKeepDays(20), 151)
-  assert.equal(Model.minKeepDays(4), 39)
+  assert.equal(Model.minKeepDays(24), 179)
+  assert.equal(Model.minKeepDays(36), 263)
+  assert.equal(Model.minKeepDays(52), 375)
   assert.equal(Model.minKeepDays(undefined), 95)
   assert.equal(Model.minKeepDays(0), 95)
 })
@@ -2071,7 +2087,7 @@ test("upgrading retention preserves every millisecond", () => {
   years[year] = {}
   const before =
     Object.keys(days).reduce((t, k) => t + days[k].total, 0) + months["2026-07"]
-  const ret = Model.applyRetention(days, years, todayKey, 95, year)
+  const ret = Model.applyRetention(days, years, todayKey, 95)
   assert.equal(ret.pruned, true)
   const afterDays = Object.keys(ret.days).reduce(
     (t, k) => t + ret.days[k].total,

@@ -315,21 +315,35 @@ function goalProgress(totalMs, goalHours) {
   }
 }
 
-// Retention floor for a week-trend window: the window plus the same
-// 11-day slack the 95-day default keeps over 12 weeks, so the visible
-// trend always stays fully detailed no matter the stored preset.
+// App-detail window: the per-app breakdown is kept for a full year, so
+// the 52-week graph stays fully detailed (the floor stretches it a
+// little further). Only the app list is forgotten after this — totals
+// live on as the perpetual per-day archive.
+var APP_DETAIL_DAYS = 365
+
+// Week-trend presets: 12w default reaches back a quarter; 24/36/52 for
+// half-year, three-quarter and full-year pages.
+var WEEK_COUNT_OPTIONS = [12, 24, 36, 52]
+
+// Preset weeks, else round legacy stored windows up to the nearest
+// preset — the graph never silently shrinks.
+function parseWeekCount(value) {
+  var n = Math.floor(Number(value))
+  if (!isFinite(n) || n < 1) return WEEK_COUNT_OPTIONS[0]
+  if (WEEK_COUNT_OPTIONS.indexOf(n) >= 0) return n
+  if (n <= 12) return 12
+  if (n <= 24) return 24
+  if (n <= 36) return 36
+  return 52
+}
+
+// Retention floor for a week-trend window: always the window plus slack
+// (52 weeks plus 11 days), so the visible trend stays fully detailed no
+// matter which preset is stored.
 function minKeepDays(weekCount) {
   var w = Math.floor(Number(weekCount))
   if (!isFinite(w) || w < 1) return 95
   return w * 7 + 11
-}
-
-// Retention window presets in days; 95 covers the 12-week trend + slack.
-var KEEP_DAYS_OPTIONS = [30, 95, 365]
-function parseKeepDays(value) {
-  var n = Math.floor(Number(value))
-  if (KEEP_DAYS_OPTIONS.indexOf(n) >= 0) return n
-  return 95
 }
 
 // Storage footprint over the three disjoint stores: { dayCount,
@@ -1683,8 +1697,9 @@ function trackedDays(dayTotals, year, todayKey) {
   )
 }
 
-// Rolls days dropped by the retention window into the per-day archive. Only
-// the total survives — the app breakdown never leaves the 95-day window.
+// Rolls days dropped by the retention window into the perpetual per-day
+// archive. Only the total survives — the app breakdown never leaves the
+// 365-day detail window.
 function rollupArchive(years, prunedDays) {
   if (!prunedDays) return years || {}
   var out = Object.assign({}, years || {})
@@ -1705,21 +1720,10 @@ function rollupArchive(years, prunedDays) {
   return out
 }
 
-// Bounds the archive to the current and previous calendar year.
-function pruneArchive(years, year) {
-  if (!years) return {}
-  var keep = {}
-  var y = Number(year)
-  for (var yk in years) {
-    if (!Object.prototype.hasOwnProperty.call(years, yk)) continue
-    var n = Number(yk)
-    if (n === y || n === y - 1) keep[yk] = years[yk]
-  }
-  return keep
-}
-
 // Prune old days into the archive; unchanged inputs return by identity.
-function applyRetention(days, years, todayKey, keepDays, year) {
+// The archive grows forever, so every recorded year keeps its day totals,
+// month bars, year total and insights.
+function applyRetention(days, years, todayKey, keepDays) {
   var kept = pruneDays(days, todayKey, keepDays)
   if (kept === days) return { days: days, years: years, pruned: false }
   var pruned = {}
@@ -1732,7 +1736,7 @@ function applyRetention(days, years, todayKey, keepDays, year) {
   }
   return {
     days: kept,
-    years: pruneArchive(rollupArchive(years, pruned), year),
+    years: rollupArchive(years, pruned),
     pruned: true,
   }
 }
@@ -1980,8 +1984,9 @@ if (typeof module !== "undefined" && module && module.exports) {
     parseGoalLog: parseGoalLog,
     goalForDay: goalForDay,
     logGoalChange: logGoalChange,
-    KEEP_DAYS_OPTIONS: KEEP_DAYS_OPTIONS,
-    parseKeepDays: parseKeepDays,
+    APP_DETAIL_DAYS: APP_DETAIL_DAYS,
+    WEEK_COUNT_OPTIONS: WEEK_COUNT_OPTIONS,
+    parseWeekCount: parseWeekCount,
     minKeepDays: minKeepDays,
     storageSummary: storageSummary,
     storageLabel: storageLabel,
@@ -2054,7 +2059,6 @@ if (typeof module !== "undefined" && module && module.exports) {
     weekdayPattern: weekdayPattern,
     trackedDays: trackedDays,
     rollupArchive: rollupArchive,
-    pruneArchive: pruneArchive,
     yearFacts: yearFacts,
     yearFactsFromSummary: yearFactsFromSummary,
     yearView: yearView,
