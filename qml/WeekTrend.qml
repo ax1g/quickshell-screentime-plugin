@@ -176,20 +176,15 @@ Column {
         }
     }
 
-    // Day bars on the drawer background; no plate.
+    // Day bars on a thin chart strip with no top pad nor bottom
+    // clearance, so the week row keeps the panel from scrolling.
     Item {
         width: parent.width
-        // Chart rows keep a 12px pad above the bars and a matching
-        // 12px clearance below the weekday labels.
-        height: Style.space(114) + Style.space(24)
+        height: Style.space(114)
         clip: true
 
         Item {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.topMargin: Style.space(12)
-            height: Style.space(114)
+            anchors.fill: parent
 
             // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified
