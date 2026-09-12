@@ -5,7 +5,8 @@ import qs.Commons
 // accent's own lightness, so the letter reads on any theme (white
 // vanishes on gold). Zero-size while hidden so panel geometry never
 // shifts under it. Positioned by the parent, near its pressable's
-// corner; it owns no MouseArea so clicks pass straight through.
+// corner; it floats above siblings (top z) and owns no MouseArea,
+// so clicks pass straight through.
 Item {
     id: root
     required property string label
@@ -13,6 +14,7 @@ Item {
     required property color accent
     required property bool show
 
+    z: 9999999
     visible: root.show
     implicitWidth: hintLabel.implicitWidth + Style.space(10)
     implicitHeight: hintLabel.implicitHeight + Style.space(4)

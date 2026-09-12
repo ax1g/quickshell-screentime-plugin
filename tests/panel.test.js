@@ -874,16 +874,15 @@ test("keyboard scroll follows the visible surface", () => {
 test("day columns show numbers only as key hints", () => {
   const daybar = comp("WeekDayBar.qml")
   const tick = comp("WeekTick.qml")
+  const badge = comp("HintBadge.qml")
   assert.match(daybar, /height: Style\.space\(114\)/)
-  assert.match(daybar, /id: badgeSlot/)
-  assert.match(daybar, /height: Style\.space\(20\)/)
+  assert.doesNotMatch(daybar, /badgeSlot/)
   assert.match(daybar, /show: day\.hintMode/)
-  assert.doesNotMatch(daybar, /dayNumberLabel/)
-  assert.doesNotMatch(daybar, /text: String\(day\.dayNumber\)/)
-  assert.match(daybar, /anchors\.bottom: badgeSlot\.top/)
+  assert.match(daybar, /anchors\.bottom: parent\.bottom/)
   assert.match(daybar, /anchors\.bottom: weekdayLabel\.top/)
-  assert.match(trend, /height: Style\.space\(114\) \+ Style\.space\(20\)/)
-  assert.match(tick, /parent\.height - Style\.space\(36\)/)
+  assert.match(trend, /height: Style\.space\(114\) \+ Style\.space\(24\)/)
+  assert.match(tick, /parent\.height - Style\.space\(16\)/)
+  assert.match(badge, /z: 9999999/)
 })
 
 test("hint badges only set declared props", () => {
