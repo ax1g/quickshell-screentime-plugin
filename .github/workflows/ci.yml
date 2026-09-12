@@ -56,8 +56,9 @@ jobs:
       # via lint/ (see lint/README.md), MaxWarnings=0 fails on any hit.
       - uses: jurplel/install-qt-action@v4
         with:
+          # Qt 6.11+ ships qtbase+qtdeclarative (qmllint/qmlformat) in the
+          # default package; they are not separate 'modules' anymore.
           version: '6.11.2'
-          modules: 'qtbase qtdeclarative'
           cache: true
       - name: Lint QML files
         run: qmllint -I lint qml/*.qml qml/components/*.qml
