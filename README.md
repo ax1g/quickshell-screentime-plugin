@@ -54,54 +54,18 @@ local.
 
 ## Keybinds & hints
 
-The panel is keyboard-first: every control can be reached from the
-keyboard without touching the mouse, and the scroll wheel works
-anywhere a list overflows.
+The panel is keyboard-first, and `f` is the only key you need to
+remember: press it and every pressable gets a key badge. Type the
+badge to trigger that control — single letters on the home panel (`y`
+yearly, `c` settings, `m` more, `b`/`n` week pages, `t` week total,
+`1`–`7` days), `b`/`n` to move between years in the yearly view, and
+two-letter tags on the settings menu. The badges disappear on any other
+press.
 
-### Navigation
-
-| Key | Action |
-|---|---|
-| `f` | Toggle hint mode — every pressable gets a key badge |
-| `j` / `↓` | Scroll down (follows the open view) |
-| `k` / `↑` | Scroll up (follows the open view) |
-| `Esc` | First exit hint mode; a second press closes the panel |
-| `Tab` / `Shift+Tab` | Jump to the next / previous bar panel |
-| `p` | Expand / collapse Show More |
-
-### Hint mode
-
-Press `f` and the panel badges every pressable with its key — a single
-letter on the home panel and yearly view, a two-letter tag on the
-settings menu (it has far more controls than letters). Typing the key
-performs that action and exits hint mode; the badges disappear on any
-other press.
-
-**Home panel**
-
-| Badge | Action |
-|---|---|
-| `y` | Open the yearly overview |
-| `c` | Open the settings |
-| `m` | Expand / collapse Show More |
-| `b` / `n` | Previous / next week in the trend |
-| `t` | Flip the week total between logged time and % of 168h |
-| `1`–`7` | Inspect that weekday's bar (focus its data) |
-
-**Yearly overview**
-
-| Badge | Action |
-|---|---|
-| `b` / `n` | Previous / next year |
-| `m` | Back to the home panel |
-
-**Settings**
-
-Every row carries a two-letter tag, starting with `aa` on the back
-button and flowing down the menu in render order. Typing a tag triggers
-its control — toggles flip, swatches recolor, and the staged
-destructive confirmations (reset / wipe) advance one step per press,
-just like a click.
+Everything else is standard: `j`/`↓` and `k`/`↑` scroll, `Esc` exits
+first hint mode then the panel, `Tab`/`Shift+Tab` move between bar
+panels, `p` expands Show More, and the wheel scrolls any overflowing
+list.
 
 ## Install
 
