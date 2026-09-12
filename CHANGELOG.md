@@ -27,6 +27,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Settings text inputs are clickable across the whole box again — only
+  the middle was focusable, not the edges.
 - Settings text inputs show a real, blinking caret again: the hand-rolled
   cursor rendered frozen and stayed visible without focus.
 - Long week-range labels no longer push the pager arrows into the week
