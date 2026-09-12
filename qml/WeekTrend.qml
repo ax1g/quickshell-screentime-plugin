@@ -176,11 +176,12 @@ Column {
         }
     }
 
-    // Day bars on a thin chart strip with no top pad nor bottom
-    // clearance, so the week row keeps the panel from scrolling.
+    // Day bars on a tight strip: the column is 80px (64px bars +
+    // 16px label row), so the tallest bar tops out against the
+    // chart edge with no dead space above it.
     Item {
         width: parent.width
-        height: Style.space(114)
+        height: Style.space(80)
         clip: true
 
         Item {

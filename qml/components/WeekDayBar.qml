@@ -22,7 +22,7 @@ Item {
 
     // Parent Row spacing is 0; one seventh of its width per day.
     width: parent.width / 7
-    height: Style.space(114)
+    height: Style.space(80)
 
     property bool isActive: modelData.key === day.activeDayKey
     property bool isFuture: modelData.isFuture
