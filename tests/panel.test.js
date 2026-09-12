@@ -621,7 +621,7 @@ test("year hero opens straight into the pager without a caption", () => {
   assert.match(drawer, /font\.letterSpacing: 2\.4/)
   assert.match(
     panel,
-    /calendarYearTotal: root\.yearView \? root\.yearView\.totalLabel : "0H"/,
+    /calendarYearTotal: root\.yearView \? root\.yearView\.totalLabel : "0h"/,
   )
 })
 

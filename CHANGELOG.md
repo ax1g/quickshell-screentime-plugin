@@ -18,9 +18,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Daily goal counts from the day it is set: past days never show it as
   reached, and each day keeps the goal it had.
-- Yearly overview polish: hero trimmed to letter-spaced, uppercase total
-  hours above a larger year pager; month bars lose their background
-  tracks, and top months take gold, silver and bronze medals over
+- Yearly overview polish: hero trimmed to letter-spaced total hours
+  above a larger year pager; month bars lose their background tracks,
+  and top months take gold, silver and bronze medals over
   middle dots.
 - Busiest Week Trophy needs two weeks of tracked data before it appears,
   so a lone first week can't crown itself.

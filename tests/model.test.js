@@ -1613,7 +1613,7 @@ test("yearView shares one merge for total and facts", () => {
   const view = Model.yearView({}, months, {}, 2026, "2026-12-24", "#e45b93")
   assert.equal(
     view.totalLabel,
-    Math.round(Model.yearTotal({}, months, 2026, {}) / 3600000) + "H",
+    Math.round(Model.yearTotal({}, months, 2026, {}) / 3600000) + "h",
   )
   assert.deepEqual(
     view.facts,
@@ -1625,7 +1625,7 @@ test("yearView shares one merge for total and facts", () => {
 
 test("yearView is empty for a year with no data", () => {
   const view = Model.yearView({}, {}, {}, 2026, "2026-12-24", "#e45b93")
-  assert.equal(view.totalLabel, "0H")
+  assert.equal(view.totalLabel, "0h")
   assert.deepEqual(view.facts, [])
 })
 
