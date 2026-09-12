@@ -6,7 +6,7 @@
 
 Know where your time goes. A lightweight service tracks focused time per app,
 shows today's total in the bar, and breaks your history into a donut chart, a
-20-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
+52-week trend, and a yearly overview — terminal-aware, keyboard-first, fully
 local.
 
 ## Features

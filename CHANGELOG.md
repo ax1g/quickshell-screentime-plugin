@@ -4,126 +4,71 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.0] - 2026-09-12
 
-### Added
+### Feat
 
+- Introducing the Settings panel — the gear beside SHOW MORE/LESS opens a
+  sectioned, keyboard-first menu where every choice persists across
+  restarts:
+  1. Weekly graph reach: 12, 24, 36 or 52 weeks of Mon–Sun pages, always
+     fully detailed.
+  2. Forever totals: day, month and year totals — plus every year's
+     insights — are never deleted; only per-app detail ages out after a
+     year, with a readout of what's stored.
+  3. Daily goal: Off/4/6/8h presets with a check badge in the bar,
+     remaining time in the tooltip, and a progress bar under the hero.
+  4. Ignored apps and custom names: banish launchers and portals (the
+     focused app's clock stops immediately), or call apps what you want
+     (zen becomes browser).
+  5. Hide the yearly overview, daily insights or yearly retro cards,
+     independently.
+  6. Busiest Week Trophy and hourglass styling: theme swatches recolor
+     the trophy and the hero icon, plus a toggle to hide the trophy.
+  7. Week-total mode (time vs share of the week's 168 hours) and
+     Playful-extras switches that persist across restarts.
+  8. Reset today (triple-confirmed, archives untouched) or wipe all
+     history (four clicks, no undo); both also reachable over
+     `quickshell ipc call agx.screen-time`.
+  9. First-run coach marks under the hero until anything is tracked.
 - Keyboard hints: press `f` to badge every main-panel control with a
   letter (`y` yearly, `c` settings, `m` more, `b`/`n` week pages,
-  `t` week total, `1`–`7` days); the settings menu takes two-letter
-  tags for every row, and staged confirmations advance one step like
-  a pointer click. `j`/`k` keep scrolling, `Esc` exits.
-- Settings revamp: one "Weekly graph" control (12/24/36/52 weeks) sizes
-  the Mon–Sun pages, while "Forever totals" spells out what never
-  expires — every recorded year's totals and insights stay for good,
-  only per-app detail is kept a year.
+  `t` week total, `1`–`7` days); the settings menu takes two-letter tags
+  for every row, and `j`/`k` keep scrolling, `Esc` exits.
 
 ### Changed
 
+- Settings prefs are grouped into tinted sections (Display, Colors,
+  Trend & History, Daily Goal, Tracking, Contribution, About with the
+  version, and a red Danger Zone last) with full-width wrapped labels
+  and larger click targets.
+- Header icons celebrate navigation: the settings gear sweeps, the
+  yearly calendar swings, and the hourglass turns a full circle on the
+  way home — all mute with Playful extras.
+- Yearly overview polish: hero trimmed to letter-spaced hours above a
+  larger year pager, month bars lose their background tracks, and top
+  months take gold, silver and bronze medals over middle dots.
 - Daily goal counts from the day it is set: past days never show it as
   reached, and each day keeps the goal it had.
-- Yearly overview polish: hero trimmed to letter-spaced total hours
-  above a larger year pager; month bars lose their background tracks,
-  and top months take gold, silver and bronze medals over
-  middle dots.
-- Busiest Week Trophy needs two weeks of tracked data before it appears,
-  so a lone first week can't crown itself.
+- Busiest Week Trophy needs two weeks of tracked data before it appears.
 
-### Fixed
+### Fixes
 
-- Settings text inputs are clickable across the whole box again — only
-  the middle was focusable, not the edges.
-- Settings text inputs show a real, blinking caret again: the hand-rolled
-  cursor rendered frozen and stayed visible without focus.
+- Screen time no longer accrues while the session is locked or the
+  screensaver is up, and tracking resumes on return (reported by
+  @88srzh, contributed by @fgrehm via PR #12).
+- Settings text inputs are clickable across the whole box and show a
+  real, blinking caret.
 - Long week-range labels no longer push the pager arrows into the week
-  total: the label stretches between the fixed arrows and elides.
-- Corrupt history files are preserved aside even without python3
-  installed; previously the safety copy depended on it, so tracking
-  could overwrite the unreadable file on the next save.
-
-## [1.6.0] - 2026-09-11
-
-### Added
-
-- Panel config menu behind a gear glyph next to SHOW MORE/LESS: every pref
-  persists in the widget settings across restarts.
-- Hide flags for the yearly overview (the drawer never opens and its merge
-  is skipped), daily insights and yearly retro cards, each independent.
-- Configurable week trend window: 4, 8, 12, 16 or 20 weeks, with a
-  retention floor that keeps the whole window detailed.
-- Triple-confirmed reset for today's data only (RESET → SURE? → REALLY?,
-  auto-disarms after 3s or on mouse-leave). Archives are untouched, and the
-  focused app keeps running with its timer rebased so cleared time can't
-  come back. Also reachable via `quickshell ipc call agx.screen-time
-  resetToday`.
-- Wipe all history: a four-click staged control (WIPE ALL → SURE? →
-  CAN'T UNDO! → WIPE!, 5s auto-disarm) that erases every day, month lump
-  and archive entry with no backup, also reachable via
-  `quickshell ipc call agx.screen-time resetAll`.
-- Persisted week-total mode (time vs share of 168h) and an easter-eggs
-  toggle (hourglass flip, hover sparkles, and the header spins below).
-- Busiest Week Trophy settings: theme-derived color swatches (gold by
-  default) and a toggle to hide the trophy, both persisted across
-  restarts.
-- Hero icon color: theme-derived swatches recolor the hourglass, the
-  yearly hero and the settings glyph together.
-- Ignored apps: banish launchers and portals from tracking and history —
-  type a name, hit ADD, and remove it anytime with ×. Ignoring the
-  focused app stops its clock immediately.
-- Custom app names: call apps what you want (zen becomes browser), with
-  forgiving matching across window classes; re-saving a name updates it,
-  and adding one folds today's earlier time into the new name.
-- Daily goal: Off/4/6/8h presets with a check badge in the bar, remaining
-  time in the tooltip, and a progress bar under the hero total.
-- Configurable history retention: 30/95/365-day presets (shorter windows
-  archive day detail instead of deleting it) with a stored-footprint
-  readout of days, month lumps and archived entries.
-- First-run onboarding: coach marks under the hero until anything is
-  tracked, explaining coverage and where settings live.
-
-### Fixed
-
-- Tracking now pauses while the session is locked or the screensaver is up,
-  and resumes on return (fixes #10 reported by @88srzh, contributed by @fgrehm via PR #12). Lock/screensaver closes the
-  active bucket; focus events and in-flight terminal resolves can't reopen
-  it mid-pause, and resume is deferred ~2s and re-validated so a stale
-  reading can't briefly restart accrual. Event-driven via `omarchy.lock` /
-  `omarchy.idle` where the shell exposes them, with a persistent lock
-  watcher (+ supervisor) and an in-process screensaver scan as fallback on
-  sandboxed shells.
-- Focus events before history loads no longer open untracked buckets, and
-  a failed load re-keys today instead of billing into yesterday.
-- Rapid focus switches no longer defer the history write indefinitely:
-  the debounced save starts once instead of restarting, bounding crash
-  loss to the debounce window.
-- Buckets spanning several midnights split day by day instead of piling
-  everything onto the start day.
-- Backward clock jumps no longer stall tracking: a start timestamp in the
-  future drops (or re-anchors) the bucket instead of billing nothing
-  until the wall clock catches up. A jump back across midnight carries
-  nothing instead of billing evening time onto yesterday morning.
-- Future month lumps no longer inflate the year total and month bars: a lump
-  beyond the current month (e.g. from a clock jump forward and back) is
-  excluded like future days, so the header, bars and retro cards agree.
-- Busiest Week Trophy follows the viewed week: paging back to the all-time
-  best week now shows the trophy there instead of only beside a leading
-  current week.
+  total: the label stretches between the arrows and elides.
+- Corrupt history files are preserved aside before tracking resumes,
+  even without python3 installed.
 - Settings writes never drop stored keys: toggles made before the shell
-  delivers settings (or while its API is unreachable) queue up and flush
-  over the delivered entry instead of replacing it with a partial one.
-- CI workflow pinned to least-privilege `contents: read`, clearing the
-  missing-permissions code-scanning alerts.
-
-### Changed
-
-- Header icons celebrate navigation: the settings gear sweeps as settings
-  opens, the yearly calendar swings on entry, and the hourglass turns a
-  full circle on the way back to the main view — all mute with Playful
-  extras.
-- Settings page groups prefs into tinted section cards (Display, Colors,
-  Trend & History, Daily Goal, Tracking, Contribution, About with the
-  app info and version, and a red Danger Zone last) with full-width
-  labels that wrap instead of truncating, and larger targets.
+  delivers settings queue up and flush over the delivered entry.
+- Busiest Week Trophy follows the viewed week, not just the leading one.
+- Tracking is safer under pressure: focus events before history loads
+  open no untracked buckets, and rapid focus switches bound crash-loss
+  to the save interval instead of deferring the write forever.
 
 ## [1.5.0] - 2026-09-07
 

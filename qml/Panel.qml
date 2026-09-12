@@ -38,7 +38,7 @@ Panel {
     // they drift apart); shown in the settings About section.
     readonly property string pluginVersion: "1.6.0"
 
-    // Week presets, up to 20 weeks back. Retention always covers the
+    // Week presets, up to 52 weeks back. App detail always covers the
     // visible window (see effectiveKeepDays below).
     readonly property var weekOptions: Model.WEEK_COUNT_OPTIONS
     readonly property int weekCount: Model.parseWeekCount(root.prefs.weekCount)
