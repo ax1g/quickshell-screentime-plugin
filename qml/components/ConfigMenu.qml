@@ -1042,7 +1042,11 @@ Column {
                             KeyNavigation.tab: aliasFromInput
                             KeyNavigation.backtab: aliasToInput
                             cursorVisible: activeFocus
+                            // A bare delegate collapses to zero width, so the
+                            // caret never renders. Size it explicitly.
                             cursorDelegate: Rectangle {
+                                width: 2
+                                height: ignoredInput.height
                                 color: root.foreground
                             }
                             anchors.fill: parent
@@ -1233,7 +1237,11 @@ Column {
                             KeyNavigation.tab: aliasToInput
                             KeyNavigation.backtab: ignoredInput
                             cursorVisible: activeFocus
+                            // See ignoredInput: a bare cursor delegate is
+                            // invisible, so size it explicitly.
                             cursorDelegate: Rectangle {
+                                width: 2
+                                height: aliasFromInput.height
                                 color: root.foreground
                             }
                             anchors.fill: parent
@@ -1285,7 +1293,11 @@ Column {
                             KeyNavigation.tab: ignoredInput
                             KeyNavigation.backtab: aliasFromInput
                             cursorVisible: activeFocus
+                            // See ignoredInput: a bare cursor delegate is
+                            // invisible, so size it explicitly.
                             cursorDelegate: Rectangle {
+                                width: 2
+                                height: aliasToInput.height
                                 color: root.foreground
                             }
                             anchors.fill: parent
@@ -1394,7 +1406,7 @@ Column {
                             Text {
                                 id: aliasRemove
                                 text: aliasEntry.armed ? "?" : "\u00D7"
-                                color: aliasEntry.armed ? root.urgent : root.foreground
+                                color: root.urgent
                                 opacity: aliasEntry.armed ? 1.0 : 0.75
                                 font.family: root.fontFamily
                                 font.pixelSize: Style.fontPx(1.4)

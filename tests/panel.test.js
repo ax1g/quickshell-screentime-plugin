@@ -649,10 +649,14 @@ test("alias row flows from, arrow, to, save", () => {
   assert.match(menu, /text: "\\u2192"/)
 })
 
-test("alias removal needs two clicks on a left cross", () => {
+test("alias removal needs two clicks on a left red cross", () => {
   assert.match(menu, /id: aliasEntry/)
   assert.match(menu, /property bool armed: false/)
   assert.match(menu, /text: aliasEntry\.armed \? "\?" : "\\u00D7"/)
+  assert.match(
+    menu,
+    /color: root\.urgent\s*\n\s*opacity: aliasEntry\.armed \? 1\.0 : 0\.75/,
+  )
   assert.match(menu, /if \(aliasEntry\.armed\)/)
   assert.match(menu, /root\.aliasRemoved\(modelData\.from\)/)
 })
@@ -690,9 +694,9 @@ test("settings inputs show a theme-colored cursor on focus", () => {
   const cursors = menu.match(/cursorVisible: activeFocus/g)
   assert(cursors && cursors.length === 3, "cursor in all three inputs")
   const delegates = menu.match(
-    /cursorDelegate: Rectangle \{\s*\n\s*color: root\.foreground/g,
+    /width: 2\s*\n\s*height: (ignoredInput|aliasFromInput|aliasToInput)\.height\s*\n\s*color: root\.foreground/g,
   )
-  assert(delegates && delegates.length === 3, "theme cursor in all three")
+  assert(delegates && delegates.length === 3, "sized theme cursor in all three")
 })
 
 test("tab cycles through the settings inputs", () => {
