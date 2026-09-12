@@ -32,10 +32,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
      the trophy and the hero icon, plus a toggle to hide the trophy.
   7. Week-total mode (time vs share of the week's 168 hours) and
      Playful-extras switches that persist across restarts.
-  8. Reset today (triple-confirmed, archives untouched) or wipe all
-     history (four clicks, no undo); both also reachable over
-     `quickshell ipc call agx.screen-time`.
-  9. First-run coach marks under the hero until anything is tracked.
+  8. First-run coach marks under the hero until anything is tracked.
+- Reset today: a triple-confirmed control (RESET → SURE? → REALLY?) that
+  clears only today's data while archives stay untouched; the focused app
+  keeps running with its timer rebased so cleared time can't come back.
+  Also reachable via `quickshell ipc call agx.screen-time resetToday`.
+- Wipe all history: a four-click staged control (WIPE ALL → SURE? →
+  CAN'T UNDO! → WIPE!) erases every day, month and archived total — the
+  forever totals included — with no undo. Also reachable via
+  `quickshell ipc call agx.screen-time resetAll`.
 - Keyboard hints: press `f` to badge every main-panel control with a
   letter (`y` yearly, `c` settings, `m` more, `b`/`n` week pages,
   `t` week total, `1`–`7` days); the settings menu takes two-letter tags
