@@ -107,41 +107,45 @@ Column {
         for (var t = 0; t < toggleKinds.length; t++)
             add("toggle", toggleKinds[t]);
         for (var s = 0; s < root.recordColorOptions.length; s++)
-            add("trophy-swatch", s);
+            add("trophy-swatch", root.recordColorOptions[s]);
         if (root.recordColor && root.recordColorOptions.indexOf(root.recordColor) === -1)
             add("trophy-custom", 0);
         add("trophy-reset", 0);
         for (var h = 0; h < root.heroColorOptions.length; h++)
-            add("hero-swatch", h);
+            add("hero-swatch", root.heroColorOptions[h]);
         if (root.heroColor && root.heroColorOptions.indexOf(root.heroColor) === -1)
             add("hero-custom", 0);
         add("hero-reset", 0);
         for (var w = 0; w < root.weekOptions.length; w++)
-            add("weeks", w);
+            add("weeks", root.weekOptions[w]);
         for (var k = 0; k < root.keepDaysOptions.length; k++)
-            add("keep", k);
+            add("keep", root.keepDaysOptions[k]);
         for (var g = 0; g < root.dailyGoalOptions.length; g++)
-            add("goal", g);
+            add("goal", root.dailyGoalOptions[g]);
         add("field-ignored", 0);
         add("add-ignored", 0);
         for (var r = 0; r < root.ignoredEntries.length; r++)
-            add("remove-ignored", r);
+            add("remove-ignored", root.ignoredEntries[r]);
         add("field-from", 0);
         add("field-to", 0);
         add("add-alias", 0);
         for (var a = 0; a < root.aliasEntries.length; a++)
-            add("remove-alias", a);
+            add("remove-alias", root.aliasEntries[a].from);
         for (var l = 0; l < root.helpItems.length; l++)
-            add("help", l);
+            add("help", root.helpItems[l].url);
         add("reset", 0);
         add("wipe", 0);
         root.hintItems = items;
     }
 
-    function hintTag(kind, sub) {
-        for (var i = 0; i < root.hintItems.length; i++) {
-            if (root.hintItems[i].kind === kind && root.hintItems[i].sub === sub)
-                return root.hintItems[i].tag;
+    // Taking the registry as an argument keeps badge bindings subscribed
+    // to rebuilds: a bare hintTag(kind, sub) call would evaluate once
+    // against the empty pre-mode array and never update.
+    function hintTag(items, kind, sub) {
+        var list = Array.isArray(items) ? items : [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].kind === kind && list[i].sub === sub)
+                return list[i].tag;
         }
         return "";
     }
@@ -161,23 +165,23 @@ Column {
         if (kind === "toggle")
             root.activate(sub);
         else if (kind === "trophy-swatch")
-            root.recordColorSelected(root.recordColorOptions[sub]);
+            root.recordColorSelected(sub);
         else if (kind === "trophy-custom")
             root.recordColorSelected(root.recordColor);
         else if (kind === "trophy-reset")
             root.recordColorSelected(root.recordDefaultColor);
         else if (kind === "hero-swatch")
-            root.heroColorSelected(root.heroColorOptions[sub]);
+            root.heroColorSelected(sub);
         else if (kind === "hero-custom")
             root.heroColorSelected(root.heroColor);
         else if (kind === "hero-reset")
             root.heroColorSelected(root.heroDefaultColor);
         else if (kind === "weeks")
-            root.weekWindowSelected(root.weekOptions[sub]);
+            root.weekWindowSelected(sub);
         else if (kind === "keep")
-            root.keepDaysSelected(root.keepDaysOptions[sub]);
+            root.keepDaysSelected(sub);
         else if (kind === "goal")
-            root.dailyGoalSelected(root.dailyGoalOptions[sub]);
+            root.dailyGoalSelected(sub);
         else if (kind === "field-ignored")
             ignoredInput.forceActiveFocus();
         else if (kind === "add-ignored") {
@@ -185,7 +189,7 @@ Column {
             ignoredInput.text = "";
             ignoredInput.focus = false;
         } else if (kind === "remove-ignored")
-            root.ignoredRemoved(root.ignoredEntries[sub]);
+            root.ignoredRemoved(sub);
         else if (kind === "field-from")
             aliasFromInput.forceActiveFocus();
         else if (kind === "field-to")
@@ -197,9 +201,9 @@ Column {
             aliasFromInput.focus = false;
             aliasToInput.focus = false;
         } else if (kind === "remove-alias")
-            root.aliasRemoved(root.aliasEntries[sub].from);
+            root.aliasRemoved(sub);
         else if (kind === "help")
-            Qt.openUrlExternally(root.helpItems[sub].url);
+            Qt.openUrlExternally(sub);
         else if (kind === "reset") {
             if (resetRow.stage >= 2) {
                 resetRow.stage = 0;
@@ -342,7 +346,7 @@ Column {
                     }
 
                     HintBadge {
-                        readonly property string tag: root.hintTag("toggle", modelData.kind)
+                        readonly property string tag: root.hintTag(root.hintItems, "toggle", modelData.kind)
                         label: tag
                         fontFamily: root.fontFamily
                         accent: root.accent
@@ -444,7 +448,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("trophy-swatch", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "trophy-swatch", modelData)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -476,7 +480,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("trophy-custom", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "trophy-custom", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -512,7 +516,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("trophy-reset", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "trophy-reset", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -581,7 +585,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("hero-swatch", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "hero-swatch", modelData)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -612,7 +616,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("hero-custom", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "hero-custom", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -649,7 +653,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("hero-reset", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "hero-reset", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -755,7 +759,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("weeks", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "weeks", modelData)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -835,7 +839,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("keep", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "keep", modelData)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -943,7 +947,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("goal", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "goal", modelData)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -1051,7 +1055,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("field-ignored", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "field-ignored", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -1092,7 +1096,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("add-ignored", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "add-ignored", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -1123,7 +1127,6 @@ Column {
 
                         Item {
                             required property string modelData
-                            required property int index
                             width: ignoredListCol.width
                             height: Math.max(ignoredName.implicitHeight, ignoredRemove.implicitHeight)
 
@@ -1160,7 +1163,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("remove-ignored", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "remove-ignored", modelData)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -1239,7 +1242,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("field-from", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "field-from", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -1297,7 +1300,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("field-to", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "field-to", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -1340,7 +1343,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("add-alias", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "add-alias", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -1372,7 +1375,6 @@ Column {
                         Item {
                             id: aliasEntry
                             required property var modelData
-                            required property int index
                             property bool armed: false
                             width: aliasListCol.width
                             height: Math.max(aliasName.implicitHeight, aliasRemove.implicitHeight)
@@ -1428,7 +1430,7 @@ Column {
                             }
 
                             HintBadge {
-                                readonly property string tag: root.hintTag("remove-alias", index)
+                                readonly property string tag: root.hintTag(root.hintItems, "remove-alias", modelData.from)
                                 label: tag
                                 fontFamily: root.fontFamily
                                 accent: root.accent
@@ -1530,7 +1532,6 @@ Column {
 
                 Item {
                     required property var modelData
-                    required property int index
                     width: parent.width
                     height: Math.max(helpRowLabels.implicitHeight, helpOpen.implicitHeight, helpRowGlyph.implicitHeight) + Style.space(4)
 
@@ -1586,7 +1587,7 @@ Column {
                     }
 
                     HintBadge {
-                        readonly property string tag: root.hintTag("help", index)
+                        readonly property string tag: root.hintTag(root.hintItems, "help", modelData.url)
                         label: tag
                         fontFamily: root.fontFamily
                         accent: root.accent
@@ -1708,7 +1709,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("reset", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "reset", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent
@@ -1815,7 +1816,7 @@ Column {
                         }
 
                         HintBadge {
-                            readonly property string tag: root.hintTag("wipe", 0)
+                            readonly property string tag: root.hintTag(root.hintItems, "wipe", 0)
                             label: tag
                             fontFamily: root.fontFamily
                             accent: root.accent

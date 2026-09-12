@@ -173,6 +173,11 @@ Visual check (lint is not enough):
 - Unreachable-in-theory is not untested-in-practice: clock jumps,
   suspends past midnight, corrupt files, and missing helpers are the
   paths that break. Cover the transition, not just the happy day.
+- In a Repeater delegate that declares `required modelData`, never READ
+  `index` in an expression — it resolves to 0 for every row (proven
+  headlessly). Implicit same-named receipt (`required property int
+  index`) still works. Derive position from model data
+  (`Model.weekdayNumber`) or pass plain values down instead.
 
 ## Definition of done
 

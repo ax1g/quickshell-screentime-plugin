@@ -72,6 +72,33 @@ TestCase {
         return true;
     }
 
+    function test_hintTagsDistinct() {
+        menu.hintMode = true;
+        var all = [];
+        collect(menu, all);
+        var seen = {};
+        var n = 0;
+        for (var i = 0; i < all.length; i++) {
+            var it = all[i];
+            // Logic, not pixels: visible/width collapse headless without
+            // a window, but show + label prove the registry resolves.
+            if (it.label !== undefined && typeof it.label === "string" && it.show === true && it.label !== "") {
+                seen[it.label] = (seen[it.label] || 0) + 1;
+                n++;
+            }
+        }
+        var distinct = 0;
+        var dupes = "";
+        for (var tag in seen) {
+            distinct++;
+            if (seen[tag] > 1)
+                dupes += tag + "x" + seen[tag] + " ";
+        }
+        verify(n > 20, "badges rendered: " + n);
+        verify(dupes === "", "duplicate badge tags: " + dupes);
+        verify(distinct === n, "all tags distinct");
+    }
+
     function test_menuHasHeight() {
         verify(menu.implicitHeight > 100, "menu height=" + Math.round(menu.implicitHeight));
     }

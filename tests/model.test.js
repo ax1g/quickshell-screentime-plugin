@@ -2225,3 +2225,17 @@ test("rhythm takes the bolt, top months take the calendar", () => {
   assert.equal(find("TOP MONTHS").glyph, "")
   assert.equal(find("WEEKDAY RHYTHM").glyph, "")
 })
+
+test("weekdayNumber maps Monday to Sunday as 1 to 7", () => {
+  assert.equal(Model.weekdayNumber("2026-08-17"), 1)
+  assert.equal(Model.weekdayNumber("2026-08-18"), 2)
+  assert.equal(Model.weekdayNumber("2026-08-19"), 3)
+  assert.equal(Model.weekdayNumber("2026-08-20"), 4)
+  assert.equal(Model.weekdayNumber("2026-08-21"), 5)
+  assert.equal(Model.weekdayNumber("2026-08-22"), 6)
+  assert.equal(Model.weekdayNumber("2026-08-23"), 7)
+  assert.equal(Model.weekdayNumber("2026-02-29"), 0)
+  assert.equal(Model.weekdayNumber("garbage"), 0)
+  assert.equal(Model.weekdayNumber(""), 0)
+  assert.equal(Model.weekdayNumber(null), 0)
+})

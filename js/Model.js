@@ -1571,6 +1571,16 @@ function longestBreak(dayTotals) {
   return best
 }
 
+// Weekday number for a day key: Monday 1 through Sunday 7, matching
+// the trend's left-to-right day columns. Zero when unparseable.
+// Preferred over Repeater index, which misreads inside delegates that
+// declare required modelData.
+function weekdayNumber(key) {
+  var d = keyToDate(key)
+  if (!d) return 0
+  return ((d.getDay() + 6) % 7) + 1
+}
+
 // Monday key of the Mon–Sun week a "YYYY-MM-DD" date belongs to (local
 // days, same week definition as the trend graph).
 function mondayKey(key) {
@@ -2040,6 +2050,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     longestBreak: longestBreak,
     busiestSpan: busiestSpan,
     mondayKey: mondayKey,
+    weekdayNumber: weekdayNumber,
     weekdayPattern: weekdayPattern,
     trackedDays: trackedDays,
     rollupArchive: rollupArchive,

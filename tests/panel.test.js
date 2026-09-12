@@ -749,7 +749,7 @@ test("main surfaces badge hint letters", () => {
   assert.match(daybar, /required property bool hintMode/)
   assert.match(daybar, /required property int dayNumber/)
   assert.match(daybar, /show: day\.hintMode && !day\.isFuture && !day\.isEmpty/)
-  assert.match(trend, /dayNumber: index \+ 1/)
+  assert.match(trend, /dayNumber: Model\.weekdayNumber\(modelData\.key\)/)
 })
 
 test("hint activation mirrors the click guards", () => {
@@ -776,7 +776,7 @@ test("settings registry covers every pressable in order", () => {
   assert.match(menu, /required property bool hintMode/)
   assert.match(menu, /property var hintItems: \[\]/)
   assert.match(menu, /function buildHintItems\(\)/)
-  assert.match(menu, /function hintTag\(kind, sub\)/)
+  assert.match(menu, /function hintTag\(items, kind, sub\)/)
   assert.match(menu, /function activateHint\(tag\)/)
   assert.match(menu, /onHintModeChanged/)
   assert.match(menu, /root\.buildHintItems\(\)/)
@@ -808,22 +808,39 @@ test("settings registry covers every pressable in order", () => {
   assert.match(menu, /resetRow\.stage\+\+/)
   assert.match(menu, /wipeRow\.stage\+\+/)
   // Alias removal through hints restores outright: re-adding undoes it.
-  assert.match(menu, /root\.aliasRemoved\(root\.aliasEntries\[sub\]\.from\)/)
+  assert.match(menu, /root\.aliasRemoved\(sub\)/)
   // Committing releases the keyboard back to shortcuts.
   assert.match(menu, /ignoredInput\.focus = false/)
   assert.match(menu, /aliasToInput\.focus = false/)
 })
 
 test("settings badges follow the registry", () => {
-  assert.match(menu, /root\.hintTag\("toggle", modelData\.kind\)/)
-  assert.match(menu, /root\.hintTag\("weeks", index\)/)
-  assert.match(menu, /root\.hintTag\("remove-ignored", index\)/)
-  assert.match(menu, /root\.hintTag\("remove-alias", index\)/)
-  assert.match(menu, /root\.hintTag\("help", index\)/)
-  assert.match(menu, /root\.hintTag\("field-ignored", 0\)/)
-  assert.match(menu, /root\.hintTag\("add-alias", 0\)/)
-  assert.match(menu, /root\.hintTag\("reset", 0\)/)
-  assert.match(menu, /root\.hintTag\("wipe", 0\)/)
+  assert.match(
+    menu,
+    /root\.hintTag\(root\.hintItems, "toggle", modelData\.kind\)/,
+  )
+  assert.match(menu, /root\.hintTag\(root\.hintItems, "weeks", modelData\)/)
+  assert.match(
+    menu,
+    /root\.hintTag\(root\.hintItems, "trophy-swatch", modelData\)/,
+  )
+  assert.match(
+    menu,
+    /root\.hintTag\(root\.hintItems, "hero-swatch", modelData\)/,
+  )
+  assert.match(
+    menu,
+    /root\.hintTag\(root\.hintItems, "remove-ignored", modelData\)/,
+  )
+  assert.match(
+    menu,
+    /root\.hintTag\(root\.hintItems, "remove-alias", modelData\.from\)/,
+  )
+  assert.match(menu, /root\.hintTag\(root\.hintItems, "help", modelData\.url\)/)
+  assert.match(menu, /root\.hintTag\(root\.hintItems, "field-ignored", 0\)/)
+  assert.match(menu, /root\.hintTag\(root\.hintItems, "add-alias", 0\)/)
+  assert.match(menu, /root\.hintTag\(root\.hintItems, "reset", 0\)/)
+  assert.match(menu, /root\.hintTag\(root\.hintItems, "wipe", 0\)/)
 })
 
 test("year drawer badges back and year pagers", () => {
@@ -921,6 +938,39 @@ test("hint badges only set declared props", () => {
         )
       }
       i = p + 1
+    }
+  }
+})
+
+test("repeater index is never read inside delegates", () => {
+  // Proven headlessly: in a delegate declaring required modelData,
+  // reading index yields 0 for every row, while implicit same-named
+  // receipt still works. Derive from modelData (Model.weekdayNumber)
+  // or pass plain values down instead.
+  const files = [
+    "Panel.qml",
+    "WeekTrend.qml",
+    "YearDrawer.qml",
+    "MonthRow.qml",
+    "components/HeroHeader.qml",
+    "components/WeekDayBar.qml",
+    "components/ConfigMenu.qml",
+    "components/LegendRow.qml",
+    "components/InsightCard.qml",
+    "components/InsightList.qml",
+    "components/CardColumn.qml",
+  ]
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(__dirname, "..", "qml", f), "utf8")
+    for (const line of src.split("\n")) {
+      const t = line.trim()
+      if (t.startsWith("//")) continue
+      if (/required property int index/.test(t)) continue
+      if (/function \w+\(index/.test(t)) continue
+      assert.ok(
+        !/(?<![\w."])index(?![\w"':])/.test(t),
+        f + " reads repeater index: " + t,
+      )
     }
   }
 })

@@ -213,7 +213,7 @@ Column {
                         accent: root.accent
                         fontFamily: root.fontFamily
                         hintMode: root.hintMode
-                        dayNumber: index + 1
+                        dayNumber: Model.weekdayNumber(modelData.key)
                         onSelected: function (key) {
                             root.daySelected(key);
                         }
