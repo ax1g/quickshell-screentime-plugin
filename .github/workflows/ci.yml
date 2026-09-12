@@ -48,22 +48,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # qmllint/qmlformat live in qt6-declarative-dev-tools (NOT
-      # qt6-declarative-tools) and land in /usr/lib/qt6/bin, off PATH.
-      # The QtQuick/Controls runtime modules must be installed too, or
-      # qmllint can't import them and flags every type unresolved.
-      # Shell/framework imports resolve via lint/ (see lint/README.md),
-      # and .qmllint.ini fails on any remaining warning (MaxWarnings=0).
-      - name: Install Qt declarative tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            qt6-declarative-dev-tools \
-            qml6-module-qtquick \
-            qml6-module-qtquick-controls \
-            qml6-module-qtquick-templates \
-            qml6-module-qtqml
-          echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
+      # Ubuntu 24.04 ships qmllint/qmlformat 6.4, which formats
+      # differently and uses older warning categories than this repo's
+      # tooling (6.11). Pin the same Qt release as local dev so lint and
+      # format behave identically on CI (see .qmllint.ini for the
+      # cross-version category names). Shell/framework imports resolve
+      # via lint/ (see lint/README.md), MaxWarnings=0 fails on any hit.
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.2'
+          modules: 'qtbase qtdeclarative'
+          cache: true
       - name: Lint QML files
         run: qmllint -I lint qml/*.qml qml/components/*.qml
       - name: Format check
