@@ -16,8 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   1. Weekly graph reach: 12, 24, 36 or 52 weeks of Mon–Sun pages, always
      fully detailed.
   2. Forever totals: day, month and year totals — plus every year's
-     insights — are never deleted; only per-app detail ages out after a
-     year, with a readout of what's stored.
+     insights — are never deleted on their own; only per-app detail ages
+     out after a year, with a readout of what's stored. Wipe all history
+     is the one way to erase them.
   3. Daily goal: Off/4/6/8h presets with a check badge in the bar,
      remaining time in the tooltip, and a progress bar under the hero.
      It counts from the day you set it, so past days never show it as
