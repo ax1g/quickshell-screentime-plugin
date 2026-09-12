@@ -784,7 +784,10 @@ test("hint buffer resolves two-letter settings tags", () => {
   assert.match(panel, /root\.hintBuffer \+= key/)
   assert.match(panel, /if \(root\.hintBuffer\.length >= 2\)/)
   assert.match(panel, /if \(configMenu\.activateHint\(tag\)\)/)
-  assert.match(panel, /else if \(!root\.calendarOpen\)/)
+  assert.match(
+    panel,
+    /\} else \{\s*\n\s*if \(root\.activateHint\(key\)\)\s*\n\s*root\.hintMode = false;/,
+  )
 })
 
 test("settings registry covers every pressable in order", () => {

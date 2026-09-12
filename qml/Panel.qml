@@ -439,7 +439,7 @@ Panel {
                             if (configMenu.activateHint(tag))
                                 root.hintMode = false;
                         }
-                    } else if (!root.calendarOpen) {
+                    } else {
                         if (root.activateHint(key))
                             root.hintMode = false;
                     }
