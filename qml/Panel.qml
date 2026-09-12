@@ -203,7 +203,7 @@ Panel {
     // Header total, month bars and retro cards share one year merge.
     // Skipped entirely while hidden; the drawer cannot open either.
     readonly property var yearView: serviceReady && !root.hideYearly ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
-    readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
+    readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0H"
     readonly property var yearFacts: root.yearView ? root.yearView.facts : []
     readonly property var yearMonths: root.yearView ? root.yearView.months : []
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -493,7 +493,6 @@ Panel {
                     currentYearOffset: root.currentYearOffset
                     oldestDataYear: root.oldestDataYear
                     calendarYearTotal: root.calendarYearTotal
-                    monthsActive: root.yearView ? root.yearView.monthsActive : 0
                     hintMode: root.hintMode
                     yearFacts: root.yearFacts
                     hideYearInsights: root.hideYearInsights

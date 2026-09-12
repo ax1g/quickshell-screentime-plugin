@@ -1945,7 +1945,7 @@ function yearView(days, months, years, year, todayKey, accentHex) {
   }
   return {
     totalMs: summary.total,
-    totalLabel: Math.round(summary.total / 3600000) + "h",
+    totalLabel: Math.round(summary.total / 3600000) + "H",
     months: summary.months,
     monthsActive: monthsActive,
     facts: facts,

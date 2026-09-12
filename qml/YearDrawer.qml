@@ -19,7 +19,6 @@ Item {
     required property int currentYearOffset
     required property int oldestDataYear
     required property string calendarYearTotal
-    required property int monthsActive
     required property bool hintMode
     required property var yearFacts
     required property bool hideYearInsights
@@ -143,17 +142,7 @@ Item {
                 font.family: root.fontFamily
                 font.pixelSize: Style.fontPx(1.5)
                 font.bold: true
-                font.letterSpacing: 1.4
-                elide: Text.ElideRight
-                width: parent.width
-            }
-
-            Text {
-                text: "Tracked " + root.monthsActive + " of 12 months"
-                color: Qt.darker(root.foreground, 1.4)
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
+                font.letterSpacing: 2.4
                 elide: Text.ElideRight
                 width: parent.width
             }

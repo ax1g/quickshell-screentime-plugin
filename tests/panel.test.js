@@ -613,13 +613,15 @@ test("trophy needs two weeks of tracked data", () => {
   )
 })
 
-test("year hero shows a tracked-months caption over the pager", () => {
+test("year hero opens straight into the pager without a caption", () => {
   const drawer = qml("YearDrawer.qml")
-  assert.match(drawer, /required property int monthsActive/)
-  assert.match(drawer, /Tracked " \+ root\.monthsActive \+ " of 12 months/)
+  assert.doesNotMatch(drawer, /monthsActive/)
+  assert.doesNotMatch(drawer, /Tracked/)
+  assert.doesNotMatch(panel, /monthsActive/)
+  assert.match(drawer, /font\.letterSpacing: 2\.4/)
   assert.match(
     panel,
-    /monthsActive: root\.yearView \? root\.yearView\.monthsActive : 0/,
+    /calendarYearTotal: root\.yearView \? root\.yearView\.totalLabel : "0H"/,
   )
 })
 
