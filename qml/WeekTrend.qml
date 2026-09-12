@@ -176,16 +176,17 @@ Column {
         }
     }
 
-    // Day bars on a tight strip: the column is 80px (64px bars +
-    // 16px label row), so the tallest bar tops out against the
-    // chart edge with no dead space above it.
+    // Day bars on a tight strip: the 80px column (64px bars + 16px
+    // label row) floats 16px below the strip top, so the tallest
+    // bar keeps breathing room above it.
     Item {
         width: parent.width
-        height: Style.space(80)
+        height: Style.space(80) + Style.space(16)
         clip: true
 
         Item {
             anchors.fill: parent
+            anchors.topMargin: Style.space(16)
 
             // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified

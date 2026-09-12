@@ -880,7 +880,7 @@ test("day columns show numbers only as key hints", () => {
   assert.match(daybar, /show: day\.hintMode/)
   assert.match(daybar, /anchors\.bottom: parent\.bottom/)
   assert.match(daybar, /anchors\.bottom: weekdayLabel\.top/)
-  assert.match(trend, /height: Style\.space\(80\)/)
+  assert.match(trend, /height: Style\.space\(80\) \+ Style\.space\(16\)/)
   assert.match(tick, /parent\.height - Style\.space\(16\)/)
   assert.match(badge, /z: 9999999/)
 })
