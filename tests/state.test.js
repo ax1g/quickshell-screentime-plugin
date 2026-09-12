@@ -2,8 +2,8 @@
 
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
-const State = require("../lib/State.js")
-const Model = require("../lib/Model.js")
+const State = require("../js/State.js")
+const Model = require("../js/Model.js")
 
 // Helper: epoch ms for a local-time date at midnight.
 function localMidnight(year, month, day) {
@@ -69,22 +69,42 @@ test("accumulateBucket returns original when app is empty", () => {
 // ---- closeActiveBucket ---------------------------------------------------
 
 test("closeActiveBucket returns original state when no bucket open", () => {
-  const state = { today: { total: 100, apps: {} }, days: {}, todayKey: "2026-08-15" }
-  const result = State.closeActiveBucket(state, "", 0, 100000, "2026-08-15", 30000, 90000)
+  const state = {
+    today: { total: 100, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "",
+    0,
+    100000,
+    "2026-08-15",
+    30000,
+    90000,
+  )
   assert.deepEqual(result.today, state.today)
   assert.deepEqual(result.days, state.days)
 })
 
 test("closeActiveBucket credits time to today when no midnight crossing", () => {
   const aug15 = localMidnight(2026, 7, 15)
-  const startMs = aug15 + 10 * 3600000          // Aug 15 10:00:00
-  const now = aug15 + 10 * 3600000 + 5000       // Aug 15 10:00:05
+  const startMs = aug15 + 10 * 3600000 // Aug 15 10:00:00
+  const now = aug15 + 10 * 3600000 + 5000 // Aug 15 10:00:05
   const state = {
     today: { total: 0, apps: {} },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
-  const result = State.closeActiveBucket(state, "editor", startMs, now, "2026-08-15", 30000, now - 2000)
+  const result = State.closeActiveBucket(
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-15",
+    30000,
+    now - 2000,
+  )
   assert.equal(result.today.total, 5000)
   assert.equal(result.today.apps.editor, 5000)
 })
@@ -93,10 +113,18 @@ test("closeActiveBucket drops bucket on suspend gap", () => {
   const state = {
     today: { total: 100, apps: { a: 100 } },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
   // lastTick=5000, now=100000 => gap=95000 > 30000 => suspend detected
-  const result = State.closeActiveBucket(state, "editor", 95000, 100000, "2026-08-15", 30000, 5000)
+  const result = State.closeActiveBucket(
+    state,
+    "editor",
+    95000,
+    100000,
+    "2026-08-15",
+    30000,
+    5000,
+  )
   assert.equal(result.today.total, 100)
   assert.equal(result.lastTick, 100000)
   assert.equal(result.activeApp, "")
@@ -107,15 +135,23 @@ test("closeActiveBucket splits a midnight-spanning bucket at midnight", () => {
   // Use local midnight to avoid timezone issues.
   const aug15 = localMidnight(2026, 7, 15)
   const aug16 = localMidnight(2026, 7, 16)
-  const startMs = aug15 + 23 * 3600000 + 59 * 60000 + 50000  // Aug 15 23:59:50
-  const now = aug16 + 5000                                      // Aug 16 00:00:05
+  const startMs = aug15 + 23 * 3600000 + 59 * 60000 + 50000 // Aug 15 23:59:50
+  const now = aug16 + 5000 // Aug 16 00:00:05
 
   const state = {
     today: { total: 100, apps: {} },
     days: {},
-    todayKey: "2026-08-16"
+    todayKey: "2026-08-16",
   }
-  const result = State.closeActiveBucket(state, "editor", startMs, now, "2026-08-16", 30000, 0)
+  const result = State.closeActiveBucket(
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-16",
+    30000,
+    0,
+  )
   // 10s lands on 2026-08-15, 5s on today — same split as commitElapsed.
   assert.equal(result.days["2026-08-15"].apps.editor, 10000)
   assert.equal(result.today.total, 100 + 5000)
@@ -126,9 +162,17 @@ test("closeActiveBucket returns new object (immutability)", () => {
   const state = {
     today: { total: 0, apps: {} },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
-  const result = State.closeActiveBucket(state, "editor", aug15 + 10000, aug15 + 15000, "2026-08-15", 30000, aug15 + 12000)
+  const result = State.closeActiveBucket(
+    state,
+    "editor",
+    aug15 + 10000,
+    aug15 + 15000,
+    "2026-08-15",
+    30000,
+    aug15 + 12000,
+  )
   assert.notEqual(result, state)
   assert.notEqual(result.today, state.today)
 })
@@ -136,21 +180,41 @@ test("closeActiveBucket returns new object (immutability)", () => {
 // ---- commitElapsed -------------------------------------------------------
 
 test("commitElapsed returns original state when no bucket open", () => {
-  const state = { today: { total: 100, apps: {} }, days: {}, todayKey: "2026-08-15" }
-  const result = State.commitElapsed(state, "", 0, 100000, "2026-08-15", 30000, 90000)
+  const state = {
+    today: { total: 100, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+  }
+  const result = State.commitElapsed(
+    state,
+    "",
+    0,
+    100000,
+    "2026-08-15",
+    30000,
+    90000,
+  )
   assert.deepEqual(result.today, state.today)
 })
 
 test("commitElapsed accrues time into today", () => {
   const aug15 = localMidnight(2026, 7, 15)
-  const startMs = aug15 + 10 * 3600000          // Aug 15 10:00:00
-  const now = aug15 + 10 * 3600000 + 10000      // Aug 15 10:00:10
+  const startMs = aug15 + 10 * 3600000 // Aug 15 10:00:00
+  const now = aug15 + 10 * 3600000 + 10000 // Aug 15 10:00:10
   const state = {
     today: { total: 0, apps: {} },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
-  const result = State.commitElapsed(state, "editor", startMs, now, "2026-08-15", 30000, now - 2000)
+  const result = State.commitElapsed(
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-15",
+    30000,
+    now - 2000,
+  )
   assert.equal(result.today.total, 10000)
   assert.equal(result.today.apps.editor, 10000)
   assert.equal(result.activeStart, now)
@@ -160,15 +224,23 @@ test("commitElapsed accrues time into today", () => {
 test("commitElapsed credits pre-midnight time to correct day", () => {
   const aug15 = localMidnight(2026, 7, 15)
   const aug16 = localMidnight(2026, 7, 16)
-  const startMs = aug15 + 23 * 3600000 + 59 * 60000 + 50000  // Aug 15 23:59:50
-  const now = aug16 + 5000                                      // Aug 16 00:00:05
+  const startMs = aug15 + 23 * 3600000 + 59 * 60000 + 50000 // Aug 15 23:59:50
+  const now = aug16 + 5000 // Aug 16 00:00:05
 
   const state = {
     today: { total: 0, apps: {} },
     days: {},
-    todayKey: "2026-08-16"
+    todayKey: "2026-08-16",
   }
-  const result = State.commitElapsed(state, "editor", startMs, now, "2026-08-16", 30000, 0)
+  const result = State.commitElapsed(
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-16",
+    30000,
+    0,
+  )
   // 10s belongs to Aug 15 (from start to midnight), 5s to Aug 16
   assert.equal(result.today.total, 0)
   assert.equal(result.today.apps.editor, undefined)
@@ -180,13 +252,21 @@ test("commitElapsed credits pre-midnight time to correct day", () => {
 test("commitElapsed drops bucket on suspend gap", () => {
   const aug15 = localMidnight(2026, 7, 15)
   const startMs = aug15 + 10 * 3600000
-  const now = aug15 + 10 * 3600000 + 95000     // 95s gap from lastTick
+  const now = aug15 + 10 * 3600000 + 95000 // 95s gap from lastTick
   const state = {
     today: { total: 100, apps: { a: 100 } },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
-  const result = State.commitElapsed(state, "editor", startMs, now, "2026-08-15", 30000, startMs)
+  const result = State.commitElapsed(
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-15",
+    30000,
+    startMs,
+  )
   assert.equal(result.today.total, 100)
   assert.equal(result.activeStart, now)
 })
@@ -196,9 +276,17 @@ test("commitElapsed returns new object (immutability)", () => {
   const state = {
     today: { total: 0, apps: {} },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
-  const result = State.commitElapsed(state, "editor", aug15 + 10000, aug15 + 20000, "2026-08-15", 30000, aug15 + 18000)
+  const result = State.commitElapsed(
+    state,
+    "editor",
+    aug15 + 10000,
+    aug15 + 20000,
+    "2026-08-15",
+    30000,
+    aug15 + 18000,
+  )
   assert.notEqual(result, state)
   assert.notEqual(result.today, state.today)
 })
@@ -211,7 +299,7 @@ test("rolloverIfNeeded returns null when key unchanged", () => {
     today: { total: 100, apps: {} },
     days: {},
     activeApp: "editor",
-    activeStart: 1000
+    activeStart: 1000,
   }
   const result = State.rolloverIfNeeded(state, "2026-08-15")
   assert.equal(result, null)
@@ -223,7 +311,7 @@ test("rolloverIfNeeded carries previous day data into today", () => {
     today: { total: 500, apps: { a: 500 } },
     days: { "2026-08-16": { total: 200, apps: { b: 200 } } },
     activeApp: "editor",
-    activeStart: 1000
+    activeStart: 1000,
   }
   const result = State.rolloverIfNeeded(state, "2026-08-16")
   assert.ok(result)
@@ -237,22 +325,26 @@ test("rolloverIfNeeded carries previous day data into today", () => {
 // ---- advanceRollover -------------------------------------------------------
 // One transition owns the whole midnight moment: close the open bucket
 // onto the day it started, carry the live day forward, reopen the bucket.
-// Service.qml used to do this as close -> patch -> reopen across three
-// applyState calls with a pre-close app snapshot; any ordering slip there
-// silently misattributes the straddling seconds.
+// Any ordering slip between those steps silently misattributes the
+// straddling seconds, so the contract is pinned as a single patch.
 
 test("dayMinus returns the unmirrored per-app remainder", () => {
   const result = State.dayMinus(
     { total: 70000, apps: { editor: 60000, browser: 10000 } },
-    { total: 60000, apps: { editor: 60000 } })
+    { total: 60000, apps: { editor: 60000 } },
+  )
   assert.deepEqual(result, { total: 10000, apps: { browser: 10000 } })
 })
 
 test("dayMinus floors at zero and tolerates junk", () => {
   assert.deepEqual(State.dayMinus(null, null), { total: 0, apps: {} })
   assert.deepEqual(
-    State.dayMinus({ total: 50, apps: { a: 50 } }, { total: 100, apps: { a: 100 } }),
-    { total: 0, apps: {} })
+    State.dayMinus(
+      { total: 50, apps: { a: 50 } },
+      { total: 100, apps: { a: 100 } },
+    ),
+    { total: 0, apps: {} },
+  )
 })
 
 test("advanceRollover returns null when the day has not changed", () => {
@@ -262,9 +354,12 @@ test("advanceRollover returns null when the day has not changed", () => {
     days: {},
     activeApp: "editor",
     activeStart: 1000,
-    lastTick: 5000
+    lastTick: 5000,
   }
-  assert.equal(State.advanceRollover(state, 2000, "2026-08-15", 30000, 5000), null)
+  assert.equal(
+    State.advanceRollover(state, 2000, "2026-08-15", 30000, 5000),
+    null,
+  )
 })
 
 test("advanceRollover closes, carries and reopens in one patch", () => {
@@ -277,9 +372,15 @@ test("advanceRollover closes, carries and reopens in one patch", () => {
     days: {},
     activeApp: "editor",
     activeStart: before,
-    lastTick: before
+    lastTick: before,
   }
-  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before)
+  const result = State.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    before,
+  )
   assert.ok(result)
   assert.equal(result.todayKey, "2026-08-16")
   // Straddling bucket split at midnight: 10s to yesterday, 5s to today.
@@ -301,9 +402,15 @@ test("advanceRollover drops the bucket on a suspend gap, still rolls", () => {
     days: {},
     activeApp: "editor",
     activeStart: before,
-    lastTick: before - 3600000 // gap far beyond suspendGapMs
+    lastTick: before - 3600000, // gap far beyond suspendGapMs
   }
-  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before - 3600000)
+  const result = State.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    before - 3600000,
+  )
   assert.ok(result)
   assert.equal(result.todayKey, "2026-08-16")
   // The stale bucket is dropped, but the 1000 live ms tracked before the
@@ -326,9 +433,15 @@ test("advanceRollover preserves unmirrored live data in the old day", () => {
     days: {},
     activeApp: "editor",
     activeStart: before,
-    lastTick: before
+    lastTick: before,
   }
-  const result = State.advanceRollover(state, after, "2026-08-16", 30000, before)
+  const result = State.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    before,
+  )
   assert.ok(result)
   assert.equal(result.days["2026-08-15"].total, 70000)
   assert.equal(result.days["2026-08-15"].apps.editor, 70000)
@@ -343,9 +456,15 @@ test("advanceRollover with no open bucket just carries the day", () => {
     days: {},
     activeApp: "",
     activeStart: 0,
-    lastTick: after - 1000
+    lastTick: after - 1000,
   }
-  const result = State.advanceRollover(state, after, "2026-08-16", 30000, after - 1000)
+  const result = State.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    after - 1000,
+  )
   assert.ok(result)
   assert.equal(result.todayKey, "2026-08-16")
   assert.equal(result.today.total, 0)
@@ -359,7 +478,7 @@ test("rolloverIfNeeded starts empty when no previous day data", () => {
     today: { total: 500, apps: { a: 500 } },
     days: {},
     activeApp: "",
-    activeStart: 0
+    activeStart: 0,
   }
   const result = State.rolloverIfNeeded(state, "2026-08-16")
   assert.ok(result)
@@ -372,7 +491,14 @@ test("rolloverIfNeeded starts empty when no previous day data", () => {
 
 test("applyResolvedApp returns null when resolveInFlight is false", () => {
   const state = { resolveInFlight: false }
-  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.equal(result, null)
 })
 
@@ -382,9 +508,16 @@ test("applyResolvedApp returns null when focus moved mid-resolve", () => {
     rawApp: "alacritty",
     resolveForApp: "foot",
     activeApp: "",
-    activeStart: 0
+    activeStart: 0,
   }
-  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.equal(result, null)
 })
 
@@ -398,9 +531,16 @@ test("applyResolvedApp returns null when result is from an older resolve generat
     resolveSpawnGen: 1,
     resolveGeneration: 2,
     activeApp: "",
-    activeStart: 0
+    activeStart: 0,
   }
-  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.equal(result, null)
 })
 
@@ -416,9 +556,16 @@ test("applyResolvedApp applies when resolve generation matches spawn", () => {
     today: { total: 0, apps: {} },
     days: {},
     todayKey: "2026-08-15",
-    lastTick: 0
+    lastTick: 0,
   }
-  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.ok(result)
   assert.equal(result.activeApp, "opencode")
 })
@@ -433,9 +580,16 @@ test("applyResolvedApp sets new app and opens bucket", () => {
     today: { total: 0, apps: {} },
     days: {},
     todayKey: "2026-08-15",
-    lastTick: 0
+    lastTick: 0,
   }
-  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.ok(result)
   assert.equal(result.resolveInFlight, false)
   assert.equal(result.activeApp, "opencode")
@@ -452,9 +606,16 @@ test("applyResolvedApp returns null when resolved name matches current", () => {
     today: { total: 0, apps: {} },
     days: {},
     todayKey: "2026-08-15",
-    lastTick: 0
+    lastTick: 0,
   }
-  const result = State.applyResolvedApp(state, "opencode", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.equal(result, null)
 })
 
@@ -468,9 +629,16 @@ test("applyResolvedApp falls back to rawApp when name is empty", () => {
     today: { total: 0, apps: {} },
     days: {},
     todayKey: "2026-08-15",
-    lastTick: 0
+    lastTick: 0,
   }
-  const result = State.applyResolvedApp(state, "", "foot", "2026-08-15", 30000, 0)
+  const result = State.applyResolvedApp(
+    state,
+    "",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
   assert.ok(result)
   assert.equal(result.activeApp, "foot")
 })
@@ -483,8 +651,8 @@ test("applyResolvedApp falls back to rawApp when name is empty", () => {
 test("close + rollover: bucket on yesterday lands in days, not today", () => {
   const aug15 = localMidnight(2026, 7, 15)
   const aug16 = localMidnight(2026, 7, 16)
-  const startMs = aug15 + 23 * 3600000  // Aug 15 23:00
-  const now = aug16 + 3000              // Aug 16 00:00:03
+  const startMs = aug15 + 23 * 3600000 // Aug 15 23:00
+  const now = aug16 + 3000 // Aug 16 00:00:03
 
   const state = {
     today: { total: 500, apps: { a: 500 } },
@@ -492,12 +660,19 @@ test("close + rollover: bucket on yesterday lands in days, not today", () => {
     todayKey: "2026-08-16",
     activeApp: "editor",
     activeStart: startMs,
-    lastTick: 0
+    lastTick: 0,
   }
 
   // Step 1: close the bucket (it started Aug 15, today is Aug 16)
   const closed = State.closeActiveBucket(
-    state, "editor", startMs, now, "2026-08-16", 30000, now - 1000)
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-16",
+    30000,
+    now - 1000,
+  )
   // Split at midnight: 23:00-00:00 to Aug 15, 3s to today
   assert.equal(closed.days["2026-08-15"].apps.editor, 3600000)
   assert.equal(closed.today.total, 500 + 3000)
@@ -519,11 +694,18 @@ test("close + rollover: existing history for new day is preserved", () => {
     todayKey: "2026-08-16",
     activeApp: "editor",
     activeStart: startMs,
-    lastTick: 0
+    lastTick: 0,
   }
 
   const closed = State.closeActiveBucket(
-    state, "editor", startMs, now, "2026-08-16", 30000, now - 1000)
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-16",
+    30000,
+    now - 1000,
+  )
   const rolled = State.rolloverIfNeeded(closed, "2026-08-17")
   assert.ok(rolled)
   // Aug 17 already had 3000ms from history
@@ -536,8 +718,8 @@ test("close + rollover: existing history for new day is preserved", () => {
 test("commitElapsed across midnight preserves existing day data", () => {
   const aug15 = localMidnight(2026, 7, 15)
   const aug16 = localMidnight(2026, 7, 16)
-  const startMs = aug15 + 23 * 3600000  // Aug 15 23:00
-  const now = aug16 + 10000             // Aug 16 00:00:10
+  const startMs = aug15 + 23 * 3600000 // Aug 15 23:00
+  const now = aug16 + 10000 // Aug 16 00:00:10
 
   // Aug 15 already had 2 hours from a previous app
   const state = {
@@ -546,11 +728,18 @@ test("commitElapsed across midnight preserves existing day data", () => {
     todayKey: "2026-08-16",
     activeApp: "editor",
     activeStart: startMs,
-    lastTick: 0
+    lastTick: 0,
   }
 
   const result = State.commitElapsed(
-    state, "editor", startMs, now, "2026-08-16", 30000, 0)
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-16",
+    30000,
+    0,
+  )
   // 1 hour went to Aug 15
   assert.equal(result.days["2026-08-15"].apps.editor, 3600000)
   // Original 2 hours still there
@@ -588,15 +777,29 @@ test("closeActiveBucket twice with same state: second call is no-op", () => {
     todayKey: "2026-08-15",
     activeApp: "editor",
     activeStart: aug15 + 10000,
-    lastTick: 0
+    lastTick: 0,
   }
   const first = State.closeActiveBucket(
-    state, "editor", aug15 + 10000, aug15 + 15000, "2026-08-15", 30000, aug15 + 12000)
+    state,
+    "editor",
+    aug15 + 10000,
+    aug15 + 15000,
+    "2026-08-15",
+    30000,
+    aug15 + 12000,
+  )
   assert.equal(first.today.total, 5000)
 
   // Second call with cleared bucket is a no-op
   const second = State.closeActiveBucket(
-    first, first.activeApp, first.activeStart, aug15 + 20000, "2026-08-15", 30000, aug15 + 18000)
+    first,
+    first.activeApp,
+    first.activeStart,
+    aug15 + 20000,
+    "2026-08-15",
+    30000,
+    aug15 + 18000,
+  )
   assert.equal(second.today.total, 5000)
 })
 
@@ -605,24 +808,38 @@ test("closeActiveBucket twice with same state: second call is no-op", () => {
 test("commitElapsed then close: full time is accounted for", () => {
   const aug15 = localMidnight(2026, 7, 15)
   const startMs = aug15 + 10 * 3600000
-  const commitTime = aug15 + 10 * 3600000 + 30000  // 30s in
-  const closeTime = aug15 + 10 * 3600000 + 45000   // 45s in
+  const commitTime = aug15 + 10 * 3600000 + 30000 // 30s in
+  const closeTime = aug15 + 10 * 3600000 + 45000 // 45s in
 
   const state = {
     today: { total: 0, apps: {} },
     days: {},
-    todayKey: "2026-08-15"
+    todayKey: "2026-08-15",
   }
 
   // Commit at 30s: credits 30s, resets bucket start
   const committed = State.commitElapsed(
-    state, "editor", startMs, commitTime, "2026-08-15", 30000, commitTime - 5000)
+    state,
+    "editor",
+    startMs,
+    commitTime,
+    "2026-08-15",
+    30000,
+    commitTime - 5000,
+  )
   assert.equal(committed.today.total, 30000)
   assert.equal(committed.activeStart, commitTime)
 
   // Close at 45s: credits remaining 15s from commitTime
   const closed = State.closeActiveBucket(
-    committed, "editor", committed.activeStart, closeTime, "2026-08-15", 30000, closeTime - 5000)
+    committed,
+    "editor",
+    committed.activeStart,
+    closeTime,
+    "2026-08-15",
+    30000,
+    closeTime - 5000,
+  )
   assert.equal(closed.today.total, 45000)
   assert.equal(closed.today.apps.editor, 45000)
 })
@@ -642,15 +859,172 @@ test("suspend gap during close prevents stale time from landing in any day", () 
     todayKey: "2026-08-16",
     activeApp: "editor",
     activeStart: startMs,
-    lastTick: aug15 + 23 * 3600000
+    lastTick: aug15 + 23 * 3600000,
   }
 
   const closed = State.closeActiveBucket(
-    state, "editor", startMs, now, "2026-08-16", 30000, state.lastTick)
+    state,
+    "editor",
+    startMs,
+    now,
+    "2026-08-16",
+    30000,
+    state.lastTick,
+  )
   // Bucket dropped: no time credited, just cleared
   assert.equal(closed.today.total, 500)
   assert.equal(closed.activeApp, "")
   assert.equal(closed.activeStart, 0)
   // No stale data leaked into days
   assert.equal(Object.keys(closed.days).length, 0)
+})
+
+test("applyResolvedApp renames through user aliases", () => {
+  const state = {
+    resolveInFlight: true,
+    rawApp: "foot",
+    resolveForApp: "foot",
+    resolveSpawnGen: 1,
+    resolveGeneration: 1,
+    appAliases: { opencode: "work" },
+    activeApp: "",
+    activeStart: 0,
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: 0,
+  }
+  const result = State.applyResolvedApp(
+    state,
+    "opencode",
+    "foot",
+    "2026-08-15",
+    30000,
+    0,
+  )
+  assert.ok(result)
+  assert.equal(result.activeApp, "work")
+})
+
+test("closeActiveBucket rebases on backward clock jumps", () => {
+  const start = localMidnight(2026, 7, 15) + 12 * 3600000
+  const now = start - 60000
+  const state = {
+    today: { total: 1000, apps: { zen: 1000 } },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: start - 5000,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-15",
+    30000,
+    state.lastTick,
+  )
+  assert.deepEqual(result.today, state.today)
+  assert.equal(result.activeApp, "")
+  assert.equal(result.activeStart, 0)
+  assert.equal(result.lastTick, now)
+})
+
+test("commitElapsed rebases an open bucket on backward jumps", () => {
+  const start = localMidnight(2026, 7, 15) + 12 * 3600000
+  const now = start - 60000
+  const state = {
+    today: { total: 1000, apps: { zen: 1000 } },
+    days: {},
+    todayKey: "2026-08-15",
+    lastTick: start - 5000,
+  }
+  const result = State.commitElapsed(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-15",
+    30000,
+    state.lastTick,
+  )
+  assert.deepEqual(result.today, state.today)
+  assert.equal(result.activeApp, "zen")
+  assert.equal(result.activeStart, now)
+  assert.equal(result.lastTick, now)
+})
+
+test("closeActiveBucket splits a multi-day bucket day by day", () => {
+  const start = localMidnight(2026, 7, 15) + 23 * 3600000
+  const now = localMidnight(2026, 7, 17) + 10000
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-17",
+    lastTick: start,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-17",
+    30 * 3600000,
+    state.lastTick,
+  )
+  assert.equal(result.days["2026-08-15"].total, 3600000)
+  assert.equal(result.days["2026-08-16"].total, 86400000)
+  assert.equal(result.today.total, 10000)
+  assert.deepEqual(result.today.apps, { zen: 10000 })
+  assert.equal(result.activeApp, "")
+})
+
+test("commitElapsed credits intermediate days and resumes at midnight", () => {
+  const start = localMidnight(2026, 7, 15) + 23 * 3600000
+  const now = localMidnight(2026, 7, 17) + 10000
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-17",
+    lastTick: start,
+  }
+  const result = State.commitElapsed(
+    state,
+    "zen",
+    start,
+    now,
+    "2026-08-17",
+    30 * 3600000,
+    state.lastTick,
+  )
+  assert.equal(result.days["2026-08-15"].total, 3600000)
+  assert.equal(result.days["2026-08-16"].total, 86400000)
+  assert.deepEqual(result.today, { total: 0, apps: {} })
+  assert.equal(result.activeApp, "zen")
+  assert.equal(result.activeStart, localMidnight(2026, 7, 17))
+})
+
+test("advanceRollover ignores backward day jumps", () => {
+  const now = localMidnight(2026, 7, 15) + 9 * 3600000
+  const state = {
+    today: { total: 3600000, apps: { zen: 3600000 } },
+    days: {},
+    todayKey: "2026-08-16",
+    activeApp: "zen",
+    activeStart: now - 60000,
+    lastTick: now - 5000,
+  }
+  const result = State.advanceRollover(
+    state,
+    now,
+    "2026-08-15",
+    30000,
+    state.lastTick,
+  )
+  assert.ok(result)
+  assert.equal(result.todayKey, "2026-08-16")
+  assert.deepEqual(result.today, state.today)
+  assert.equal(result.activeApp, "")
+  assert.equal(result.activeStart, 0)
+  assert.equal(result.lastTick, now)
 })

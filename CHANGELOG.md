@@ -4,7 +4,79 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.0] - 2026-09-12
+
+### Feat
+
+- Introducing the Settings panel — the gear beside SHOW MORE/LESS opens a
+  keyboard-first menu grouped into tinted sections (Display, Colors,
+  Trend & History, Daily Goal, Tracking, Contribution, About with the
+  version, and a red Danger Zone last) with full-width labels and larger
+  click targets. Every choice persists across restarts:
+  1. Weekly graph reach: 12, 24, 36 or 52 weeks of Mon–Sun pages, always
+     fully detailed.
+  2. Forever totals: day, month and year totals — plus every year's
+     insights — are never deleted on their own; only per-app detail ages
+     out after a year, with a readout of what's stored. Wipe all history
+     is the one way to erase them.
+  3. Daily goal: Off/4/6/8h presets with a check badge in the bar,
+     remaining time in the tooltip, and a progress bar under the hero.
+     It counts from the day you set it, so past days never show it as
+     reached.
+  4. Ignored apps and custom names: banish launchers and portals (the
+     focused app's clock stops immediately), or call apps what you want
+     (zen becomes browser).
+  5. Hide the yearly overview, daily insights or yearly retro cards,
+     independently.
+  6. Busiest Week Trophy and hourglass styling: theme swatches recolor
+     the trophy and the hero icon, plus a toggle to hide the trophy.
+  7. Week-total mode (time vs share of the week's 168 hours) and
+     Playful-extras switches that persist across restarts.
+  8. First-run coach marks under the hero until anything is tracked.
+- Reset today: a triple-confirmed control (RESET → SURE? → REALLY?) that
+  clears only today's data while archives stay untouched; the focused app
+  keeps running with its timer rebased so cleared time can't come back.
+  Also reachable via `quickshell ipc call agx.screen-time resetToday`.
+- Wipe all history: a four-click staged control (WIPE ALL → SURE? →
+  CAN'T UNDO! → WIPE!) erases every day, month and archived total — the
+  forever totals included — with no undo. Also reachable via
+  `quickshell ipc call agx.screen-time resetAll`.
+- Keyboard hints: press `f` to badge every main-panel control with a
+  letter (`y` yearly, `c` settings, `m` more, `b`/`n` week pages,
+  `t` week total, `1`–`7` days); the settings menu takes two-letter tags
+  for every row, and `j`/`k` keep scrolling, `Esc` exits.
+
+### Changed
+
+- Header icons celebrate navigation: the settings gear sweeps, the
+  yearly calendar swings, and the hourglass turns a full circle on the
+  way home — all mute with Playful extras.
+- Yearly overview polish: hero trimmed to letter-spaced hours above a
+  larger year pager, month bars lose their background tracks, and top
+  months take gold, silver and bronze medals over middle dots.
+- Busiest Week Trophy needs two weeks of tracked data before it appears.
+- Codebase refactored for maintainability: repeated panel code was
+  extracted into small single-purpose components (donut, legend, week
+  bars, pager, cards, drawers) and display logic into a shared model,
+  slimming the largest file — Panel.qml — by over 40%.
+- Agent-ready development workflow: a contributor guide (`AGENTS.md`)
+  codifies the project structure, conventions, data-safety contracts and
+  test gates, so agent-assisted changes land at the same quality bar as
+  manual ones.
+
+### Fixes
+
+- Screen time no longer accrues while the session is locked or the
+  screensaver is up, and tracking resumes on return (reported by
+  @88srzh, contributed by @fgrehm via PR #12).
+- Long week-range labels no longer push the pager arrows into the week
+  total: the label stretches between the arrows and elides.
+- Corrupt history files are preserved aside before tracking resumes,
+  even without python3 installed.
+- Busiest Week Trophy follows the viewed week, not just the leading one.
+- Tracking is safer under pressure: focus events before history loads
+  open no untracked buckets, and rapid focus switches bound crash-loss
+  to the save interval instead of deferring the write forever.
 
 ## [1.5.0] - 2026-09-07
 
@@ -189,7 +261,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Scrollable app list: bounded legend with a thin scrollbar; Show More
   toggles the full app list inline (renamed from Patterns).
 - Clean app names: reverse-DNS compositor IDs shortened to the last
-  segment and title-cased (`com.github.user.Codium` → `Codium`).
+  segment and lowercased (`com.github.user.Codium` → `codium`).
 - Donut slices below 3% auto-collapse into the "Other" bucket so the
   chart stays readable with many small apps.
 - Donut centre now shows the full date ("Aug 15") instead of a

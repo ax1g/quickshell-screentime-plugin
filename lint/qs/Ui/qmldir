@@ -1,0 +1,10 @@
+module qs.Ui
+BarWidget 1.0 BarWidget.qml
+Panel 1.0 Panel.qml
+PanelController 1.0 PanelController.qml
+WidgetButton 1.0 WidgetButton.qml
+OpticalGlyph 1.0 OpticalGlyph.qml
+PanelSeparator 1.0 PanelSeparator.qml
+PanelKeyCatcher 1.0 PanelKeyCatcher.qml
+KeyboardPanel 1.0 KeyboardPanel.qml
+ToggleSwitch 1.0 ToggleSwitch.qml

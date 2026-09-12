@@ -17,16 +17,21 @@ import unittest
 from contextlib import redirect_stdout
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "python"),
+)
 
-import resolve_app as r  # noqa: E402
+import resolve_app as r
 
 
 class CanonicalizationTests(unittest.TestCase):
     def test_browser_aliases_json_is_loaded(self):
         json_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "lib", "browser_aliases.json")
+            "js",
+            "browser_aliases.json",
+        )
         with open(json_path) as f:
             expected = json.load(f)
         self.assertEqual(r.BROWSER_BINARY_TO_APP, expected)
@@ -119,7 +124,7 @@ class TerminalResolutionTests(unittest.TestCase):
         # foot does not hold the pty as its controlling terminal; the
         # spawned shell's session does. Regression test for "shows foot".
         w = self.world
-        w.add(100, "foot", 1)                      # ttynr=0, tpgid=-1
+        w.add(100, "foot", 1)  # ttynr=0, tpgid=-1
         w.add(110, "bash", 100, ttynr=34817, tpgid=120)
         w.add(120, "opencode", 110, ttynr=34817, tpgid=120)
         self.assertEqual(r._resolve_terminal_foreground(100), "opencode")
@@ -141,13 +146,13 @@ class TerminalResolutionTests(unittest.TestCase):
     def test_no_tty_owning_descendant_returns_none(self):
         w = self.world
         w.add(300, "term", 1)
-        w.add(310, "notify-send", 300)             # no controlling tty
+        w.add(310, "notify-send", 300)  # no controlling tty
         self.assertIsNone(r._resolve_terminal_foreground(300))
 
     def test_tty_session_found_below_direct_children(self):
         w = self.world
         w.add(400, "term", 1)
-        w.add(410, "shim", 400)                    # depth 2, no tty
+        w.add(410, "shim", 400)  # depth 2, no tty
         w.add(420, "bash", 410, ttynr=99, tpgid=430)
         w.add(430, "htop", 420)
         self.assertEqual(r._resolve_terminal_foreground(400), "htop")
@@ -156,7 +161,7 @@ class TerminalResolutionTests(unittest.TestCase):
         w = self.world
         w.add(500, "term", 1)
         parent = 500
-        for pid in range(510, 520):                # chain deeper than limit
+        for pid in range(510, 520):  # chain deeper than limit
             w.add(pid, "wrap", parent)
             parent = pid
         w.add(520, "bash", parent, ttynr=7, tpgid=530)
@@ -167,7 +172,7 @@ class TerminalResolutionTests(unittest.TestCase):
         w = self.world
         w.add(600, "foot", 1)
         w.add(610, "bash", 600, ttynr=11, tpgid=620)
-        w.add(620, "Web Content", 630)             # browser worker is fg
+        w.add(620, "Web Content", 630)  # browser worker is fg
         w.add(630, "zen-bin", 610)
         self.assertEqual(r._resolve_terminal_foreground(600), "zen")
 
@@ -208,8 +213,7 @@ class SteamTitleTests(unittest.TestCase):
         path = os.path.join(directory, f"appmanifest_{appid}.acf")
         with open(path, "w") as f:
             f.write(
-                '"AppState"\n{\n\t"appid"\t\t"%s"\n'
-                '\t"name"\t\t"%s"\n}\n' % (appid, name)
+                f'"AppState"\n{{\n\t"appid"\t\t"{appid}"\n\t"name"\t\t"{name}"\n}}\n'
             )
         return path
 
@@ -228,8 +232,7 @@ class SteamTitleTests(unittest.TestCase):
             self.assertEqual(r._acf_name(path), "Counter-Strike 2")
 
     def test_acf_name_missing_file_is_none(self):
-        self.assertIsNone(
-            r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
+        self.assertIsNone(r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
 
     def test_is_steam_class_accepts_numeric_and_slug_forms(self):
         self.assertTrue(r._is_steam_class("steam_app_730"))
@@ -243,34 +246,42 @@ class SteamTitleTests(unittest.TestCase):
 
     def test_main_resolves_slug_steam_class_from_window_title(self):
         """A slug class with no manifest falls back to the live window title."""
-        activewindow = json.dumps({
-            "pid": 0,
-            "class": "steam_app_battlenet",
-            "title": "World of Warcraft",
-        })
+        activewindow = json.dumps(
+            {
+                "pid": 0,
+                "class": "steam_app_battlenet",
+                "title": "World of Warcraft",
+            }
+        )
         fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
         out = io.StringIO()
-        with mock.patch.object(r.subprocess, "run", fake_run), \
-                mock.patch.object(r.sys, "argv", ["resolve_app.py"]), \
-                contextlib.redirect_stdout(out), \
-                self.assertRaises(SystemExit) as cm:
+        with (
+            mock.patch.object(r.subprocess, "run", fake_run),
+            mock.patch.object(r.sys, "argv", ["resolve_app.py"]),
+            contextlib.redirect_stdout(out),
+            self.assertRaises(SystemExit) as cm,
+        ):
             r.main()
         self.assertEqual(cm.exception.code, 0)
         self.assertEqual(out.getvalue().strip(), "World of Warcraft")
 
     def test_main_slug_steam_class_without_title_stays_silent(self):
         """No title -> no output, so tracking keeps the stable slug key."""
-        activewindow = json.dumps({
-            "pid": 0,
-            "class": "steam_app_battlenet",
-            "title": "   ",
-        })
+        activewindow = json.dumps(
+            {
+                "pid": 0,
+                "class": "steam_app_battlenet",
+                "title": "   ",
+            }
+        )
         fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
         out = io.StringIO()
-        with mock.patch.object(r.subprocess, "run", fake_run), \
-                mock.patch.object(r.sys, "argv", ["resolve_app.py"]), \
-                contextlib.redirect_stdout(out), \
-                self.assertRaises(SystemExit) as cm:
+        with (
+            mock.patch.object(r.subprocess, "run", fake_run),
+            mock.patch.object(r.sys, "argv", ["resolve_app.py"]),
+            contextlib.redirect_stdout(out),
+            self.assertRaises(SystemExit) as cm,
+        ):
             r.main()
         self.assertEqual(cm.exception.code, 0)
         self.assertEqual(out.getvalue(), "")
@@ -295,13 +306,15 @@ class MainTests(unittest.TestCase):
             run_mock = mock.Mock(side_effect=run_error)
         else:
             run_mock = mock.Mock(return_value=mock.Mock(stdout=run_result))
-        with mock.patch.object(r.subprocess, "run", run_mock):
-            with mock.patch.object(r.sys, "argv", ["resolve_app.py"]):
-                buf = io.StringIO()
-                with redirect_stdout(buf):
-                    with self.assertRaises(SystemExit) as cm:
-                        r.main()
-                return cm.exception.code, buf.getvalue()
+        buf = io.StringIO()
+        with (
+            mock.patch.object(r.subprocess, "run", run_mock),
+            mock.patch.object(r.sys, "argv", ["resolve_app.py"]),
+            redirect_stdout(buf),
+            self.assertRaises(SystemExit) as cm,
+        ):
+            r.main()
+        return cm.exception.code, buf.getvalue()
 
     def test_main_missing_hyprctl_exits_quietly(self):
         code, out = self._run_main_no_args(run_error=FileNotFoundError("hyprctl"))
@@ -319,14 +332,24 @@ class MainTests(unittest.TestCase):
         self.assertEqual(out, "")
 
     def test_main_non_string_title_exits_quietly(self):
-        code, out = self._run_main_no_args(run_result=json.dumps({
-            "pid": 0, "class": "steam_app_battlenet", "title": 123}))
+        code, out = self._run_main_no_args(
+            run_result=json.dumps(
+                {"pid": 0, "class": "steam_app_battlenet", "title": 123}
+            )
+        )
         self.assertEqual(code, 0)
         self.assertEqual(out, "")
 
     def test_main_slug_title_prints_stripped(self):
-        code, out = self._run_main_no_args(run_result=json.dumps({
-            "pid": 0, "class": "steam_app_battlenet", "title": "  World of Warcraft  "}))
+        code, out = self._run_main_no_args(
+            run_result=json.dumps(
+                {
+                    "pid": 0,
+                    "class": "steam_app_battlenet",
+                    "title": "  World of Warcraft  ",
+                }
+            )
+        )
         self.assertEqual(code, 0)
         self.assertEqual(out.strip(), "World of Warcraft")
         self.assertEqual(out, "World of Warcraft\n")

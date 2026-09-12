@@ -16,7 +16,7 @@
 
 ## Checklist
 
-- [ ] Tests pass (`node --test tests/model.test.js tests/state.test.js && python3 -m unittest discover -s tests`)
-- [ ] No new comments added (code is self-documenting)
-- [ ] Browser aliases updated in both `Model.js` and `resolve_app.py` (if applicable)
+- [ ] Tests pass (`node --test tests/model.test.js tests/state.test.js tests/service.test.js tests/panel.test.js && python3 -m unittest discover -s tests`)
+- [ ] Comments are WHY-only (explain the trap, not the line — see AGENTS.md)
+- [ ] Browser aliases updated in `js/browser_aliases.json` and the `qmlBrowserAliases()` mirror in `js/Model.js` (if applicable)
 - [ ] Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)

@@ -24,7 +24,6 @@ import subprocess
 import sys
 from collections import deque
 
-
 # comm names of internal browser worker processes. These must never show up
 # as screen-time apps on their own.
 BROWSER_SUBPROCESS_COMMS = {
@@ -50,9 +49,9 @@ BROWSER_SUBPROCESS_COMMS = {
 }
 
 # Browser binary basenames -> canonical screen-time app name.
-# Single source of truth: lib/browser_aliases.json (shared with Model.js).
+# Single source of truth: js/browser_aliases.json (shared with Model.js).
 _ALIASES_JSON = os.path.join(
-    os.path.dirname(__file__), os.pardir, "lib", "browser_aliases.json"
+    os.path.dirname(__file__), os.pardir, "js", "browser_aliases.json"
 )
 try:
     with open(_ALIASES_JSON) as _f:
@@ -105,8 +104,7 @@ def proc_name(pid):
         pass
     # Login shells report "-bash": strip the marker so they resolve as
     # plain "bash" instead of tracking a separate "-bash" app.
-    if name.startswith("-"):
-        name = name[1:]
+    name = name.removeprefix("-")
     return name
 
 
@@ -130,22 +128,15 @@ def _children(pid):
 # Terminals spawn their shell directly (depth 1); wrappers are rare.
 _MAX_TTY_SEARCH_DEPTH = 4
 
-# Maximum ancestor hops when walking from a browser worker up to the
-# browser binary. A pathological ppid chain (e.g. reparented/recycled
-# workers) must terminate rather than loop forever. Real chains are only
-# a couple of hops.
+# Cap ancestor hops so a pathological ppid cycle can't loop forever.
 _MAX_ANCESTOR_HOPS = 10
 
-# steamapps directories that hold appmanifest_<appid>.acf files. The first
-# two are the same library via symlink on most installs; both are listed
-# because neither is guaranteed to exist.
+# steamapps dirs holding appmanifest_<appid>.acf (overlapping on purpose).
 _STEAM_ROOTS = [
     os.path.expanduser("~/.steam/steam/steamapps"),
     os.path.expanduser("~/.local/share/Steam/steamapps"),
     os.path.expanduser("~/.steam/root/steamapps"),
-    os.path.expanduser(
-        "~/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps"
-    ),
+    os.path.expanduser("~/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps"),
 ]
 
 _STEAM_CLASS_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
@@ -174,7 +165,9 @@ def _is_steam_class(class_name):
     but Service.qml still routes them here because it matches on the same
     prefix.
     """
-    return isinstance(class_name, str) and bool(_STEAM_CLASS_PREFIX_RE.match(class_name))
+    return isinstance(class_name, str) and bool(
+        _STEAM_CLASS_PREFIX_RE.match(class_name)
+    )
 
 
 def _acf_name(path):
@@ -256,11 +249,7 @@ def _resolve_terminal_foreground(terminal_pid):
     if not name:
         return None
 
-    # Walk up from a browser worker (Web Content, forkserver, …) to the
-    # browser binary so time attributes to the browser, not an internal
-    # process.  Only reads /proc for ancestors, not all processes.  Bounded
-    # so a pathological ppid cycle (e.g. a reparented process) can't loop
-    # forever; browser chains are a handful of hops at most.
+    # Walk up from a browser worker to the browser binary it belongs to.
     pid = tpgid
     hops = 0
     while name in BROWSER_SUBPROCESS_COMMS and hops < _MAX_ANCESTOR_HOPS:
@@ -289,44 +278,41 @@ def main():
         try:
             out = subprocess.run(
                 ["hyprctl", "activewindow", "-j"],
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=2,
             ).stdout
             info = json.loads(out)
             if not isinstance(info, dict):
-                raise AttributeError("hyprctl activewindow is not a JSON object")
+                raise TypeError("hyprctl activewindow is not a JSON object")
             terminal_pid = int(info.get("pid") or 0)
             window_class = str(info.get("class") or "")
-            # Titles must be strings to be usable: a non-string title is
-            # malformed data, and coercing it would mint garbage
-            # tracking keys like "123". Stay silent instead.
+            # Non-string titles would mint garbage keys; stay silent instead.
             raw_title = info.get("title")
             window_title = raw_title if isinstance(raw_title, str) else ""
-        except (ValueError, json.JSONDecodeError, subprocess.SubprocessError,
-                OSError, AttributeError):
+        except (
+            ValueError,
+            json.JSONDecodeError,
+            subprocess.SubprocessError,
+            OSError,
+            AttributeError,
+            TypeError,
+        ):
             terminal_pid = 0
             window_class = ""
             window_title = ""
 
-    # Steam games: the class carries the AppID, so /proc walking is both
-    # unnecessary and wrong (it would report the game binary). Resolve the
-    # title from local manifests; if the manifest is missing, exit without
-    # output so tracking keeps the stable steam_app_* key instead of
-    # flip-flopping to a binary name.
+    # Steam class carries the AppID: resolve via manifests, else keep the
+    # stable steam_app_* key by exiting silently.
     if _steam_class_appid(window_class) is not None:
         title = steam_title_for_class(window_class)
         if title:
             print(title)
         sys.exit(0)
 
-    # Non-Steam shortcuts and launch wrappers (e.g. Battle.net added to Steam
-    # as a non-Steam game as is the common in Omarchy) report a fixed slug
-    # instead of a numeric AppID "steam_app_battlenet" for World of Warcraft
-    # Diablo, Overwatch, etc. alike. No manifest can tell them apart, but
-    # the window title can (the launcher itself titles its window "Battle.net";
-    # a running game titles it with the game's own name), so use it instead of
-    # leaving every game bucketed under the wrapper's slug.
+    # Non-Steam slugs (e.g. steam_app_battlenet) cover many games; tell them
+    # apart by window title instead.
     if _steam_class_appid(window_class) is None and _is_steam_class(window_class):
         title = window_title.strip()
         if title:
