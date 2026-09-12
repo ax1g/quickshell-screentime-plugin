@@ -699,9 +699,13 @@ test("settings inputs use Qt's real cursor, not a hand-rolled one", () => {
 
 test("settings inputs are clickable across the whole box", () => {
   const inputs = menu.match(
-    /anchors\.fill: parent\s*\n\s*padding: Style\.space\(8\)/g,
+    /anchors\.fill: parent\s*\n\s*leftPadding: Style\.space\(8\)\s*\n\s*rightPadding: Style\.space\(8\)\s*\n\s*verticalAlignment: TextInput\.AlignVCenter/g,
   )
-  assert(inputs && inputs.length === 3, "inputs cover their boxes edge to edge")
+  assert(
+    inputs && inputs.length === 3,
+    "full-width hit area, no height inflation",
+  )
+  assert.doesNotMatch(menu, /\n\s*padding: Style\.space\(8\)/)
 })
 
 test("tab cycles through the settings inputs", () => {

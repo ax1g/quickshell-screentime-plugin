@@ -1042,7 +1042,9 @@ Column {
                             KeyNavigation.tab: aliasFromInput
                             KeyNavigation.backtab: aliasToInput
                             anchors.fill: parent
-                            padding: Style.space(8)
+                            leftPadding: Style.space(8)
+                            rightPadding: Style.space(8)
+                            verticalAlignment: TextInput.AlignVCenter
                             color: root.foreground
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.bodySmall
@@ -1229,7 +1231,9 @@ Column {
                             KeyNavigation.tab: aliasToInput
                             KeyNavigation.backtab: ignoredInput
                             anchors.fill: parent
-                            padding: Style.space(8)
+                            leftPadding: Style.space(8)
+                            rightPadding: Style.space(8)
+                            verticalAlignment: TextInput.AlignVCenter
                             color: root.foreground
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.bodySmall
@@ -1277,7 +1281,9 @@ Column {
                             KeyNavigation.tab: ignoredInput
                             KeyNavigation.backtab: aliasFromInput
                             anchors.fill: parent
-                            padding: Style.space(8)
+                            leftPadding: Style.space(8)
+                            rightPadding: Style.space(8)
+                            verticalAlignment: TextInput.AlignVCenter
                             color: root.foreground
                             font.family: root.fontFamily
                             font.pixelSize: Style.font.bodySmall
