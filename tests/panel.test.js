@@ -697,6 +697,13 @@ test("settings inputs use Qt's real cursor, not a hand-rolled one", () => {
   assert.doesNotMatch(menu, /cursorVisible/)
 })
 
+test("settings inputs are clickable across the whole box", () => {
+  const inputs = menu.match(
+    /anchors\.fill: parent\s*\n\s*padding: Style\.space\(8\)/g,
+  )
+  assert(inputs && inputs.length === 3, "inputs cover their boxes edge to edge")
+})
+
 test("tab cycles through the settings inputs", () => {
   assert.match(
     menu,
