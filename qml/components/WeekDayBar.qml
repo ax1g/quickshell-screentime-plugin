@@ -1,7 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// One week-chart day column: bar + weekday label.
+// One week-chart day column: bar, weekday label, day number, hint.
+// Bottom stack uses explicit heights (badge slot 20, number 12,
+// label 14) so the axis gridlines stay aligned in every mode.
 // Outer reads are layout-parent geometry; muted file-wide like Service.
 // qmllint disable unqualified
 
@@ -18,19 +20,9 @@ Item {
 
     signal selected(string key)
 
-    HintBadge {
-        label: String(day.dayNumber)
-        fontFamily: day.fontFamily
-        accent: day.accent
-        foreground: day.foreground
-        show: day.hintMode && !day.isFuture && !day.isEmpty
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-    }
-
     // Parent Row spacing is 0; one seventh of its width per day.
     width: parent.width / 7
-    height: Style.space(80)
+    height: Style.space(114)
 
     property bool isActive: modelData.key === day.activeDayKey
     property bool isFuture: modelData.isFuture
@@ -44,8 +36,8 @@ Item {
         color: (day.isFuture || day.isEmpty) ? Qt.rgba(day.foreground.r, day.foreground.g, day.foreground.b, 0.10) : (day.isActive ? day.accent : (barMouse.containsMouse ? Qt.lighter(day.foreground, 1.4) : Qt.rgba(day.foreground.r, day.foreground.g, day.foreground.b, 0.9)))
         opacity: 1.0
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Style.space(14)
+        anchors.bottom: weekdayLabel.top
+        anchors.bottomMargin: Style.space(2)
         height: day.barPx
 
         MouseArea {
@@ -59,6 +51,7 @@ Item {
     }
 
     Text {
+        id: weekdayLabel
         text: day.modelData.label
         color: day.foreground
         opacity: (day.isActive || (!day.isFuture && day.modelData.ms > 0)) ? 1.0 : 0.45
@@ -66,7 +59,38 @@ Item {
         font.pixelSize: Style.font.caption
         font.bold: day.isActive
         width: day.width
+        height: Style.space(14)
         horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        anchors.bottom: dayNumberLabel.top
+    }
+
+    Text {
+        id: dayNumberLabel
+        text: String(day.dayNumber)
+        color: day.foreground
+        opacity: 0.45
+        font.family: day.fontFamily
+        font.pixelSize: Style.font.caption
+        width: day.width
+        height: Style.space(12)
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        anchors.bottom: badgeSlot.top
+    }
+
+    Item {
+        id: badgeSlot
+        width: parent.width
+        height: Style.space(20)
         anchors.bottom: parent.bottom
+
+        HintBadge {
+            label: String(day.dayNumber)
+            fontFamily: day.fontFamily
+            accent: day.accent
+            show: day.hintMode && !day.isFuture && !day.isEmpty
+            anchors.centerIn: parent
+        }
     }
 }

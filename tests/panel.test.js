@@ -853,3 +853,18 @@ test("keyboard scroll follows the visible surface", () => {
   assert.match(drawer, /calendarScroll/)
   assert.match(panel, /yearDrawer\.scrollBy\(dy\)/)
 })
+
+test("day columns number Mon-Sun above the hint slot", () => {
+  const daybar = comp("WeekDayBar.qml")
+  const tick = comp("WeekTick.qml")
+  assert.match(daybar, /height: Style\.space\(114\)/)
+  assert.match(daybar, /id: badgeSlot/)
+  assert.match(daybar, /height: Style\.space\(20\)/)
+  assert.match(daybar, /id: dayNumberLabel/)
+  assert.match(daybar, /text: String\(day\.dayNumber\)/)
+  assert.match(daybar, /anchors\.bottom: badgeSlot\.top/)
+  assert.match(daybar, /anchors\.bottom: dayNumberLabel\.top/)
+  assert.match(daybar, /anchors\.bottom: weekdayLabel\.top/)
+  assert.match(trend, /height: Style\.space\(114\) \+ Style\.space\(20\)/)
+  assert.match(tick, /parent\.height - Style\.space\(48\)/)
+})

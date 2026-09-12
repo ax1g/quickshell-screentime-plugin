@@ -171,8 +171,9 @@ Column {
     // Day bars on the drawer background; no plate.
     Item {
         width: parent.width
-        // 12px top pad for the peak label, 8px bottom clearance.
-        height: Style.space(80) + Style.space(20)
+        // Inner column grew for the number + badge rows below the
+        // weekday labels; the 12px top pad and 8px clearance stand.
+        height: Style.space(114) + Style.space(20)
         clip: true
 
         Item {
@@ -180,7 +181,7 @@ Column {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.topMargin: Style.space(12)
-            height: Style.space(80)
+            height: Style.space(114)
 
             // Outer-id reads are idiomatic in delegates; muted for the linter.
             // qmllint disable unqualified
