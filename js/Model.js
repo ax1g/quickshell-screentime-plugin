@@ -64,6 +64,10 @@ function displayName(app) {
   if (!app) return ""
   var s = String(app)
 
+  // Per-project editor buckets (see projectForTitle). Case is preserved:
+  // a workspace is a folder name the user chose, not a hostname.
+  if (s.indexOf(PROJECT_PREFIX) === 0) return s.slice(PROJECT_PREFIX.length)
+
   var webApp = s.match(CHROMIUM_WEB_APP_RE)
   if (webApp) return webApp[2].toLowerCase()
 
@@ -71,6 +75,108 @@ function displayName(app) {
   var last = s.split(".").pop()
   if (!last) return s.toLowerCase()
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
+}
+
+// ---- Per-project tracking inside editors --------------------------------
+//
+// Same shape of problem as browsers: every window of an editor lands in one
+// bucket ("code"), so the donut cannot tell one project from another. Unlike
+// a browser tab, the project needs no rule table: VSCode-family editors
+// render the title as "<file> - <project> - Visual Studio Code" (and
+// "<project> - Visual Studio Code" with no file open), so stripping the app
+// suffix and taking the last remaining segment recovers the workspace name
+// structurally.
+//
+// A title that yields a project is tracked as "project:<name>"; anything
+// unrecoverable stays on the editor's own key, so "code" keeps working as
+// "everything else" instead of fragmenting into one row per file.
+var PROJECT_PREFIX = "project:"
+
+// Canonical app keys whose single bucket is worth splitting per project.
+var EDITOR_APP_KEYS = {
+  code: true,
+  "code-oss": true,
+  "code-insiders": true,
+  vscodium: true,
+  codium: true,
+  cursor: true,
+  windsurf: true,
+}
+
+// Trailing editor name to strip before the project is parsed out.
+var EDITOR_TITLE_SUFFIX_RE = new RegExp(
+  "\\s*[-\u2013\u2014]\\s*(?:" +
+    [
+      "Visual Studio Code(?:\\s*-\\s*Insiders)?",
+      "Code\\s*-\\s*OSS",
+      "VSCodium",
+      "Codium",
+      "Cursor",
+      "Windsurf",
+    ].join("|") +
+    ")\\s*$",
+  "i",
+)
+
+// Remote/container decorations VSCode appends to the workspace segment, and
+// the unsaved-changes marker it prepends to the whole title.
+var PROJECT_DECORATION_RE =
+  /\s*\[(?:SSH|Dev Container(?:s)?|WSL|Codespaces|Remote|Administrator)[^\]]*\]\s*/gi
+var PROJECT_DIRTY_RE = /^\s*[\u25cf\u2022\u00b7*]\s*/
+
+// VSCode joins segments with " - "; some builds use an en/em dash.
+var EDITOR_SEGMENT_RE = /\s+[-\u2013\u2014]\s+/
+
+// A lone segment that looks like a file means no folder is open, so there is
+// no project to attribute the time to.
+var EDITOR_FILENAME_RE = /\.[A-Za-z0-9]{1,8}$/
+
+// True for any app whose canonical key is an editor worth splitting.
+function isEditorApp(app) {
+  if (!app) return false
+  var key = String(canonicalApp(app)).toLowerCase()
+  return Object.prototype.hasOwnProperty.call(EDITOR_APP_KEYS, key)
+}
+
+// Title as the project parser sees it: editor suffix, remote decorations and
+// the dirty marker removed.
+function normalizeEditorTitle(title) {
+  if (!title) return ""
+  var t = String(title).replace(EDITOR_TITLE_SUFFIX_RE, "")
+  t = t.replace(PROJECT_DECORATION_RE, " ")
+  var prev
+  do {
+    prev = t
+    t = t.replace(PROJECT_DIRTY_RE, "")
+  } while (t !== prev)
+  return t.replace(/\s+/g, " ").trim()
+}
+
+// Project name for an editor window title: the last segment is the
+// workspace. Returns "" when nothing can be recovered, which keeps the time
+// on the editor's own key.
+function projectForTitle(title) {
+  var t = normalizeEditorTitle(title)
+  if (!t) return ""
+
+  var parts = []
+  var raw = t.split(EDITOR_SEGMENT_RE)
+  for (var i = 0; i < raw.length; i++) {
+    var p = (raw[i] || "").trim()
+    if (p) parts.push(p)
+  }
+  if (!parts.length) return ""
+  // "notes.md - Visual Studio Code": a file with no workspace around it.
+  if (parts.length === 1 && EDITOR_FILENAME_RE.test(parts[0])) return ""
+  return parts[parts.length - 1]
+}
+
+function projectKey(label) {
+  return label ? PROJECT_PREFIX + String(label) : ""
+}
+
+function isProjectKey(app) {
+  return !!app && String(app).indexOf(PROJECT_PREFIX) === 0
 }
 
 // User tracking prefs: ignored apps and custom aliases. Both accept the
@@ -1964,6 +2070,11 @@ if (typeof module !== "undefined" && module && module.exports) {
     pad2: pad2,
     qmlBrowserAliases: qmlBrowserAliases,
     canonicalApp: canonicalApp,
+    isEditorApp: isEditorApp,
+    normalizeEditorTitle: normalizeEditorTitle,
+    projectForTitle: projectForTitle,
+    projectKey: projectKey,
+    isProjectKey: isProjectKey,
     displayName: displayName,
     parseIgnoredApps: parseIgnoredApps,
     isIgnoredApp: isIgnoredApp,
