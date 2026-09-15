@@ -34,7 +34,12 @@ Item {
     }
 
     // Terminals report the window class; resolve the pty foreground instead.
-    readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty", "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st", "org.omarchy.terminal"]
+    // Wayland terminals report either a short binary name or a reverse-DNS
+    // app id, depending on the desktop file they ship. Ghostty, Kitty and
+    // WezTerm all use reverse-DNS under Hyprland, so matching short names
+    // alone leaves them tracked as ordinary apps and skips the resolver that
+    // attributes their time to the command being run.
+    readonly property var terminalAppIds: ["foot", "alacritty", "kitty", "ghostty", "wezterm", "konsole", "gnome-terminal", "tilix", "xfce4-terminal", "termite", "st", "org.omarchy.terminal", "com.mitchellh.ghostty", "net.kovidgoyal.kitty", "org.wezfurlong.wezterm", "org.gnome.terminal", "org.gnome.console", "org.kde.konsole", "com.raggesilver.blackbox", "dev.warp.warp", "io.elementary.terminal"]
 
     // App-detail window in days; the panel raises it to the visible
     // week trend's floor, so wide graphs stay fully detailed. Days that
