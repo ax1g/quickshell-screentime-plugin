@@ -64,6 +64,11 @@ function displayName(app) {
   if (!app) return ""
   var s = String(app)
 
+  // Per-site browser buckets (see siteForTitle) carry their own prefix so
+  // they can never be confused with a real compositor appId.
+  if (s.indexOf(SITE_PREFIX) === 0)
+    return s.slice(SITE_PREFIX.length).toLowerCase()
+
   var webApp = s.match(CHROMIUM_WEB_APP_RE)
   if (webApp) return webApp[2].toLowerCase()
 
@@ -71,6 +76,160 @@ function displayName(app) {
   var last = s.split(".").pop()
   if (!last) return s.toLowerCase()
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
+}
+
+// ---- Per-site tracking inside browsers ---------------------------------
+//
+// The compositor exposes a browser as a single appId, so every tab lands in
+// one bucket ("google-chrome") and the donut cannot tell WhatsApp from work.
+// The window title is the only per-tab signal available without driving the
+// browser itself (Chrome 136+ refuses --remote-debugging-port on the default
+// profile), and Chrome renders it as "<page title> - Google Chrome".
+//
+// A title that matches a rule is tracked as "site:<label>"; anything
+// unmatched stays on the browser's own key, so the browser bucket keeps
+// working as "everything else" rather than fragmenting into one row per page
+// title. The prefix cannot collide with a compositor appId, which keeps
+// canonicalApp and CHROMIUM_WEB_APP_RE untouched.
+var SITE_PREFIX = "site:"
+
+// Trailing browser name to strip before matching. Chromium builds use " - ",
+// Firefox-family builds use an em dash; both separators are covered.
+var BROWSER_TITLE_SUFFIX_RE = new RegExp(
+  "\\s*[-\u2013\u2014|]\\s*(?:" +
+    [
+      "Google Chrome",
+      "Chromium",
+      "Brave",
+      "Vivaldi",
+      "Microsoft.?\\s?Edge",
+      "Mozilla Firefox",
+      "Firefox(?: Developer Edition)?",
+      "Zen Browser",
+      "Zen",
+      "LibreWolf",
+      "Waterfox",
+      "Tor Browser",
+      "Mullvad Browser",
+    ].join("|") +
+    ")\\s*$",
+  "i",
+)
+
+// Unread counters ("(56) WhatsApp") and media glyphs change constantly while
+// the site does not. Stripping them keeps a rule matching the same key
+// instead of churning buckets every time a notification lands.
+var TITLE_NOISE_RE = /^\s*(?:\(\d+\+?\)|\[\d+\+?\]|\u25b6|\u23f8|\u25cf)\s*/
+
+// Compiled rule cache: rules are re-tested on every title change, and a
+// title change is cheap enough to be frequent. Keyed by pattern + flags.
+var SITE_RULE_CACHE = {}
+
+function siteRuleRegExp(pattern, flags) {
+  var f = flags || "i"
+  var key = f + "\u0000" + pattern
+  if (Object.prototype.hasOwnProperty.call(SITE_RULE_CACHE, key))
+    return SITE_RULE_CACHE[key]
+  var re = null
+  try {
+    re = new RegExp(pattern, f)
+  } catch (e) {
+    re = null
+  }
+  SITE_RULE_CACHE[key] = re
+  return re
+}
+
+// True for any app whose canonical key is a browser, i.e. the apps whose
+// single bucket is worth splitting per site.
+function isBrowserApp(app) {
+  if (!app) return false
+  var key = canonicalApp(app)
+  for (var k in BROWSER_ALIASES) {
+    if (
+      Object.prototype.hasOwnProperty.call(BROWSER_ALIASES, k) &&
+      BROWSER_ALIASES[k] === key
+    )
+      return true
+  }
+  return false
+}
+
+// Title as the rules see it: browser suffix and notification noise removed.
+function normalizeTitle(title) {
+  if (!title) return ""
+  var t = String(title).replace(BROWSER_TITLE_SUFFIX_RE, "")
+  var prev
+  do {
+    prev = t
+    t = t.replace(TITLE_NOISE_RE, "")
+  } while (t !== prev)
+  return t.trim()
+}
+
+// First matching rule wins, so rules are ordered specific-to-generic.
+// Returns "" when nothing matches, which keeps the time on the browser key.
+function siteForTitle(title, rules) {
+  var t = normalizeTitle(title)
+  if (!t) return ""
+  var list = rules && rules.length ? rules : defaultSiteRules()
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i]
+    if (!r || !r.match || !r.site) continue
+    var re = siteRuleRegExp(String(r.match), r.flags)
+    if (re && re.test(t)) return String(r.site)
+  }
+  return ""
+}
+
+function siteKey(label) {
+  return label ? SITE_PREFIX + String(label) : ""
+}
+
+function isSiteKey(app) {
+  return !!app && String(app).indexOf(SITE_PREFIX) === 0
+}
+
+// Seed rules, written to ~/.config/omarchy/screen-time/site-rules.json on
+// first run and owned by the user from then on. Ordered specific first:
+// "Google Docs" must win before any generic Google rule is added.
+function defaultSiteRules() {
+  return [
+    { match: "\\bWhatsApp\\b", site: "whatsapp.com" },
+    { match: "\\bMessenger\\b", site: "messenger.com" },
+    { match: "\\bFacebook\\b", site: "facebook.com" },
+    { match: "\\bInstagram\\b", site: "instagram.com" },
+    { match: "\\bTikTok\\b", site: "tiktok.com" },
+    { match: "/ X$|\\bTwitter\\b", site: "x.com" },
+    { match: "\\bLinkedIn\\b", site: "linkedin.com" },
+    { match: "\\bReddit\\b|^r/", site: "reddit.com" },
+    { match: "\\bYouTube\\b", site: "youtube.com" },
+    { match: "\\bTwitch\\b", site: "twitch.tv" },
+    { match: "\\bNetflix\\b", site: "netflix.com" },
+    { match: "\\bSpotify\\b", site: "spotify.com" },
+    { match: "\\bXVIDEOS\\b", site: "xvideos.com" },
+    { match: "\\bXNXX\\b", site: "xnxx.com" },
+    { match: "\\bPornhub\\b", site: "pornhub.com" },
+    { match: "\\bxHamster\\b", site: "xhamster.com" },
+    { match: "\\bOnlyFans\\b", site: "onlyfans.com" },
+    { match: "\\bGmail\\b", site: "gmail.com" },
+    {
+      match: "\\bGoogle (?:Docs|Sheets|Slides|Drive)\\b",
+      site: "docs.google.com",
+    },
+    { match: "\\bGoogle (?:Agenda|Calendar)\\b", site: "calendar.google.com" },
+    { match: "\\bClickUp\\b", site: "clickup.com" },
+    { match: "\\bGitHub\\b", site: "github.com" },
+    { match: "\\bGitLab\\b", site: "gitlab.com" },
+    { match: "\\bStack Overflow\\b", site: "stackoverflow.com" },
+    { match: "\\bChatGPT\\b", site: "chatgpt.com" },
+    { match: "\\bClaude\\b", site: "claude.ai" },
+    { match: "\\bcPanel\\b|\\bWHM\\b|\\bWebmail\\b", site: "cpanel" },
+    {
+      match: "\\bWordPress\\b|\\u2039 .* \\u2014 WordPress",
+      site: "wordpress",
+    },
+  ]
 }
 
 // User tracking prefs: ignored apps and custom aliases. Both accept the
@@ -1964,6 +2123,12 @@ if (typeof module !== "undefined" && module && module.exports) {
     pad2: pad2,
     qmlBrowserAliases: qmlBrowserAliases,
     canonicalApp: canonicalApp,
+    isBrowserApp: isBrowserApp,
+    normalizeTitle: normalizeTitle,
+    siteForTitle: siteForTitle,
+    siteKey: siteKey,
+    isSiteKey: isSiteKey,
+    defaultSiteRules: defaultSiteRules,
     displayName: displayName,
     parseIgnoredApps: parseIgnoredApps,
     isIgnoredApp: isIgnoredApp,
