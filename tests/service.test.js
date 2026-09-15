@@ -119,7 +119,10 @@ test("tracking prefs filter ignored apps and rename via aliases", () => {
   assert.match(service, /Model\.parseIgnoredApps\(ignored\)/)
   assert.match(service, /Model\.parseAppAliases\(aliases\)/)
   assert.match(service, /Model\.isIgnoredApp\(appId, root\.ignoredApps\)/)
-  assert.match(service, /Model\.resolveAppName\(app, root\.appAliases\)/)
+  // The alias lookup moved behind trackingKeyFor, which falls back to it
+  // when the window is not an editor with a recoverable project.
+  assert.match(service, /Model\.resolveAppName\(appId, root\.appAliases\)/)
+  assert.match(service, /root\.trackingKeyFor\(app, /)
 })
 
 test("resetAll wipes days, months and archive, then persists", () => {
