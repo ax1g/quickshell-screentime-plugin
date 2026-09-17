@@ -19,7 +19,9 @@ function isSuspendGap(now, lastTick, suspendGapMs) {
 }
 
 function accumulateBucket(today, app, dur) {
-  if (!app || dur <= 0) return today
+  // NaN <= 0 is false, so a plain dur <= 0 check lets NaN through and
+  // poisons the day total. Only a positive finite duration accrues.
+  if (!app || !isFinite(dur) || dur <= 0) return today
   var apps = Object.assign({}, today.apps)
   apps[app] = (apps[app] || 0) + dur
   return { total: today.total + dur, apps: apps }

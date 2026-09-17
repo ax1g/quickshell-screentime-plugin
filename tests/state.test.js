@@ -66,6 +66,12 @@ test("accumulateBucket returns original when app is empty", () => {
   assert.equal(State.accumulateBucket(today, "", 5000), today)
 })
 
+test("accumulateBucket returns original for NaN or infinite durations", () => {
+  const today = { total: 1000, apps: { a: 500 } }
+  assert.equal(State.accumulateBucket(today, "a", NaN), today)
+  assert.equal(State.accumulateBucket(today, "a", Infinity), today)
+})
+
 // ---- closeActiveBucket ---------------------------------------------------
 
 test("closeActiveBucket returns original state when no bucket open", () => {

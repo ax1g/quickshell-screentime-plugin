@@ -949,6 +949,16 @@ test("sanitizeHistory validates the years archive", () => {
   assert.deepEqual(Model.sanitizeHistory({}, {}, { 2026: "nope" }).years, {})
 })
 
+test("rollupArchive coerces string totals to numbers", () => {
+  const out = Model.rollupArchive({}, { "2026-08-01": { total: "3600" } })
+  assert.deepEqual(out, { 2026: { "2026-08-01": 3600 } })
+})
+
+test("trackedDays returns 0 for a malformed todayKey", () => {
+  const days = [{ date: "2026-08-19", ms: HOUR_MS }]
+  assert.equal(Model.trackedDays(days, 2026, "not-a-day"), 0)
+  assert.equal(Model.trackedDays(days, 2026, ""), 0)
+})
 test("rollupArchive keeps only per-day totals, never app maps", () => {
   const pruned = {
     "2026-08-01": { total: HOUR_MS, apps: { web: HOUR_MS } },

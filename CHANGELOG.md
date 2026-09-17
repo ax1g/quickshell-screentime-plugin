@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The bar icon no longer renders larger than its neighbors in icon-only mode.
+- Corrupt values no longer poison totals: bad durations never accrue and malformed dates count zero days.
 
 ## [1.6.1] - 2026-09-17
 

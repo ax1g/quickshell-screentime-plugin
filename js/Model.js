@@ -1678,7 +1678,11 @@ function weekdayPattern(dayTotals, totalMs) {
 // first recorded day to today for the ongoing year, the full year otherwise.
 function trackedDays(dayTotals, year, todayKey) {
   var thisYear = todayKey ? Number(String(todayKey).split("-")[0]) : NaN
-  if (Number(year) !== thisYear)
+  // A malformed todayKey parses to NaN, which never equals the year:
+  // without the finiteness check every corrupt call would claim a full
+  // past year. Unknown today falls through to the span math, which
+  // yields 0 for the same reason.
+  if (isFinite(thisYear) && Number(year) !== thisYear)
     return Math.round(
       (Date.UTC(Number(year) + 1, 0, 1) - Date.UTC(Number(year), 0, 1)) /
         86400000,
@@ -1693,9 +1697,10 @@ function trackedDays(dayTotals, year, todayKey) {
     }
   }
   if (!first) return 0
-  return (
+  // A malformed todayKey yields a NaN span; never render "of NaN days".
+  var span =
     Math.round((dayMsUtc(String(todayKey)) - dayMsUtc(first)) / 86400000) + 1
-  )
+  return isFinite(span) && span > 0 ? span : 0
 }
 
 // Rolls days dropped by the retention window into the perpetual per-day
@@ -1710,7 +1715,8 @@ function rollupArchive(years, prunedDays) {
     // would corrupt the archive object.
     if (!isDayKey(dk)) continue
     var d = prunedDays[dk]
-    var total = d && d.total ? d.total : 0
+    // String totals (from corrupt history) must archive as numbers.
+    var total = numMs(d && d.total)
     if (total <= 0) continue
     var parts = String(dk).split("-")
     if (parts.length !== 3) continue
