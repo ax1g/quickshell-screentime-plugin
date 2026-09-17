@@ -53,6 +53,8 @@ Column {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                tipText: "Previous week"
+                tipBackground: root.tipBackground
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: root.prevWeekRequested()
@@ -88,6 +90,8 @@ Column {
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                tipText: "Next week"
+                tipBackground: root.tipBackground
                 anchors.left: weekLabel.right
                 anchors.leftMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
@@ -220,6 +224,7 @@ Column {
                         foreground: root.foreground
                         accent: root.accent
                         fontFamily: root.fontFamily
+                        tipBackground: root.tipBackground
                         hintMode: root.hintMode
                         dayNumber: Model.weekdayNumber(modelData.key)
                         onSelected: function (key) {

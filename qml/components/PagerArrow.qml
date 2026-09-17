@@ -9,6 +9,10 @@ Text {
     required property color foreground
     required property string fontFamily
     required property int fontSize
+    // Empty text means no tip; keeps call sites without a background
+    // (year drawer) free of new required props.
+    property string tipText: ""
+    property color tipBackground: "transparent"
     signal clicked
 
     text: arrow.glyph
@@ -31,5 +35,14 @@ Text {
         enabled: arrow.active
         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         onClicked: arrow.clicked()
+    }
+
+    ScreenTip {
+        foreground: arrow.foreground
+        fontFamily: arrow.fontFamily
+        tipBackground: arrow.tipBackground
+
+        hovered: arrowMouse.containsMouse && arrow.tipText !== ""
+        tipText: arrow.tipText
     }
 }

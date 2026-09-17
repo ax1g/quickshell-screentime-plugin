@@ -1043,6 +1043,25 @@ test("repeater index is never read inside delegates", () => {
   }
 })
 
+test("week bars and pager arrows carry tooltips", () => {
+  const daybar = comp("WeekDayBar.qml")
+  const arrow = comp("PagerArrow.qml")
+  // Day bars show exact time on dwell; the axis only renders whole hours.
+  assert.match(daybar, /required property color tipBackground/)
+  assert.match(
+    daybar,
+    /tipText: day\.modelData\.label \+ " \\u00b7 " \+ Model\.fmt\(day\.modelData\.ms\)/,
+  )
+  // Arrow tips are opt-in so call sites without a background stay unchanged.
+  assert.match(arrow, /property string tipText: ""/)
+  assert.match(
+    arrow,
+    /hovered: arrowMouse\.containsMouse && arrow\.tipText !== ""/,
+  )
+  assert.match(trend, /tipText: "Previous week"/)
+  assert.match(trend, /tipText: "Next week"/)
+  assert.match(trend, /tipBackground: root\.tipBackground/)
+})
 test("week header nudges the next arrow after the range text", () => {
   assert.match(trend, /anchors\.right: weekTotalLabel\.left/)
   assert.match(trend, /anchors\.left: prevArrow\.right/)

@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import "../../js/Model.js" as Model
 
 // One week-chart day column: bar, weekday label, floating hint.
 // The column is just the bar above the 14px label hugging the
@@ -15,6 +16,7 @@ Item {
     required property color foreground
     required property color accent
     required property string fontFamily
+    required property color tipBackground
     required property bool hintMode
     required property int dayNumber
 
@@ -47,6 +49,16 @@ Item {
             enabled: !day.isFuture && !day.isEmpty
             cursorShape: Qt.PointingHandCursor
             onClicked: day.selected(day.modelData.key)
+        }
+
+        // Exact time on dwell; the axis only renders whole hours.
+        ScreenTip {
+            foreground: day.foreground
+            fontFamily: day.fontFamily
+            tipBackground: day.tipBackground
+
+            hovered: barMouse.containsMouse
+            tipText: day.modelData.label + " \u00b7 " + Model.fmt(day.modelData.ms)
         }
     }
 
