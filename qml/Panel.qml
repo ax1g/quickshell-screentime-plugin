@@ -36,7 +36,7 @@ Panel {
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
     // Plugin version, mirrored from manifest.json (a test fails when
     // they drift apart); shown in the settings About section.
-    readonly property string pluginVersion: "1.6.1"
+    readonly property string pluginVersion: "1.6.2"
 
     // Week presets, up to 52 weeks back. App detail always covers the
     // visible window (see effectiveKeepDays below).

@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-09-17
+
+### Fixed
+
+- The bar's screen-time glyph no longer renders larger than the time beside it; the two now read as one size.
+
 ## [1.6.1] - 2026-09-17
 
 ### Fixed
