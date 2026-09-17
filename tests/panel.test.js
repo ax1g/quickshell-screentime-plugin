@@ -301,19 +301,14 @@ test("daily goal threads from prefs to bar badge and hero bar", () => {
   assert.match(bar, /root\.goalTooltip/)
 })
 
-test("time mode paints glyph and duration as balanced siblings", () => {
-  // One pixel size lets the Nerd glyph ink overhang the digits, so the
-  // row splits them: glyph slightly smaller, duration at bar size, and
-  // the open indicator tracks the row instead of the hidden label.
-  assert.match(bar, /id: timeRow/)
-  assert.match(bar, /visible: !root\.vertical && !root\.iconOnly/)
-  assert.match(
-    bar,
-    /font\.pixelSize: Math\.max\(1, Math\.round\(button\.fontSize \* 0\.9\)\)/,
-  )
-  assert.match(bar, /text: root\.label \+ \(root\.goalReached \? " ✓" : ""\)/)
-  assert.match(bar, /if \(timeRow\)/)
-  assert.match(bar, /timeRow\.implicitWidth/)
+test("icon-only glyph renders at bar icon size", () => {
+  // Title size lets the Nerd glyph ink overhang the neighboring bar
+  // icons; the open indicator keeps tracking the painted ink width.
+  assert.match(bar, /id: iconGlyph/)
+  assert.match(bar, /visible: !root\.vertical && root\.iconOnly/)
+  assert.match(bar, /fontSize: Style\.bar\.iconFont/)
+  assert.doesNotMatch(bar, /fontSize: Style\.font\.title/)
+  assert.match(bar, /iconGlyph\.tightWidth/)
 })
 
 test("wipe-all needs four conscious clicks and names the blast radius", () => {

@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- The bar's screen-time glyph no longer renders larger than the time beside it; the two now read as one size.
+- The bar icon no longer renders larger than its neighbors in icon-only mode.
 
 ## [1.6.1] - 2026-09-17
 
