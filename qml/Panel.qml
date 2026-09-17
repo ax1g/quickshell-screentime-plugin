@@ -621,6 +621,8 @@ Panel {
                         anchors.top: parent.top
                         foreground: root.contentForeground
                         fontFamily: root.contentFontFamily
+                        tipText: "Back to screen time"
+                        tipBackground: root.bar ? root.bar.background : Color.background
                         onClicked: root.openConfig(false)
                     }
 
@@ -772,6 +774,7 @@ Panel {
                         goalProgress: root.goalProgress
                         hintMode: root.hintMode
                         accent: Color.accent
+                        tipBackground: root.bar ? root.bar.background : Color.background
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)

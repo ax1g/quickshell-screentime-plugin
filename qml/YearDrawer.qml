@@ -158,6 +158,8 @@ Item {
                     foreground: root.foreground
                     fontFamily: root.fontFamily
                     fontSize: Style.font.bodySmall
+                    tipText: "Previous year"
+                    tipBackground: root.panelBackground
                     onClicked: root.prevYearRequested()
                 }
 
@@ -187,6 +189,8 @@ Item {
                     foreground: root.foreground
                     fontFamily: root.fontFamily
                     fontSize: Style.font.bodySmall
+                    tipText: "Next year"
+                    tipBackground: root.panelBackground
                     onClicked: root.nextYearRequested()
                 }
 
@@ -207,6 +211,8 @@ Item {
             anchors.top: parent.top
             foreground: root.foreground
             fontFamily: root.fontFamily
+            tipText: "Back to screen time"
+            tipBackground: root.panelBackground
             onClicked: root.closeRequested()
         }
 

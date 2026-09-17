@@ -6,6 +6,9 @@ Item {
     id: action
     required property color foreground
     required property string fontFamily
+    // Empty text means no tip; same opt-in idiom as PagerArrow.
+    property string tipText: ""
+    property color tipBackground: "transparent"
     signal clicked
 
     width: row.implicitWidth
@@ -41,5 +44,14 @@ Item {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: action.clicked()
+    }
+
+    ScreenTip {
+        foreground: action.foreground
+        fontFamily: action.fontFamily
+        tipBackground: action.tipBackground
+
+        hovered: actionMouse.containsMouse && action.tipText !== ""
+        tipText: action.tipText
     }
 }

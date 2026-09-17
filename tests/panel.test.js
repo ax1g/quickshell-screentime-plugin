@@ -1062,6 +1062,31 @@ test("week bars and pager arrows carry tooltips", () => {
   assert.match(trend, /tipText: "Next week"/)
   assert.match(trend, /tipBackground: root\.tipBackground/)
 })
+
+test("year pager, back buttons and gear carry tooltips", () => {
+  const drawer = qml("YearDrawer.qml")
+  const back = comp("BackButton.qml")
+  // BackButton tips are opt-in like PagerArrow, so existing call sites
+  // stay valid without a background.
+  assert.match(back, /property string tipText: ""/)
+  assert.match(
+    back,
+    /hovered: actionMouse\.containsMouse && action\.tipText !== ""/,
+  )
+  // The year drawer reuses its own panel background for tips.
+  assert.match(drawer, /tipText: "Previous year"/)
+  assert.match(drawer, /tipText: "Next year"/)
+  assert.match(drawer, /tipText: "Back to screen time"/)
+  assert.match(drawer, /tipBackground: root\.panelBackground/)
+  assert.match(panel, /tipText: "Back to screen time"/)
+  // The hero gear needs the bar background threaded through.
+  assert.match(hero, /required property color tipBackground/)
+  assert.match(hero, /tipText: "Settings"/)
+  assert.match(
+    panel,
+    /tipBackground: root\.bar \? root\.bar\.background : Color\.background/,
+  )
+})
 test("week header nudges the next arrow after the range text", () => {
   assert.match(trend, /anchors\.right: weekTotalLabel\.left/)
   assert.match(trend, /anchors\.left: prevArrow\.right/)

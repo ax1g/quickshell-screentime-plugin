@@ -11,7 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Contribution section links the marketplace listing, so a like is one click away.
-- Week-day bars and week pager arrows show tooltips with exact times on hover.
+- Week-day bars, week and year pager arrows, back buttons and the settings gear show tooltips with exact times on hover.
 
 ### Fixed
 
