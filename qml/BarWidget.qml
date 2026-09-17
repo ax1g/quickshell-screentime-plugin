@@ -227,16 +227,15 @@ BarWidget {
         }
 
         // OpticalGlyph centers glyph ink over the hidden label's advance.
-        // Bar icon size, not title: at title size the Nerd glyph ink
-        // overhangs the neighboring bar icons (measured ~12px vs ~11px
-        // in JetBrainsMono Nerd Font at the default theme scale).
+        // Body size, not icon size: the glyph must paint pixel-identical
+        // pixels in both modes, and time mode paints it at body size.
         OpticalGlyph {
             id: iconGlyph
             visible: !root.vertical && root.iconOnly
             anchors.fill: parent
             text: root.glyph
             fontFamily: button.fontFamily
-            fontSize: Style.bar.iconFont
+            fontSize: button.fontSize
             color: button.foreground
         }
 
