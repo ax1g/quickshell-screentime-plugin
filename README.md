@@ -47,8 +47,8 @@ local.
   control from the keyboard — see [Keybinds & hints](#keybinds--hints)
   below. Summon and control the panel via the `agx.screen-time` IPC
   target (`open`, `toggle`, `resetToday`, `resetAll`, `status`).
-- Private by design: one local JSON file; old days roll into a two-year
-  per-day archive, then monthly totals.
+- Private by design: one local JSON file; old days roll into a
+  perpetual per-day archive, and only the app breakdown is ever forgotten.
 - Hourglass easter egg: flips over on the hour; gold sparkles on hover;
   header icons spin as you navigate (mute it all with Playful extras).
 
