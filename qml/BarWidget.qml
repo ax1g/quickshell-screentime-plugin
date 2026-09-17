@@ -103,13 +103,16 @@ BarWidget {
         root.setSetting("iconOnly", !root.iconOnly);
     }
 
-    // Underline tracks painted label width, like omarchy.clock.
+    // Underline tracks painted content width, like omarchy.clock.
     readonly property real openPanelIndicatorWidth: {
         if (root.iconOnly && !root.vertical && iconGlyph)
             return Math.max(1, Math.round(iconGlyph.tightWidth));
         // Vertical mark takes one icon slot.
         if (root.vertical)
             return Style.bar.iconSlot;
+        // Time mode paints its own row (the button label stays hidden).
+        if (timeRow)
+            return Math.max(1, Math.round(timeRow.implicitWidth));
         return button.labelWidth;
     }
     readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
@@ -211,10 +214,11 @@ BarWidget {
         id: button
         anchors.fill: parent
         bar: root.bar
-        // Single label at bar size: glyph + duration render uniformly.
-        // A reached daily goal appends a check badge.
+        // Hidden metric: sizes the button; the rows below do the painting.
+        // The mixed glyph + duration text stays here so implicitWidth and
+        // hasVisualContent keep working with no other consumer changes.
         text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label + (root.goalReached ? " ✓" : "")
-        labelVisible: !root.vertical && !root.iconOnly
+        labelVisible: false
         hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
         fixedHeight: root.vertical ? root.verticalLines.length * Style.bar.iconSlot : -1
         horizontalMargin: 8.5
@@ -235,6 +239,38 @@ BarWidget {
             fontFamily: button.fontFamily
             fontSize: Style.font.title
             color: button.foreground
+        }
+
+        // Time row: glyph and duration paint as siblings so each takes
+        // its own size. A single run at one pixel size lets the Nerd
+        // glyph ink overhang the digits (measured 17% taller in
+        // JetBrainsMono Nerd Font); at 0.9 the two read as one size.
+        // A reached daily goal appends a check badge to the duration.
+        Row {
+            id: timeRow
+            visible: !root.vertical && !root.iconOnly
+            anchors.centerIn: parent
+            spacing: Style.space(6)
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                textFormat: Text.PlainText
+                text: root.glyph
+                color: button.foreground
+                font.family: button.fontFamily
+                font.pixelSize: Math.max(1, Math.round(button.fontSize * 0.9))
+                renderType: Text.NativeRendering
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                textFormat: Text.PlainText
+                text: root.label + (root.goalReached ? " ✓" : "")
+                color: button.foreground
+                font.family: button.fontFamily
+                font.pixelSize: button.fontSize
+                renderType: Text.NativeRendering
+            }
         }
 
         Column {
