@@ -6,9 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-09-17
+
 ### Fixed
 
 - Reset today and Wipe all history buttons now respond to clicks in Settings.
+- Terminals that identify themselves by their full app id (Ghostty, Kitty and WezTerm among others) now get the per-command breakdown instead of landing in one opaque bucket.
+- Settings menu no longer logs errors on open, and the reset icons dim correctly when the color already is the default.
 
 ### Changed
 
