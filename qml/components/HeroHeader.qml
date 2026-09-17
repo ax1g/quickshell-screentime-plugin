@@ -176,15 +176,17 @@ Item {
                 gearSpin.restart();
             heroHeader.configToggled();
         }
-    }
 
-    ScreenTip {
-        foreground: heroHeader.foreground
-        fontFamily: heroHeader.fontFamily
-        tipBackground: heroHeader.tipBackground
+        // Parented to the gear's own hit area so the tip centers
+        // above the icon, not above the full-width header.
+        ScreenTip {
+            foreground: heroHeader.foreground
+            fontFamily: heroHeader.fontFamily
+            tipBackground: heroHeader.tipBackground
 
-        hovered: configGearMouse.containsMouse
-        tipText: "Settings"
+            hovered: configGearMouse.containsMouse
+            tipText: "Settings"
+        }
     }
 
     HintBadge {
