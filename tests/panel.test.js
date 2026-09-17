@@ -540,13 +540,15 @@ test("settings header icon returns to the main panel", () => {
   )
 })
 
-test("help section links out with icons and a privacy note", () => {
+test("help section links out with icons and a marketplace like", () => {
   assert.match(menu, /text: "CONTRIBUTION"/)
-  assert.match(menu, /Private by design/)
+  assert.doesNotMatch(menu, /Private by design/)
   assert.match(menu, /issues\/new/)
   assert.match(menu, /"Report a bug"/)
   assert.match(menu, /"Share an idea"/)
   assert.match(menu, /"Contribute"/)
+  assert.match(menu, /"Please leave a like"/)
+  assert.match(menu, /plugin\.html\?id=agx\.screen-time/)
   assert.match(menu, /Qt\.openUrlExternally\(modelData\.url\)/)
   assert.match(menu, /github\.com\/ax1g\/quickshell-screentime-plugin/)
 })

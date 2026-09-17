@@ -1430,6 +1430,12 @@ Column {
             label: "Contribute",
             sub: "Pull requests welcome",
             url: "https://github.com/ax1g/quickshell-screentime-plugin"
+        },
+        {
+            glyph: "\uf004",
+            label: "Please leave a like",
+            sub: "A like on the marketplace keeps it going",
+            url: "https://plugins.omarchy.org/plugin.html?id=agx.screen-time"
         }
     ]
 
@@ -1457,36 +1463,6 @@ Column {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 font.letterSpacing: 1.5
-            }
-
-            // Private by design: everything lives in one local file.
-            Item {
-                width: parent.width
-                height: Math.max(lockGlyph.implicitHeight, lockLabel.implicitHeight)
-
-                Text {
-                    id: lockGlyph
-                    text: "\uf023"
-                    color: root.accent
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                    id: lockLabel
-                    text: "Private by design — one local file, nothing leaves this machine"
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    anchors.left: lockGlyph.right
-                    anchors.leftMargin: Style.space(10)
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    wrapMode: Text.WordWrap
-                }
             }
 
             // Outer-id reads are idiomatic in delegates, covered by the

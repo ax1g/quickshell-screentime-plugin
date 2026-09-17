@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.6.2] - 2026-09-17
 
+### Added
+
+- Contribution section links the marketplace listing, so a like is one click away.
+
 ### Fixed
 
 - The bar icon no longer renders larger than its neighbors in icon-only mode.
