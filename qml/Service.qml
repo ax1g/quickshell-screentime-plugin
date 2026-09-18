@@ -73,6 +73,12 @@ Item {
     property double activeStart: 0
     // Raw compositor appId; activeApp is the resolved name.
     property string rawApp: ""
+    // The active toplevel's title is the only per-window signal the
+    // compositor offers. It changes when the editor switches file or folder
+    // WITHOUT the active toplevel changing, so this binding — not
+    // onActiveToplevelChanged — is what drives project switches.
+    readonly property string activeTitle: ToplevelManager.activeToplevel && ToplevelManager.activeToplevel.title ? ToplevelManager.activeToplevel.title : ""
+    onActiveTitleChanged: root.refreshProject()
     property string resolveForApp: ""
     property bool resolveInFlight: false
     // Generation tokens stop stale terminal resolves misattributing.
@@ -212,6 +218,42 @@ Item {
         return true;
     }
 
+    // Tracking key for an editor window: its project bucket when the title
+    // exposes a workspace, "" otherwise so the caller keeps the editor key.
+    function editorProjectKey(appId, title) {
+        if (!Model.isEditorApp(Model.canonicalApp(appId)))
+            return "";
+        return Model.projectKey(Model.projectForTitle(title));
+    }
+
+    // Key the focused window should be accruing to right now.
+    function trackingKeyFor(appId, title) {
+        return root.editorProjectKey(appId, title) || Model.resolveAppName(appId, root.appAliases);
+    }
+
+    // Switching file or folder inside an editor never changes activeToplevel,
+    // so the bucket is rotated here. Only a change in the RESOLVED key
+    // rotates it: editing two files in the same workspace resolves to the
+    // same project, so a file switch cannot churn buckets.
+    function refreshProject() {
+        if (!root.ready || root.resolveInFlight)
+            return;
+        // Paused: leave the bucket closed rather than reopening on a title
+        // change that arrives while locked or with the screensaver up.
+        if (root.sessionLocked || root.screensaverActive)
+            return;
+        if (!Model.isEditorApp(Model.canonicalApp(root.rawApp)))
+            return;
+        var want = root.trackingKeyFor(root.rawApp, root.activeTitle);
+        if (!want || want === root.activeApp)
+            return;
+        var now = Date.now();
+        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+        root.activeApp = want;
+        root.activeStart = Date.now();
+        root.persist();
+    }
+
     function switchActive() {
         // Pre-ready focus events open unguarded buckets (and defeat the
         // lastTick baseline); the load handlers call back once ready.
@@ -242,7 +284,7 @@ Item {
             root.activeStart = 0;
             root.beginResolve();
         } else {
-            root.activeApp = Model.resolveAppName(app, root.appAliases);
+            root.activeApp = root.trackingKeyFor(app, tl && tl.title ? tl.title : "");
             root.activeStart = app ? now : 0;
         }
     }
