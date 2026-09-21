@@ -936,6 +936,7 @@ Panel {
                             width: parent.width
                             segments: root.daySpans ? root.daySpans.segments : []
                             categories: root.daySpans ? root.daySpans.categories : []
+                            axis: root.daySpans ? root.daySpans.axis : []
                             foreground: root.contentForeground
                             fontFamily: root.contentFontFamily
                             tipBackground: root.bar ? root.bar.background : Color.background

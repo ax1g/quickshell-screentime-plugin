@@ -2396,7 +2396,16 @@ test("dayBounds resolves real days only", () => {
   assert.equal(Model.dayBounds("2026-02-30"), null)
 })
 
-test("daySpanView merges commit chips and places segments", () => {
+test("axisFracs thins ticks for short sessions", () => {
+  assert.deepEqual(Model.axisFracs(3 * 3600000), [0, 0.25, 0.5, 0.75, 1])
+  assert.deepEqual(Model.axisFracs(3600000), [0, 1 / 3, 2 / 3, 1])
+  assert.deepEqual(Model.axisFracs(15 * 60000), [0, 0.5, 1])
+  assert.deepEqual(Model.axisFracs(60000), [0, 1])
+  assert.deepEqual(Model.axisFracs(0), [0, 1])
+  assert.deepEqual(Model.axisFracs("junk"), [0, 1])
+})
+
+test("daySpanView sizes spans to the session, not midnight", () => {
   const t0 = new Date(2026, 8, 21, 7, 0, 0).getTime()
   const day = {
     total: 0,
@@ -2408,15 +2417,20 @@ test("daySpanView merges commit chips and places segments", () => {
     ],
   }
   const view = Model.daySpanView(day, "2026-09-21", "#e45b93")
+  // Session runs 07:00–07:16: the opening span fills from the left edge.
+  assert.equal(view.sessionStart, t0)
+  assert.equal(view.sessionEnd, t0 + 960000)
   assert.equal(view.segments.length, 2)
   assert.equal(view.segments[0].app, "zen")
   assert.equal(view.segments[0].ms, 600000)
   assert.equal(view.segments[0].category, "Web Browsing")
-  assert.ok(Math.abs(view.segments[0].startFrac - 7 / 24) < 0.001)
-  assert.ok(view.segments[0].endFrac > view.segments[0].startFrac)
+  assert.equal(view.segments[0].startFrac, 0)
+  assert.ok(Math.abs(view.segments[0].endFrac - 600 / 960) < 0.001)
   for (const s of view.segments) assert.match(s.color, /^#[0-9a-f]{6}$/)
   assert.equal(view.categories[0].category, "Web Browsing")
   assert.equal(view.categories[0].ms, 600000)
+  assert.equal(view.axis[0].label, "07:00")
+  assert.equal(view.axis[view.axis.length - 1].label, "07:16")
   // A ten-minute hop stays split; other apps never merge.
   const split = Model.daySpanView(
     {
@@ -2431,9 +2445,24 @@ test("daySpanView merges commit chips and places segments", () => {
     "#e45b93",
   )
   assert.equal(split.segments.length, 2)
+  // Sub-minute blips stay in the totals but off the strip.
+  const blips = Model.daySpanView(
+    {
+      total: 3000,
+      apps: { zen: 3000 },
+      spans: [{ app: "zen", start: t0, end: t0 + 3000 }],
+    },
+    "2026-09-21",
+    "#e45b93",
+  )
+  assert.deepEqual(blips.segments, [])
+  assert.deepEqual(blips.categories, [])
   assert.deepEqual(Model.daySpanView(null, "2026-09-21", "#e45b93"), {
     segments: [],
     categories: [],
+    axis: [],
+    sessionStart: 0,
+    sessionEnd: 0,
   })
   assert.deepEqual(
     Model.daySpanView({ total: 1, apps: {} }, "junk", "#e45b93").segments,
@@ -2441,7 +2470,7 @@ test("daySpanView merges commit chips and places segments", () => {
   )
 })
 
-test("fmtClock and hourLabel render day times", () => {
+test("fmtClock renders day times", () => {
   assert.equal(
     Model.fmtClock(new Date(2026, 8, 21, 7, 5, 0).getTime()),
     "07:05",
@@ -2451,11 +2480,6 @@ test("fmtClock and hourLabel render day times", () => {
     "00:00",
   )
   assert.equal(Model.fmtClock("junk"), "")
-  assert.equal(Model.hourLabel(0), "00:00")
-  assert.equal(Model.hourLabel(6), "06:00")
-  assert.equal(Model.hourLabel(24), "24:00")
-  assert.equal(Model.hourLabel(25), "")
-  assert.equal(Model.hourLabel("x"), "")
 })
 
 test("parseDayView prefers the explicit pick, then the retired toggle", () => {

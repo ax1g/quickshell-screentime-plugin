@@ -1075,9 +1075,24 @@ function categoryColor(category, accentHex) {
 // The spans key stays absent until the first span records, so old days
 // and old code pass through untouched.
 var MAX_DAY_SPANS = 3000
+// Spans below a minute never render: like the donut's app list, the
+// timeline only shows meaningful entries, so 3s focus blips stay in the
+// totals but off the strip.
+var MIN_SPAN_MS = 60000
 // Read-time coalescing: adjacent same-app spans rejoin across short hops
 // (a 60s commit cadence must not dice one session into minutes).
 var SPAN_MERGE_GAP_MS = 5 * 60000
+
+// Axis tick fractions for a session range: wide sessions take five
+// ticks, narrow ones fewer, so minute labels never collide.
+function axisFracs(rangeMs) {
+  var r = Number(rangeMs)
+  if (!(r > 0) || !isFinite(r)) return [0, 1]
+  if (r >= 2 * 3600000) return [0, 0.25, 0.5, 0.75, 1]
+  if (r >= 30 * 60000) return [0, 1 / 3, 2 / 3, 1]
+  if (r >= 10 * 60000) return [0, 0.5, 1]
+  return [0, 1]
+}
 
 function isSpan(s) {
   if (!s || typeof s !== "object") return false
@@ -1175,11 +1190,23 @@ function dayBounds(key) {
   }
 }
 
-// One timeline derivation over a day's spans: { segments, categories }.
-// Segments sort by start and carry day fractions for absolute placement;
-// adjacent same-app spans rejoin across short hops; categories total the
-// merged time with stable per-category colors for the legend.
+// One timeline derivation over a day's spans: { segments, categories,
+// axis, sessionStart, sessionEnd }. The track spans the user session —
+// first span start to last span end — so bars size relative to the day
+// lived, not to a fixed midnight grid: the first span fills the strip
+// and earlier spans shrink as later usage extends the session. Adjacent
+// same-app spans rejoin across short hops; sub-minute remnants never
+// render. Segments sort by start and carry session fractions for
+// absolute placement; categories total the rendered time with stable
+// per-category colors for the legend; axis ticks the session range.
 function daySpanView(day, key, accentHex) {
+  var empty = {
+    segments: [],
+    categories: [],
+    axis: [],
+    sessionStart: 0,
+    sessionEnd: 0,
+  }
   var raw = spanList(day)
   var ordered = []
   for (var i = 0; i < raw.length; i++) {
@@ -1202,26 +1229,30 @@ function daySpanView(day, key, accentHex) {
       merged.push({ app: s.app, start: Number(s.start), end: Number(s.end) })
     }
   }
-  var bounds = dayBounds(key)
-  var span = bounds ? bounds.end - bounds.start : 0
+  var kept = []
+  for (var w = 0; w < merged.length; w++) {
+    if (merged[w].end - merged[w].start >= MIN_SPAN_MS) kept.push(merged[w])
+  }
+  if (!kept.length) return empty
+  var sessionStart = kept[0].start
+  var sessionEnd = kept[kept.length - 1].end
+  var range = sessionEnd - sessionStart
+  if (!(range > 0)) return empty
   var segments = []
   var totals = {}
-  for (var k = 0; k < merged.length; k++) {
-    var g = merged[k]
+  for (var k = 0; k < kept.length; k++) {
+    var g = kept[k]
     var ms = g.end - g.start
-    if (!(ms > 0)) continue
     var category = appCategory(g.app)
     totals[category] = (totals[category] || 0) + ms
-    var startFrac = bounds ? (g.start - bounds.start) / span : 0
-    var endFrac = bounds ? (g.end - bounds.start) / span : 0
     segments.push({
       app: g.app,
       category: category,
       start: g.start,
       end: g.end,
       ms: ms,
-      startFrac: Math.max(0, Math.min(1, startFrac)),
-      endFrac: Math.max(0, Math.min(1, endFrac)),
+      startFrac: (g.start - sessionStart) / range,
+      endFrac: (g.end - sessionStart) / range,
       color: categoryColor(category, accentHex),
     })
   }
@@ -1239,7 +1270,21 @@ function daySpanView(day, key, accentHex) {
   categories.sort(function (a, b) {
     return b.ms - a.ms
   })
-  return { segments: segments, categories: categories }
+  var fracs = axisFracs(range)
+  var axis = []
+  for (var f = 0; f < fracs.length; f++) {
+    axis.push({
+      frac: fracs[f],
+      label: fmtClock(sessionStart + fracs[f] * range),
+    })
+  }
+  return {
+    segments: segments,
+    categories: categories,
+    axis: axis,
+    sessionStart: sessionStart,
+    sessionEnd: sessionEnd,
+  }
 }
 
 // Local "HH:MM" for an epoch timestamp; "" when unparseable.
@@ -1247,13 +1292,6 @@ function fmtClock(ms) {
   var d = new Date(Number(ms))
   if (isNaN(d.getTime())) return ""
   return pad2(d.getHours()) + ":" + pad2(d.getMinutes())
-}
-
-// Axis label for a whole hour of the day: "00:00" … "24:00".
-function hourLabel(h) {
-  var n = Math.floor(Number(h))
-  if (!isFinite(n) || n < 0 || n > 24) return ""
-  return pad2(n) + ":00"
 }
 
 // Day view: the apps donut or the 24h timeline. An explicit pick wins;
@@ -2634,6 +2672,8 @@ if (typeof module !== "undefined" && module && module.exports) {
     categoryColor: categoryColor,
     MAX_DAY_SPANS: MAX_DAY_SPANS,
     SPAN_MERGE_GAP_MS: SPAN_MERGE_GAP_MS,
+    MIN_SPAN_MS: MIN_SPAN_MS,
+    axisFracs: axisFracs,
     isSpan: isSpan,
     spanList: spanList,
     sanitizeSpans: sanitizeSpans,
@@ -2642,7 +2682,6 @@ if (typeof module !== "undefined" && module && module.exports) {
     dayBounds: dayBounds,
     daySpanView: daySpanView,
     fmtClock: fmtClock,
-    hourLabel: hourLabel,
     parseDayView: parseDayView,
     hexToHsl: hexToHsl,
     hslToHex: hslToHex,

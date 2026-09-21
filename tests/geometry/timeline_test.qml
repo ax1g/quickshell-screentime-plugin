@@ -22,14 +22,19 @@ TestCase {
         tipBackground: "#101315"
         dayTotal: 3720000
         segments: [
-            { app: "zen", category: "Web Browsing", start: 25200000, end: 25800000, ms: 600000, startFrac: 0.2916, endFrac: 0.2986, color: "#e45b93" },
-            { app: "foot", category: "System & Utilities", start: 26100000, end: 26160000, ms: 60000, startFrac: 0.302, endFrac: 0.3027, color: "#d54b23" },
-            { app: "discord", category: "Communication", start: 27000000, end: 30600000, ms: 3600000, startFrac: 0.3125, endFrac: 0.3541, color: "#e4d15b" }
+            { app: "zen", category: "Web Browsing", start: 25200000, end: 25800000, ms: 600000, startFrac: 0, endFrac: 0.217, color: "#e45b93" },
+            { app: "foot", category: "System & Utilities", start: 26100000, end: 26160000, ms: 60000, startFrac: 0.326, endFrac: 0.348, color: "#d54b23" },
+            { app: "discord", category: "Communication", start: 27000000, end: 27960000, ms: 960000, startFrac: 0.652, endFrac: 1.0, color: "#e4d15b" }
         ]
         categories: [
-            { category: "Communication", ms: 3600000, color: "#e4d15b" },
+            { category: "Communication", ms: 960000, color: "#e4d15b" },
             { category: "Web Browsing", ms: 600000, color: "#e45b93" },
             { category: "System & Utilities", ms: 60000, color: "#d54b23" }
+        ]
+        axis: [
+            { frac: 0, label: "07:00" },
+            { frac: 0.5, label: "07:08" },
+            { frac: 1, label: "07:16" }
         ]
     }
 
@@ -93,13 +98,14 @@ TestCase {
         segs.sort(function (a, b) {
             return a.x - b.x;
         });
-        verify(segs[0].x > 90 && segs[0].x < 120, "browser near 7h: " + segs[0].x);
+        verify(segs[0].x < 5, "session starts at the left edge: " + segs[0].x);
         verify(segs[2].x > segs[1].x && segs[1].x > segs[0].x, "time order");
         verify(segs[2].width > segs[0].width, "wider span, wider bar");
+        verify(Math.abs(segs[2].x + segs[2].width - 360) < 1, "session ends at the right edge");
     }
 
     function test_axisLabelsRender() {
-        for (const label of ["00:00", "06:00", "12:00", "18:00", "24:00"]) {
+        for (const label of ["07:00", "07:08", "07:16"]) {
             var t = findText(label);
             verify(t !== null && t.height > 0 && ancestorsOccupy(t), label + " occupies");
         }
@@ -149,6 +155,7 @@ TestCase {
             dayTotal: 0
             segments: []
             categories: []
+            axis: []
         }
     }
 }

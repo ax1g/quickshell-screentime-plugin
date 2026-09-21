@@ -2,9 +2,11 @@ import QtQuick
 import qs.Commons
 import "../../js/Model.js" as Model
 
-// 24h day timeline: one bar per focus span at its 00:00–23:59 position,
-// colored by category, with hour ticks and exact times on hover. Gaps
-// are honest: idle, lock and untracked time leave the track empty.
+// Session timeline: one bar per focus span at its position in the user
+// session (first span to last), colored by category, with session ticks
+// and exact times on hover. Bars size relative to the session: the first
+// span fills the strip and earlier spans shrink as later usage extends
+// it. Gaps are honest: lock and untracked time leave the track empty.
 // Spans record from this version on, so older days keep totals only.
 // Outer-id reads are idiomatic in delegates; muted for the linter.
 // qmllint disable unqualified
@@ -13,6 +15,7 @@ Column {
     id: root
     required property var segments
     required property var categories
+    required property var axis
     required property double dayTotal
     required property color foreground
     required property string fontFamily
@@ -20,8 +23,6 @@ Column {
 
     width: parent.width
     spacing: Style.space(8)
-
-    readonly property var axisHours: [0, 6, 12, 18, 24]
 
     Row {
         width: parent.width
@@ -91,25 +92,25 @@ Column {
         }
     }
 
-    // Hour axis under the track; edge labels clamp inside.
+    // Session axis under the track; edge labels clamp inside.
     Item {
         id: axis
         width: parent.width
         height: axisLabel0.implicitHeight
 
         Repeater {
-            model: root.axisHours
+            model: root.axis
 
             Text {
                 id: axisLabel
-                required property int modelData
-                text: Model.hourLabel(modelData)
+                required property var modelData
+                text: modelData.label
                 color: root.foreground
                 opacity: 0.4
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 width: implicitWidth
-                x: Math.max(0, Math.min(axis.width - width, axis.width * modelData / 24 - width / 2))
+                x: Math.max(0, Math.min(axis.width - width, axis.width * Number(modelData.frac || 0) - width / 2))
             }
         }
 

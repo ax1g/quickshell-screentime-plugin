@@ -1121,16 +1121,18 @@ test("day view swaps the donut and the 24h timeline in place", () => {
     panel,
     /segments: root\.daySpans \? root\.daySpans\.segments : \[\]/,
   )
+  assert.match(panel, /axis: root\.daySpans \? root\.daySpans\.axis : \[\]/)
   assert.match(
     panel,
     /writeSetting\("dayView", root\.dayView === "timeline" \? "apps" : "timeline"\)/,
   )
-  // The strip positions spans absolutely on a 24h track with an hour
-  // axis, exact clock ranges on hover, and a category legend.
+  // The strip positions spans in the user session with a session axis,
+  // exact clock ranges on hover, and a category legend.
   assert.match(timeline, /required property var segments/)
   assert.match(timeline, /required property var categories/)
+  assert.match(timeline, /required property var axis/)
   assert.match(timeline, /x: strip\.width \* Number\(modelData\.startFrac/)
-  assert.match(timeline, /Model\.hourLabel\(modelData\)/)
+  assert.match(timeline, /text: modelData\.label/)
   assert.match(timeline, /Model\.fmtClock\(segment\.modelData\.start\)/)
   assert.match(timeline, /text: "DAY TIMELINE"/)
   assert.match(timeline, /earlier time keeps totals only/)

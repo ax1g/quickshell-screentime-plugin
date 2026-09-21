@@ -13,11 +13,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the scroll position, persist across restarts. The heatmap opens
   on the current month and mutes future days.
 - Know your day at a glance: flip the panel between the apps donut and
-  a real 00:00–23:59 timeline with a toggle icon — every focus span
-  lands at its exact time, colored by one of ten categories
+  a timeline of your session with a toggle icon — every focus span
+  lands at its time in the session, colored by one of ten categories
   (Development, Productivity, Communication, Education & Research,
   Creative, Web Browsing, Social, Entertainment, Gaming,
-  System & Utilities, Other), with hour ticks and exact times on hover.
+  System & Utilities, Other), with session ticks and exact times on
+  hover. Sub-minute blips stay in the totals but off the strip.
   Browser tabs split into per-site buckets (facebook.com counts as
   Social, not Web Browsing) off a clean rule set with no adult entries.
   Your pick persists across restarts.
