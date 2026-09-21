@@ -226,17 +226,23 @@ BarWidget {
                 root.togglePanel();
         }
 
-        // OpticalGlyph centers glyph ink over the hidden label's advance.
-        // Body size, not icon size: the glyph must paint pixel-identical
-        // pixels in both modes, and time mode paints it at body size.
-        OpticalGlyph {
-            id: iconGlyph
+        // Match the shell's BarIconButton geometry so the standalone glyph
+        // aligns with adjacent status icons.
+        Item {
+            id: iconCanvas
             visible: !root.vertical && root.iconOnly
-            anchors.fill: parent
-            text: root.glyph
-            fontFamily: button.fontFamily
-            fontSize: button.fontSize
-            color: button.foreground
+            anchors.centerIn: parent
+            width: Style.bar.iconCanvas
+            height: Style.bar.iconCanvas
+
+            OpticalGlyph {
+                id: iconGlyph
+                anchors.fill: parent
+                text: root.glyph
+                fontFamily: button.fontFamily
+                fontSize: Style.bar.iconFont
+                color: button.foreground
+            }
         }
 
         Column {

@@ -301,15 +301,16 @@ test("daily goal threads from prefs to bar badge and hero bar", () => {
   assert.match(bar, /root\.goalTooltip/)
 })
 
-test("icon-only glyph matches time-mode size", () => {
-  // The glyph must paint identically in both modes, and time mode
-  // paints it at body size; the open indicator keeps tracking the
-  // painted ink width.
+test("icon-only glyph matches shell status icon geometry", () => {
+  // Match BarIconButton: an icon canvas centered in the button with the
+  // shared status-icon font token. The open indicator tracks painted ink.
   assert.match(bar, /id: iconGlyph/)
+  assert.match(bar, /id: iconCanvas/)
   assert.match(bar, /visible: !root\.vertical && root\.iconOnly/)
-  assert.match(bar, /fontSize: button\.fontSize/)
-  assert.doesNotMatch(bar, /fontSize: Style\.bar\.iconFont/)
-  assert.doesNotMatch(bar, /fontSize: Style\.font\.title/)
+  assert.match(bar, /anchors\.centerIn: parent/)
+  assert.match(bar, /width: Style\.bar\.iconCanvas/)
+  assert.match(bar, /height: Style\.bar\.iconCanvas/)
+  assert.match(bar, /fontSize: Style\.bar\.iconFont/)
   assert.match(bar, /iconGlyph\.tightWidth/)
 })
 
