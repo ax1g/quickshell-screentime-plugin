@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "components"
+import "../js/Model.js" as Model
 
 // Yearly overview: per-month bars plus Wrapped-style retro cards.
 // Drawer slide chrome lives in Panel; this is the scrolling content.
@@ -26,12 +27,18 @@ Item {
     // mutes with it.
     required property bool easterEggs
     required property var yearMonths
+    required property var yearDays
+    required property string yearGraph
+    required property int heatmapSavedWeek
+    required property string todayKey
     required property var monthNamesShort
     required property var monthNamesLong
 
     signal closeRequested
     signal prevYearRequested
     signal nextYearRequested
+    signal yearGraphSelected(string mode)
+    signal heatmapPositionSaved(int week)
 
     // Entry celebration, called by the panel as the drawer slides in.
     function swingCalendar() {
@@ -276,27 +283,92 @@ Item {
                     font.pixelSize: Style.font.caption
                 }
 
-                // Outer-id reads are idiomatic in delegates; muted for the linter.
-                // qmllint disable unqualified
-                Repeater {
-                    model: 12
+                // Graph switcher: one icon flips bars ↔ heatmap in place;
+                // the pick persists in settings.
+                Item {
+                    width: parent.width
+                    height: graphToggle.implicitHeight
 
-                    MonthRow {
-                        months: heatGrid.months
-                        maxMs: heatGrid.maxMs
-                        monthShort: root.monthNamesShort
-                        monthLong: root.monthNamesLong
-                        isThisYear: heatGrid.isThisYear
-                        nowMonth: heatGrid.nowMonth
-                        gridWidth: heatGrid.width
-                        hoursW: heatGrid.hoursW
+                    PagerArrow {
+                        id: graphToggle
+                        anchors.left: parent.left
+                        glyph: root.yearGraph === "heatmap" ? "\uf0c9" : "\uf00a"
+                        active: true
                         foreground: root.foreground
                         fontFamily: root.fontFamily
-                        panelBackground: root.panelBackground
+                        fontSize: Style.font.bodySmall
+                        tipText: root.yearGraph === "heatmap" ? "Show month bars" : "Show heatmap"
+                        tipBackground: root.panelBackground
+                        onClicked: root.yearGraphSelected(root.yearGraph === "heatmap" ? "bars" : "heatmap")
+                    }
+
+                    HintBadge {
+                        label: "g"
+                        fontFamily: root.fontFamily
                         accent: root.accent
+                        show: root.hintMode
+                        anchors.top: graphToggle.top
+                        anchors.left: graphToggle.left
                     }
                 }
-                // qmllint enable unqualified
+
+                // One graph shows at a time; layout snaps to the visible one.
+                Item {
+                    width: parent.width
+                    visible: root.yearGraph === "bars"
+                    height: visible ? barsColumn.implicitHeight : 0
+                    implicitHeight: height
+
+                    Column {
+                        id: barsColumn
+                        width: parent.width
+                        spacing: Style.space(6)
+
+                        // Outer-id reads are idiomatic in delegates; muted for the linter.
+                        // qmllint disable unqualified
+                        Repeater {
+                            model: 12
+
+                            MonthRow {
+                                months: heatGrid.months
+                                maxMs: heatGrid.maxMs
+                                monthShort: root.monthNamesShort
+                                monthLong: root.monthNamesLong
+                                isThisYear: heatGrid.isThisYear
+                                nowMonth: heatGrid.nowMonth
+                                gridWidth: barsColumn.width
+                                hoursW: heatGrid.hoursW
+                                foreground: root.foreground
+                                fontFamily: root.fontFamily
+                                panelBackground: root.panelBackground
+                                accent: root.accent
+                            }
+                        }
+                        // qmllint enable unqualified
+                    }
+                }
+
+                Item {
+                    width: parent.width
+                    visible: root.yearGraph === "heatmap"
+                    height: visible ? yearHeatmap.implicitHeight : 0
+                    implicitHeight: height
+
+                    YearHeatmap {
+                        id: yearHeatmap
+                        width: parent.width
+                        weeks: Model.yearHeatmap(root.yearDays, root.currentYear, root.todayKey).weeks
+                        currentMonth: heatGrid.isThisYear ? root.monthNamesShort[heatGrid.nowMonth] : ""
+                        savedWeek: root.heatmapSavedWeek
+                        foreground: root.foreground
+                        fontFamily: root.fontFamily
+                        accent: root.accent
+                        panelBackground: root.panelBackground
+                        onPositionSaved: function (week) {
+                            root.heatmapPositionSaved(week);
+                        }
+                    }
+                }
 
                 Item {
                     width: parent.width

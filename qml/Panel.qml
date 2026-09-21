@@ -202,6 +202,11 @@ Panel {
     readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
     readonly property var yearFacts: root.yearView ? root.yearView.facts : []
     readonly property var yearMonths: root.yearView ? root.yearView.months : []
+    readonly property var yearDays: root.yearView ? root.yearView.days : []
+    // Bars or heatmap; anything unset renders bars like before.
+    readonly property string yearGraph: Model.parseYearGraph(root.prefs.yearGraph)
+    // Sticky heatmap scroll, year-scoped; -1 opens on the current month.
+    readonly property int heatmapSavedWeek: Model.parseHeatmapPos(root.prefs.heatmapPos, root.currentYear)
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
@@ -293,14 +298,18 @@ Panel {
 
     // Hint-mode dispatch: fixed single-letter tags for the main panel's
     // pressables (y yearly, c config, m show more, b/n week pagers,
-    // t week total, 1-7 weekday bars). Only currently actionable items
-    // fire; anything else (or a drawer opening underneath) leaves the
-    // mode untouched, and a handled tag always exits it.
+    // t week total, 1-7 weekday bars, g year graph). Only currently
+    // actionable items fire; anything else (or a drawer opening
+    // underneath) leaves the mode untouched, and a handled tag always
+    // exits it.
     function activateHint(tag) {
         var handled = false;
         if (root.calendarOpen) {
             if (tag === "m") {
                 root.openCalendar(false);
+                handled = true;
+            } else if (tag === "g") {
+                root.writeSetting("yearGraph", root.yearGraph === "heatmap" ? "bars" : "heatmap");
                 handled = true;
             } else if (tag === "b" && root.currentYear > root.oldestDataYear) {
                 root.currentYearOffset += 1;
@@ -495,11 +504,24 @@ Panel {
                     yearFacts: root.yearFacts
                     hideYearInsights: root.hideYearInsights
                     yearMonths: root.yearMonths
+                    yearDays: root.yearDays
+                    yearGraph: root.yearGraph
+                    heatmapSavedWeek: root.heatmapSavedWeek
+                    todayKey: root.todayKey
                     monthNamesShort: root.monthNamesShort
                     monthNamesLong: root.monthNamesLong
                     onCloseRequested: root.openCalendar(false)
                     onPrevYearRequested: root.currentYearOffset += 1
                     onNextYearRequested: root.currentYearOffset -= 1
+                    onYearGraphSelected: function (mode) {
+                        if (mode !== root.yearGraph)
+                            root.writeSetting("yearGraph", mode);
+                    }
+                    onHeatmapPositionSaved: function (week) {
+                        var pos = root.currentYear + ":" + week;
+                        if (root.prefs.heatmapPos !== pos)
+                            root.writeSetting("heatmapPos", pos);
+                    }
                 }
             }
 

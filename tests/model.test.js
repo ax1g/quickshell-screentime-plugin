@@ -2318,3 +2318,112 @@ test("timelineView attaches one theme color per block", () => {
   for (const b of blocks) assert.match(b.color, /^#[0-9a-f]{6}$/)
   assert.deepEqual(Model.timelineView([], "#e45b93"), [])
 })
+
+test("heatLevel buckets rest days to zero and scales quartiles", () => {
+  assert.equal(Model.heatLevel(0, 100), 0)
+  assert.equal(Model.heatLevel(-5, 100), 0)
+  assert.equal(Model.heatLevel(10, 0), 0)
+  assert.equal(Model.heatLevel(1, 8), 1)
+  assert.equal(Model.heatLevel(4, 8), 2)
+  assert.equal(Model.heatLevel(6, 8), 3)
+  assert.equal(Model.heatLevel(8, 8), 4)
+  assert.equal(Model.heatLevel(99, 8), 4)
+})
+
+test("parseYearGraph defaults to bars", () => {
+  assert.equal(Model.parseYearGraph("heatmap"), "heatmap")
+  assert.equal(Model.parseYearGraph("bars"), "bars")
+  assert.equal(Model.parseYearGraph(""), "bars")
+  assert.equal(Model.parseYearGraph(undefined), "bars")
+  assert.equal(Model.parseYearGraph(null), "bars")
+})
+
+test("yearHeatmap lays Monday-first weeks with pads and month labels", () => {
+  // Jan 1 2026 is a Thursday: the first column pads Mon–Wed with nulls.
+  const heat = Model.yearHeatmap(
+    [
+      { date: "2026-01-01", ms: 3600000 },
+      { date: "2026-09-21", ms: 7200000 },
+    ],
+    2026,
+  )
+  assert.equal(heat.weeks.length, 53)
+  assert.equal(heat.maxMs, 7200000)
+  const first = heat.weeks[0]
+  assert.equal(first.label, "Jan")
+  assert.deepEqual(
+    first.days.map((d) => (d ? d.date : null)),
+    [null, null, null, "2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04"],
+  )
+  assert.equal(first.days[3].level, 2)
+  const labels = heat.weeks.map((w) => w.label).filter((l) => l !== "")
+  assert.deepEqual(labels, [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ])
+  // Every column holds exactly seven slots.
+  for (const w of heat.weeks) assert.equal(w.days.length, 7)
+})
+
+test("yearHeatmap tolerates empty and malformed input", () => {
+  const empty = Model.yearHeatmap([], 2026)
+  assert.equal(empty.weeks.length, 53)
+  assert.equal(empty.maxMs, 0)
+  assert.equal(empty.weeks[0].days[3].level, 0)
+  assert.deepEqual(Model.yearHeatmap(null, 2026).weeks.length, 53)
+  assert.deepEqual(Model.yearHeatmap([], "junk"), { weeks: [], maxMs: 0 })
+  assert.deepEqual(Model.yearHeatmap([], 1999), { weeks: [], maxMs: 0 })
+})
+
+test("yearView shares day totals with the heatmap", () => {
+  const days = { "2026-09-21": { total: 3600000, apps: { zen: 3600000 } } }
+  const view = Model.yearView(days, {}, {}, 2026, "2026-09-21", "#e45b93")
+  assert.deepEqual(view.days, [{ date: "2026-09-21", ms: 3600000 }])
+})
+
+test("yearHeatmap flags future days, weeks and month labels", () => {
+  const heat = Model.yearHeatmap(
+    [{ date: "2026-09-21", ms: 3600000 }],
+    2026,
+    "2026-09-21",
+  )
+  function find(date) {
+    for (const w of heat.weeks)
+      for (const d of w.days) if (d && d.date === date) return { day: d, week: w }
+    return {}
+  }
+  assert.equal(find("2026-09-21").day.future, false)
+  assert.equal(find("2026-09-21").day.level, 4)
+  assert.equal(find("2026-09-22").day.future, true)
+  assert.equal(find("2026-09-22").day.level, 0)
+  assert.equal(find("2026-09-22").week.future, false)
+  assert.equal(find("2026-01-05").week.future, false)
+  const labels = {}
+  for (const w of heat.weeks) if (w.label) labels[w.label] = w
+  assert.equal(labels["Sep"].labelFuture, false)
+  assert.equal(labels["Oct"].labelFuture, true)
+  assert.equal(labels["Oct"].future, true)
+  // Without a today key nothing is future, keeping old callers exact.
+  const timeless = Model.yearHeatmap([{ date: "2026-09-21", ms: 1 }], 2026)
+  assert.equal(timeless.weeks[40].days[0].future, false)
+})
+
+test("parseHeatmapPos restores only its own year", () => {
+  assert.equal(Model.parseHeatmapPos("2026:38", 2026), 38)
+  assert.equal(Model.parseHeatmapPos("2026:0", 2026), 0)
+  assert.equal(Model.parseHeatmapPos("2025:38", 2026), -1)
+  assert.equal(Model.parseHeatmapPos("2026:99", 2026), -1)
+  assert.equal(Model.parseHeatmapPos("junk", 2026), -1)
+  assert.equal(Model.parseHeatmapPos(undefined, 2026), -1)
+  assert.equal(Model.parseHeatmapPos(null, 2026), -1)
+})

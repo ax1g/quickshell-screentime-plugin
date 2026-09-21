@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Know your year at a glance: flip the yearly graph between month bars
+  and a GitHub-style activity heatmap with a toggle icon — your pick,
+  and the scroll position, persist across restarts. The heatmap opens
+  on the current month and mutes future days.
 - Know your day at a glance: an optional color-coded timeline below the
   donut breaks the active day into Browser, Email, Code, Terminal, Chat,
   Media and Other. Off by default until v2.0 tracking lands — flip it on

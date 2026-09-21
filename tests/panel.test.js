@@ -1129,3 +1129,69 @@ test("day timeline demo sits below the donut behind a settings toggle", () => {
     /writeSetting\("hideDayTimeline", !root\.hideDayTimeline\)/,
   )
 })
+
+test("year graph toggles bars and heatmap in place with a persisted mode", () => {
+  const drawer = qml("YearDrawer.qml")
+  const pills = comp("ViewPills.qml")
+  const heatmap = comp("YearHeatmap.qml")
+  // Anything unset renders bars like before.
+  assert.match(panel, /Model\.parseYearGraph\(root\.prefs\.yearGraph\)/)
+  assert.match(panel, /yearDays: root\.yearView \? root\.yearView\.days : \[\]/)
+  assert.match(panel, /yearGraph: root\.yearGraph/)
+  assert.match(panel, /yearDays: root\.yearDays/)
+  assert.match(panel, /onYearGraphSelected/)
+  assert.match(panel, /writeSetting\("yearGraph", mode\)/)
+  // The drawer swaps the graphs where the month bars lived, flipped by
+  // one icon on the left.
+  assert.match(drawer, /required property var yearDays/)
+  assert.match(drawer, /required property string yearGraph/)
+  assert.match(drawer, /required property int heatmapSavedWeek/)
+  assert.match(drawer, /required property string todayKey/)
+  assert.match(drawer, /signal yearGraphSelected\(string mode\)/)
+  assert.match(drawer, /signal heatmapPositionSaved\(int week\)/)
+  assert.match(drawer, /id: graphToggle/)
+  assert.match(drawer, /tipText: root\.yearGraph === "heatmap" \? "Show month bars" : "Show heatmap"/)
+  assert.match(drawer, /visible: root\.yearGraph === "bars"/)
+  assert.match(drawer, /visible: root\.yearGraph === "heatmap"/)
+  assert.match(drawer, /YearHeatmap \{/)
+  assert.match(
+    drawer,
+    /weeks: Model\.yearHeatmap\(root\.yearDays, root\.currentYear, root\.todayKey\)\.weeks/,
+  )
+  assert.match(drawer, /savedWeek: root\.heatmapSavedWeek/)
+  assert.match(drawer, /onPositionSaved/)
+  // Sticky scroll is year-scoped; the mode and position persist.
+  assert.match(panel, /Model\.parseHeatmapPos\(root\.prefs\.heatmapPos, root\.currentYear\)/)
+  assert.match(panel, /heatmapSavedWeek: root\.heatmapSavedWeek/)
+  assert.match(panel, /todayKey: root\.todayKey/)
+  assert.match(panel, /onHeatmapPositionSaved/)
+  assert.match(panel, /writeSetting\("heatmapPos", pos\)/)
+  // Shared pills render options and emit the picked key with one hint.
+  assert.match(pills, /required property var options/)
+  assert.match(pills, /required property string current/)
+  assert.match(pills, /signal selected\(string key\)/)
+  assert.match(pills, /property string hintTag: ""/)
+  assert.match(pills, /root\.selected\(pill\.modelData\.key\)/)
+  // Heatmap cells carry levels for the accent ramp and tip exact times;
+  // future cells stay muted and tipless, empty past days say no data.
+  assert.match(heatmap, /required property var weeks/)
+  assert.match(heatmap, /required property string currentMonth/)
+  assert.match(heatmap, /required property int savedWeek/)
+  assert.match(heatmap, /signal positionSaved\(int week\)/)
+  assert.match(heatmap, /flickableDirection: Flickable\.HorizontalFlick/)
+  assert.match(heatmap, /function restorePosition/)
+  assert.match(heatmap, /modelData\.level, modelData\.future/)
+  assert.match(heatmap, /: "no data"/)
+  assert.match(heatmap, /modelData\.labelFuture \? 0\.25 : 0\.45/)
+  assert.match(heatmap, /text: "Less"/)
+  assert.match(heatmap, /text: "More"/)
+  // The drawer opens the heatmap on the current month.
+  assert.match(drawer, /currentMonth: heatGrid\.isThisYear/)
+  // Hint mode flips the graph with g inside the drawer.
+  assert.match(drawer, /label: "g"/)
+  assert.match(panel, /tag === "g"/)
+  assert.match(
+    panel,
+    /writeSetting\("yearGraph", root\.yearGraph === "heatmap" \? "bars" : "heatmap"\)/,
+  )
+})

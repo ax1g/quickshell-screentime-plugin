@@ -12,6 +12,11 @@ if [ -z "$BIN" ]; then
   echo "SKIP: qmltestrunner not found"
   exit 0
 fi
-QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/geometry_test.qml" || exit $?
-QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/weektrend_test.qml"
-QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/timeline_test.qml"
+# Every file runs even when an earlier one fails; the exit reports the
+# first failure so one red suite cannot hide the rest.
+FAIL=0
+QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/geometry_test.qml" || FAIL=$?
+QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/weektrend_test.qml" || FAIL=$?
+QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/timeline_test.qml" || FAIL=$?
+QT_QPA_PLATFORM=offscreen QML_IMPORT_PATH="$HERE/stubs" "$BIN" -input "$HERE/heatmap_test.qml" || FAIL=$?
+exit $FAIL

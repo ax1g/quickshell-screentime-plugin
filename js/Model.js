@@ -2076,8 +2076,103 @@ function yearView(days, months, years, year, todayKey, accentHex) {
     totalLabel: Math.round(summary.total / 3600000) + "h",
     months: summary.months,
     monthsActive: monthsActive,
+    days: summary.dayTotals,
     facts: facts,
   }
+}
+
+// Year graph mode: month bars or the GitHub-style heatmap. Anything but
+// an explicit "heatmap" renders bars, so old installs keep the graph.
+function parseYearGraph(value) {
+  return String(value || "") === "heatmap" ? "heatmap" : "bars"
+}
+
+// Activity quartile for one heatmap day: 0 for rest days, 1–4 scaled
+// against the year's busiest day.
+function heatLevel(ms, maxMs) {
+  var v = Number(ms)
+  var max = Number(maxMs)
+  if (!(v > 0) || !(max > 0) || !isFinite(v) || !isFinite(max)) return 0
+  return Math.max(1, Math.min(4, Math.ceil((v / max) * 4)))
+}
+
+// GitHub-style year grid: Monday–Sunday week columns covering Jan 1 to
+// Dec 31. Returns { weeks, maxMs }; each week is { days, label,
+// labelFuture, future } where days holds { date, ms, level, future } or
+// null for padding outside the year, label names the month whose 1st the
+// week holds ("" otherwise), and future flags days past todayKey (plus
+// weeks and labels that lie wholly beyond it) for muted rendering.
+// Merge-year days already exclude the future, so flags only matter for
+// the current year's trailing empty cells.
+function yearHeatmap(dayTotals, year, todayKey) {
+  var y = Math.floor(Number(year))
+  var tk = String(todayKey || "")
+  var list = Array.isArray(dayTotals) ? dayTotals : []
+  var byDate = {}
+  var maxMs = 0
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i] || {}
+    var ms = Number(entry.ms)
+    if (!isDayKey(entry.date) || !(ms > 0)) continue
+    byDate[String(entry.date)] = ms
+    if (ms > maxMs) maxMs = ms
+  }
+  var weeks = []
+  if (!isFinite(y) || y < 2000 || y > 2200) return { weeks: weeks, maxMs: 0 }
+  var jan1 = new Date(y, 0, 1)
+  var cursor = new Date(y, 0, 1 - ((jan1.getDay() + 6) % 7))
+  var end = new Date(y, 11, 31)
+  var guard = 0
+  while (cursor <= end && guard < 54) {
+    var days = []
+    var label = ""
+    var labelFuture = false
+    var seenPast = false
+    for (var d = 0; d < 7; d++) {
+      if (cursor.getFullYear() !== y) {
+        days.push(null)
+      } else {
+        var key = dayKey(cursor)
+        if (cursor.getDate() === 1) {
+          label = MONTH_NAMES[cursor.getMonth()]
+          labelFuture = tk !== "" && key > tk
+        }
+        var m = byDate[key] || 0
+        var isFuture = tk !== "" && key > tk
+        if (!isFuture) seenPast = true
+        days.push({
+          date: key,
+          ms: m,
+          level: heatLevel(m, maxMs),
+          future: isFuture,
+        })
+      }
+      cursor = new Date(
+        cursor.getFullYear(),
+        cursor.getMonth(),
+        cursor.getDate() + 1,
+      )
+    }
+    weeks.push({
+      days: days,
+      label: label,
+      labelFuture: labelFuture,
+      future: !seenPast,
+    })
+    guard++
+  }
+  return { weeks: weeks, maxMs: maxMs }
+}
+
+// Sticky heatmap scroll: "YYYY:week" leftmost column, year-scoped so a
+// stored position never misplaces another year. Anything else means no
+// stored position (-1) and the grid opens on the current month.
+function parseHeatmapPos(value, year) {
+  var m = /^(\d{4}):(\d{1,2})$/.exec(String(value || ""))
+  if (!m || Number(m[1]) !== Number(year)) return -1
+  var w = Math.floor(Number(m[2]))
+  if (!isFinite(w) || w < 0 || w > 60) return -1
+  return w
 }
 
 // Node-style exports only so `node --test` can drive these pure functions;
@@ -2190,5 +2285,9 @@ if (typeof module !== "undefined" && module && module.exports) {
     yearFacts: yearFacts,
     yearFactsFromSummary: yearFactsFromSummary,
     yearView: yearView,
+    parseYearGraph: parseYearGraph,
+    heatLevel: heatLevel,
+    yearHeatmap: yearHeatmap,
+    parseHeatmapPos: parseHeatmapPos,
   }
 }
