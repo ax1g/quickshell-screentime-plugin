@@ -12,10 +12,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and a GitHub-style activity heatmap with a toggle icon — your pick,
   and the scroll position, persist across restarts. The heatmap opens
   on the current month and mutes future days.
-- Know your day at a glance: an optional color-coded timeline below the
-  donut breaks the active day into Browser, Email, Code, Terminal, Chat,
-  Media and Other. Off by default until v2.0 tracking lands — flip it on
-  in Settings → Display (demo widths are each category's share of the day).
+- Know your day at a glance: flip the panel between the apps donut and
+  a real 00:00–23:59 timeline with a toggle icon — every focus span
+  lands at its exact time, colored by one of ten categories
+  (Development, Productivity, Communication, Education & Research,
+  Creative, Web Browsing, Social, Entertainment, Gaming,
+  System & Utilities, Other), with hour ticks and exact times on hover.
+  Your pick persists across restarts.
 
 ### Fixed
 

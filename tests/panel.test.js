@@ -1097,42 +1097,54 @@ test("week header nudges the next arrow after the range text", () => {
   assert.doesNotMatch(trend, /space\(76\)/)
 })
 
-test("day timeline demo sits below the donut behind a settings toggle", () => {
+test("day view swaps the donut and the 24h timeline in place", () => {
   const timeline = comp("DayTimeline.qml")
-  // Hidden by default: missing prefs keep the current panel.
+  // Donut by default; the retired demo toggle still opts in.
   assert.match(
     panel,
-    /hideDayTimeline: !\(root\.prefs\.hideDayTimeline === false \|\| root\.prefs\.hideDayTimeline === "false"\)/,
+    /Model\.parseDayView\(root\.prefs\.dayView, root\.prefs\.hideDayTimeline\)/,
   )
-  // One Model view call threaded down to the strip.
-  assert.match(panel, /Model\.timelineView\(root\.fullApps, Color\.accent\)/)
+  // One Model view call over the active day's spans, threaded down.
+  assert.match(
+    panel,
+    /Model\.daySpanView\(root\.activeDay, root\.activeDayKey, Color\.accent\)/,
+  )
+  assert.match(panel, /id: dayToggle/)
+  assert.match(
+    panel,
+    /tipText: root\.dayView === "timeline" \? "Show apps donut" : "Show day timeline"/,
+  )
+  assert.match(panel, /visible: root\.dayView === "apps"/)
+  assert.match(panel, /visible: root\.dayView === "timeline"/)
   assert.match(panel, /DayTimeline \{/)
-  assert.match(panel, /blocks: root\.timelineBlocks/)
   assert.match(
     panel,
-    /visible: !root\.hideDayTimeline && root\.timelineBlocks\.length > 0/,
+    /segments: root\.daySpans \? root\.daySpans\.segments : \[\]/,
   )
-  // Strip carries its own color per block and labels the proportional demo.
-  assert.match(timeline, /required property var blocks/)
-  assert.match(timeline, /modelData\.color/)
+  assert.match(
+    panel,
+    /writeSetting\("dayView", root\.dayView === "timeline" \? "apps" : "timeline"\)/,
+  )
+  // The strip positions spans absolutely on a 24h track with an hour
+  // axis, exact clock ranges on hover, and a category legend.
+  assert.match(timeline, /required property var segments/)
+  assert.match(timeline, /required property var categories/)
+  assert.match(timeline, /x: strip\.width \* Number\(modelData\.startFrac/)
+  assert.match(timeline, /Model\.hourLabel\(modelData\)/)
+  assert.match(timeline, /Model\.fmtClock\(segment\.modelData\.start\)/)
   assert.match(timeline, /text: "DAY TIMELINE"/)
-  assert.match(timeline, /text: "DEMO"/)
-  // Settings toggle with hint registry coverage.
-  assert.match(menu, /required property bool hideDayTimeline/)
-  assert.match(menu, /signal timelineToggled/)
-  assert.match(menu, /label: "Day timeline"/)
-  assert.match(menu, /root\.timelineToggled\(\)/)
-  assert.match(menu, /shown: !root\.hideDayTimeline/)
-  assert.match(panel, /hideDayTimeline: root\.hideDayTimeline/)
-  assert.match(
-    panel,
-    /writeSetting\("hideDayTimeline", !root\.hideDayTimeline\)/,
-  )
+  assert.match(timeline, /earlier time keeps totals only/)
+  // The in-place toggle answers to d like the yearly g.
+  assert.match(panel, /label: "d"/)
+  assert.match(panel, /tag === "d"/)
+  // No settings row anymore: the toggle lives where the graph does.
+  assert.doesNotMatch(menu, /timelineToggled/)
+  assert.doesNotMatch(menu, /Day timeline/)
+  assert.doesNotMatch(panel, /hideDayTimeline: root\.hideDayTimeline/)
 })
 
 test("year graph toggles bars and heatmap in place with a persisted mode", () => {
   const drawer = qml("YearDrawer.qml")
-  const pills = comp("ViewPills.qml")
   const heatmap = comp("YearHeatmap.qml")
   // Anything unset renders bars like before.
   assert.match(panel, /Model\.parseYearGraph\(root\.prefs\.yearGraph\)/)
@@ -1150,7 +1162,10 @@ test("year graph toggles bars and heatmap in place with a persisted mode", () =>
   assert.match(drawer, /signal yearGraphSelected\(string mode\)/)
   assert.match(drawer, /signal heatmapPositionSaved\(int week\)/)
   assert.match(drawer, /id: graphToggle/)
-  assert.match(drawer, /tipText: root\.yearGraph === "heatmap" \? "Show month bars" : "Show heatmap"/)
+  assert.match(
+    drawer,
+    /tipText: root\.yearGraph === "heatmap" \? "Show month bars" : "Show heatmap"/,
+  )
   assert.match(drawer, /visible: root\.yearGraph === "bars"/)
   assert.match(drawer, /visible: root\.yearGraph === "heatmap"/)
   assert.match(drawer, /YearHeatmap \{/)
@@ -1161,17 +1176,14 @@ test("year graph toggles bars and heatmap in place with a persisted mode", () =>
   assert.match(drawer, /savedWeek: root\.heatmapSavedWeek/)
   assert.match(drawer, /onPositionSaved/)
   // Sticky scroll is year-scoped; the mode and position persist.
-  assert.match(panel, /Model\.parseHeatmapPos\(root\.prefs\.heatmapPos, root\.currentYear\)/)
+  assert.match(
+    panel,
+    /Model\.parseHeatmapPos\(root\.prefs\.heatmapPos, root\.currentYear\)/,
+  )
   assert.match(panel, /heatmapSavedWeek: root\.heatmapSavedWeek/)
   assert.match(panel, /todayKey: root\.todayKey/)
   assert.match(panel, /onHeatmapPositionSaved/)
   assert.match(panel, /writeSetting\("heatmapPos", pos\)/)
-  // Shared pills render options and emit the picked key with one hint.
-  assert.match(pills, /required property var options/)
-  assert.match(pills, /required property string current/)
-  assert.match(pills, /signal selected\(string key\)/)
-  assert.match(pills, /property string hintTag: ""/)
-  assert.match(pills, /root\.selected\(pill\.modelData\.key\)/)
   // Heatmap cells carry levels for the accent ramp and tip exact times;
   // future cells stay muted and tipless, empty past days say no data.
   assert.match(heatmap, /required property var weeks/)

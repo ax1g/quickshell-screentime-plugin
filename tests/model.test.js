@@ -2278,45 +2278,236 @@ test("weekRangeLabel shortens to three cases", () => {
   )
 })
 
-test("appCategory buckets the demo timeline without title rules", () => {
-  assert.equal(Model.appCategory("zen-bin"), "Browser")
-  assert.equal(Model.appCategory("google-chrome"), "Browser")
-  assert.equal(Model.appCategory("thunderbird"), "Email")
-  assert.equal(Model.appCategory("code"), "Code")
-  assert.equal(Model.appCategory("opencode"), "Code")
-  assert.equal(Model.appCategory("foot"), "Terminal")
-  assert.equal(Model.appCategory("discord"), "Chat")
-  assert.equal(Model.appCategory("spotify"), "Media")
-  assert.equal(Model.appCategory("nautilus"), "Other")
-  assert.equal(Model.appCategory(""), "Other")
-  assert.equal(Model.appCategory(null), "Other")
+test("appCategory sorts apps into the ten buckets plus Other", () => {
+  const cases = [
+    ["zen-bin", "Web Browsing"],
+    ["google-chrome", "Web Browsing"],
+    ["chromium-browser", "Web Browsing"],
+    ["code", "Development"],
+    ["opencode", "Development"],
+    ["nvim", "Development"],
+    ["docker", "Development"],
+    ["obsidian", "Productivity"],
+    ["libreoffice-writer", "Productivity"],
+    ["discord", "Communication"],
+    ["thunderbird", "Communication"],
+    ["zoom", "Communication"],
+    ["anki", "Education & Research"],
+    ["evince", "Education & Research"],
+    ["blender", "Creative"],
+    ["krita", "Creative"],
+    ["obs-studio", "Creative"],
+    ["cawbird", "Social"],
+    ["spotify", "Entertainment"],
+    ["vlc", "Entertainment"],
+    ["steam", "Gaming"],
+    ["lutris", "Gaming"],
+    ["nautilus", "System & Utilities"],
+    ["foot", "System & Utilities"],
+    ["bash", "System & Utilities"],
+    ["htop", "System & Utilities"],
+    ["mystery-app-xyz", "Other"],
+    ["", "Other"],
+    [null, "Other"],
+  ]
+  for (const [app, want] of cases)
+    assert.equal(Model.appCategory(app), want, String(app))
 })
 
-test("groupByCategory folds app rows into sorted category totals", () => {
-  const groups = Model.groupByCategory([
-    { app: "zen-bin", ms: 3600000, pct: 50 },
-    { app: "foot", ms: 1800000, pct: 25 },
-    { app: "discord", ms: 1800000, pct: 25 },
+test("categoryColor is stable per category", () => {
+  const a = Model.categoryColor("Gaming", "#e45b93")
+  assert.equal(a, Model.categoryColor("Gaming", "#e45b93"))
+  assert.match(a, /^#[0-9a-f]{6}$/)
+  assert.notEqual(a, Model.categoryColor("Development", "#e45b93"))
+  assert.equal(Model.categoryColor("Nope", "#e45b93"), "#e45b93")
+})
+
+test("span validation accepts credited chunks only", () => {
+  assert.equal(Model.isSpan({ app: "zen", start: 1, end: 2 }), true)
+  assert.equal(Model.isSpan({ app: "zen", start: 2, end: 2 }), false)
+  assert.equal(Model.isSpan({ app: "zen", start: 3, end: 2 }), false)
+  assert.equal(Model.isSpan({ app: "", start: 1, end: 2 }), false)
+  assert.equal(Model.isSpan({ app: "zen", start: NaN, end: 2 }), false)
+  assert.equal(Model.isSpan(null), false)
+  assert.equal(Model.isSpan("zen"), false)
+})
+
+test("sanitizeSpans keeps clean lists by identity and rebuilds the rest", () => {
+  assert.deepEqual(Model.sanitizeSpans(undefined), {
+    spans: undefined,
+    changed: false,
+  })
+  const clean = [{ app: "zen", start: 1, end: 2 }]
+  const kept = Model.sanitizeSpans(clean)
+  assert.equal(kept.spans, clean)
+  assert.equal(kept.changed, false)
+  const dirty = Model.sanitizeSpans([
+    { app: "zen", start: 1, end: 2 },
+    { app: "zen", start: 5, end: 5 },
+    { nope: 1 },
   ])
-  assert.equal(groups.length, 3)
-  assert.equal(groups[0].category, "Browser")
-  assert.equal(groups[0].frac, 0.5)
-  assert.equal(groups[0].pct, 50)
-  assert.deepEqual(Model.groupByCategory([]), [])
-  assert.deepEqual(Model.groupByCategory(null), [])
+  assert.deepEqual(dirty.spans, [{ app: "zen", start: 1, end: 2 }])
+  assert.equal(dirty.changed, true)
+  assert.deepEqual(Model.sanitizeSpans("junk"), { spans: [], changed: true })
+  const big = []
+  for (let i = 0; i < Model.MAX_DAY_SPANS + 10; i++)
+    big.push({ app: "zen", start: i * 2 + 1, end: i * 2 + 2 })
+  const capped = Model.sanitizeSpans(big)
+  assert.equal(capped.spans.length, Model.MAX_DAY_SPANS)
+  assert.equal(capped.changed, true)
 })
 
-test("timelineView attaches one theme color per block", () => {
-  const blocks = Model.timelineView(
-    [
-      { app: "zen-bin", ms: 3600000, pct: 50 },
-      { app: "foot", ms: 3600000, pct: 50 },
+test("appendSpan returns the input when there is nothing to record", () => {
+  const day = { total: 0, apps: {} }
+  assert.equal(Model.appendSpan(day, "zen", 2, 2), day)
+  assert.equal(Model.appendSpan(day, "", 1, 2), day)
+  assert.equal(Model.appendSpan(null, "zen", 1, 2), null)
+  const full = { total: 1, apps: {}, spans: [] }
+  for (let i = 0; i < Model.MAX_DAY_SPANS; i++)
+    full.spans.push({ app: "zen", start: i * 2 + 1, end: i * 2 + 2 })
+  assert.equal(Model.appendSpan(full, "zen", 1, 2), full)
+  const grown = Model.appendSpan(day, "zen", 1000, 2000)
+  assert.notEqual(grown, day)
+  assert.deepEqual(grown.spans, [{ app: "zen", start: 1000, end: 2000 }])
+})
+
+test("splitSpan cuts at local midnights", () => {
+  const t0 = new Date(2026, 8, 21, 23, 55, 0).getTime()
+  const t1 = new Date(2026, 8, 22, 0, 5, 0).getTime()
+  const parts = Model.splitSpan("zen", t0, t1)
+  assert.equal(parts.length, 2)
+  assert.equal(parts[0].key, "2026-09-21")
+  assert.equal(parts[0].start, t0)
+  assert.equal(parts[1].key, "2026-09-22")
+  assert.equal(parts[1].end, t1)
+  assert.equal(parts[0].end, parts[1].start)
+  const single = Model.splitSpan("zen", t0, t0 + 60000)
+  assert.equal(single.length, 1)
+  assert.equal(single[0].key, "2026-09-21")
+  assert.deepEqual(Model.splitSpan("zen", 5, 5), [])
+  assert.deepEqual(Model.splitSpan("", 1, 2), [])
+})
+
+test("dayBounds resolves real days only", () => {
+  const b = Model.dayBounds("2026-09-21")
+  assert.equal(b.end - b.start, 86400000)
+  assert.equal(new Date(b.start).getHours(), 0)
+  assert.equal(Model.dayBounds("junk"), null)
+  assert.equal(Model.dayBounds("2026-02-30"), null)
+})
+
+test("daySpanView merges commit chips and places segments", () => {
+  const t0 = new Date(2026, 8, 21, 7, 0, 0).getTime()
+  const day = {
+    total: 0,
+    apps: {},
+    spans: [
+      { app: "zen", start: t0, end: t0 + 60000 },
+      { app: "zen", start: t0 + 60000, end: t0 + 600000 },
+      { app: "foot", start: t0 + 900000, end: t0 + 960000 },
     ],
+  }
+  const view = Model.daySpanView(day, "2026-09-21", "#e45b93")
+  assert.equal(view.segments.length, 2)
+  assert.equal(view.segments[0].app, "zen")
+  assert.equal(view.segments[0].ms, 600000)
+  assert.equal(view.segments[0].category, "Web Browsing")
+  assert.ok(Math.abs(view.segments[0].startFrac - 7 / 24) < 0.001)
+  assert.ok(view.segments[0].endFrac > view.segments[0].startFrac)
+  for (const s of view.segments) assert.match(s.color, /^#[0-9a-f]{6}$/)
+  assert.equal(view.categories[0].category, "Web Browsing")
+  assert.equal(view.categories[0].ms, 600000)
+  // A ten-minute hop stays split; other apps never merge.
+  const split = Model.daySpanView(
+    {
+      total: 0,
+      apps: {},
+      spans: [
+        { app: "zen", start: t0, end: t0 + 60000 },
+        { app: "zen", start: t0 + 660000, end: t0 + 720000 },
+      ],
+    },
+    "2026-09-21",
     "#e45b93",
   )
-  assert.equal(blocks.length, 2)
-  for (const b of blocks) assert.match(b.color, /^#[0-9a-f]{6}$/)
-  assert.deepEqual(Model.timelineView([], "#e45b93"), [])
+  assert.equal(split.segments.length, 2)
+  assert.deepEqual(Model.daySpanView(null, "2026-09-21", "#e45b93"), {
+    segments: [],
+    categories: [],
+  })
+  assert.deepEqual(
+    Model.daySpanView({ total: 1, apps: {} }, "junk", "#e45b93").segments,
+    [],
+  )
+})
+
+test("fmtClock and hourLabel render day times", () => {
+  assert.equal(
+    Model.fmtClock(new Date(2026, 8, 21, 7, 5, 0).getTime()),
+    "07:05",
+  )
+  assert.equal(
+    Model.fmtClock(new Date(2026, 8, 21, 0, 0, 0).getTime()),
+    "00:00",
+  )
+  assert.equal(Model.fmtClock("junk"), "")
+  assert.equal(Model.hourLabel(0), "00:00")
+  assert.equal(Model.hourLabel(6), "06:00")
+  assert.equal(Model.hourLabel(24), "24:00")
+  assert.equal(Model.hourLabel(25), "")
+  assert.equal(Model.hourLabel("x"), "")
+})
+
+test("parseDayView prefers the explicit pick, then the retired toggle", () => {
+  assert.equal(Model.parseDayView("timeline"), "timeline")
+  assert.equal(Model.parseDayView("apps"), "apps")
+  assert.equal(Model.parseDayView(undefined, false), "timeline")
+  assert.equal(Model.parseDayView(undefined, "false"), "timeline")
+  assert.equal(Model.parseDayView(undefined, true), "apps")
+  assert.equal(Model.parseDayView(undefined, undefined), "apps")
+  assert.equal(Model.parseDayView("junk", false), "timeline")
+})
+
+test("sanitizeDay validates spans without minting the key", () => {
+  const bare = { total: 5, apps: { zen: 5 } }
+  const kept = Model.sanitizeDay(bare)
+  assert.equal(kept.day, bare)
+  assert.equal(kept.changed, false)
+  assert.ok(!("spans" in kept.day))
+  const dirty = Model.sanitizeDay({
+    total: 5,
+    apps: { zen: 5 },
+    spans: [{ app: "zen", start: 1, end: 2 }, { nope: 1 }],
+  })
+  assert.equal(dirty.changed, true)
+  assert.deepEqual(dirty.day.spans, [{ app: "zen", start: 1, end: 2 }])
+})
+
+test("filterIgnoredDay strips ignored spans with the totals", () => {
+  const day = {
+    total: 3,
+    apps: { zen: 2, foot: 1 },
+    spans: [
+      { app: "zen", start: 1, end: 3 },
+      { app: "foot", start: 3, end: 4 },
+    ],
+  }
+  const clean = Model.filterIgnoredDay(day, ["foot"])
+  assert.deepEqual(clean.apps, { zen: 2 })
+  assert.deepEqual(clean.spans, [{ app: "zen", start: 1, end: 3 }])
+  assert.equal(Model.filterIgnoredDay(day, []), day)
+})
+
+test("refoldDay remaps span apps with the totals", () => {
+  const day = {
+    total: 2,
+    apps: { zen: 2 },
+    spans: [{ app: "zen", start: 1, end: 3 }],
+  }
+  const folded = Model.refoldDay(day, { zen: "browser" })
+  assert.deepEqual(folded.apps, { browser: 2 })
+  assert.deepEqual(folded.spans, [{ app: "browser", start: 1, end: 3 }])
+  assert.equal(Model.refoldDay(day, {}), day)
 })
 
 test("heatLevel buckets rest days to zero and scales quartiles", () => {
@@ -2399,7 +2590,8 @@ test("yearHeatmap flags future days, weeks and month labels", () => {
   )
   function find(date) {
     for (const w of heat.weeks)
-      for (const d of w.days) if (d && d.date === date) return { day: d, week: w }
+      for (const d of w.days)
+        if (d && d.date === date) return { day: d, week: w }
     return {}
   }
   assert.equal(find("2026-09-21").day.future, false)

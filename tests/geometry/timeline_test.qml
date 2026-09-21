@@ -3,10 +3,10 @@ import QtTest
 import qs.Commons
 import "../../qml/components"
 
-// Day timeline demo strip: the color-coded blocks fill the track exactly
-// (fractions of the strip width) and every legend row occupies space.
-// Sample blocks mirror the Model.timelineView shape (category, ms, pct,
-// frac, color). Thresholds stay relative, never absolute pixels.
+// 24h day timeline geometry: segments sit at their day fractions, the
+// hour axis renders five clamped labels, and every legend row occupies
+// space. Sample segments mirror the Model.daySpanView shape.
+// Thresholds stay relative, never absolute pixels.
 TestCase {
     name: "TimelineGeometry"
     width: 400
@@ -20,12 +20,16 @@ TestCase {
         foreground: "#ffffff"
         fontFamily: "monospace"
         tipBackground: "#101315"
-        dayTotal: 12273172
-        blocks: [
-            { category: "Browser", ms: 8966550, pct: 74, frac: 0.74, color: "#e45b93" },
-            { category: "Code", ms: 1772592, pct: 15, frac: 0.15, color: "#d54b23" },
-            { category: "Terminal", ms: 1068293, pct: 9, frac: 0.09, color: "#e4d15b" },
-            { category: "Other", ms: 380509, pct: 3, frac: 0.02, color: "#7dd523" }
+        dayTotal: 3720000
+        segments: [
+            { app: "zen", category: "Web Browsing", start: 25200000, end: 25800000, ms: 600000, startFrac: 0.2916, endFrac: 0.2986, color: "#e45b93" },
+            { app: "foot", category: "System & Utilities", start: 26100000, end: 26160000, ms: 60000, startFrac: 0.302, endFrac: 0.3027, color: "#d54b23" },
+            { app: "discord", category: "Communication", start: 27000000, end: 30600000, ms: 3600000, startFrac: 0.3125, endFrac: 0.3541, color: "#e4d15b" }
+        ]
+        categories: [
+            { category: "Communication", ms: 3600000, color: "#e4d15b" },
+            { category: "Web Browsing", ms: 600000, color: "#e45b93" },
+            { category: "System & Utilities", ms: 60000, color: "#d54b23" }
         ]
     }
 
@@ -60,41 +64,91 @@ TestCase {
     function test_headerRenders() {
         var title = findText("DAY TIMELINE");
         verify(title !== null && title.height > 0 && ancestorsOccupy(title), "header occupies");
-        var demo = findText("DEMO");
-        verify(demo !== null && demo.height > 0 && ancestorsOccupy(demo), "demo badge occupies");
+    }
+
+    function test_segmentsSitAtDayFractions() {
+        // The strip is the 16px rect holding the repeater; its rectangle
+        // children are the segments (mouse areas are no rectangles).
+        var all = [];
+        collect(timeline, all);
+        var strip = null;
+        for (var i = 0; i < all.length; i++) {
+            var it = all[i];
+            if (it.height !== Style.space(16) || it.width <= 2)
+                continue;
+            var kids = it.children;
+            for (var k = 0; k < kids.length; k++) {
+                if (String(kids[k]).indexOf("QQuickRepeater") === 0)
+                    strip = it;
+            }
+        }
+        verify(strip !== null, "strip exists");
+        var segs = [];
+        for (var j = 0; j < strip.children.length; j++) {
+            var child = strip.children[j];
+            if (String(child).indexOf("QQuickRectangle") === 0)
+                segs.push(child);
+        }
+        verify(segs.length === 3, "three segments: " + segs.length);
+        segs.sort(function (a, b) {
+            return a.x - b.x;
+        });
+        verify(segs[0].x > 90 && segs[0].x < 120, "browser near 7h: " + segs[0].x);
+        verify(segs[2].x > segs[1].x && segs[1].x > segs[0].x, "time order");
+        verify(segs[2].width > segs[0].width, "wider span, wider bar");
+    }
+
+    function test_axisLabelsRender() {
+        for (const label of ["00:00", "06:00", "12:00", "18:00", "24:00"]) {
+            var t = findText(label);
+            verify(t !== null && t.height > 0 && ancestorsOccupy(t), label + " occupies");
+        }
     }
 
     function test_legendRowsOccupy() {
-        var labels = ["Browser", "Code", "Terminal", "Other"];
-        for (var i = 0; i < labels.length; i++) {
-            var row = findText(labels[i]);
-            verify(row !== null && row.height > 0 && ancestorsOccupy(row), labels[i] + " occupies");
+        for (const label of ["Communication", "Web Browsing", "System & Utilities"]) {
+            var row = findText(label);
+            verify(row !== null && row.height > 0 && ancestorsOccupy(row), label + " occupies");
         }
     }
 
-    function test_blocksFillTrack() {
-        // The block repeater's parent is the strip row; its item children
-        // are the blocks, and the row fills the track edge to edge.
+    function test_emptyStateExplains() {
+        var note = emptyComponent.createObject(timeline.parent, {
+            width: 360,
+            foreground: "#ffffff",
+            fontFamily: "monospace",
+            tipBackground: "#101315",
+            dayTotal: 3600000,
+            segments: [],
+            categories: []
+        });
+        verify(note !== null, "empty timeline instantiates");
+        var found = false;
         var all = [];
-        collect(timeline, all);
-        var row = null;
-        for (var i = 0; i < all.length; i++) {
-            if (String(all[i]).indexOf("QQuickRepeater") === 0 && String(all[i].parent).indexOf("QQuickRow") === 0)
-                row = all[i].parent;
+        var stack = [note];
+        while (stack.length) {
+            var it = stack.pop();
+            all.push(it);
+            for (var i = 0; i < it.children.length; i++)
+                stack.push(it.children[i]);
         }
-        verify(row !== null, "strip row exists");
-        verify(row.parent.width === timeline.width, "row fills the track");
-        // The repeater itself lists as a zero-size child; the blocks are
-        // the children with width.
-        var filled = 0;
-        var blocks = 0;
-        for (var j = 0; j < row.children.length; j++) {
-            if (row.children[j].width > 0) {
-                filled += row.children[j].width;
-                blocks++;
-            }
+        for (var j = 0; j < all.length; j++) {
+            if (all[j].text !== undefined && String(all[j].text).indexOf("totals only") !== -1)
+                found = true;
         }
-        verify(blocks === 4, "four blocks: " + blocks);
-        verify(Math.abs(filled - row.width) < 1, "blocks fill the track: " + filled + " of " + row.width);
+        verify(found, "empty state explains span-less days");
+        note.destroy();
+    }
+
+    Component {
+        id: emptyComponent
+        DayTimeline {
+            foreground: "#ffffff"
+            fontFamily: "monospace"
+            tipBackground: "#101315"
+            dayTotal: 0
+            segments: []
+            categories: []
+        }
     }
 }

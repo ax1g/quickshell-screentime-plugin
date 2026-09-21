@@ -200,7 +200,17 @@ function filterIgnoredDay(day, ignoredList) {
     }
   }
   if (!dropped) return day
-  return { total: total, apps: clean }
+  var out = { total: total, apps: clean }
+  var kept = spanList(day)
+  if (kept.length > 0) {
+    var spans = []
+    for (var s = 0; s < kept.length; s++) {
+      if (isSpan(kept[s]) && !isIgnoredApp(kept[s].app, ignoredList))
+        spans.push(kept[s])
+    }
+    if (spans.length > 0) out.spans = spans
+  }
+  return out
 }
 
 // Remap one stored day through the alias map, merging totals of keys
@@ -224,7 +234,21 @@ function refoldDay(day, aliases) {
     total += ms
   }
   if (!changed) return day
-  return { total: total, apps: out }
+  var folded = { total: total, apps: out }
+  var spans = spanList(day)
+  if (spans.length > 0) {
+    var remapped = []
+    for (var s = 0; s < spans.length; s++) {
+      if (!isSpan(spans[s])) continue
+      remapped.push({
+        app: resolveAppName(spans[s].app, aliases),
+        start: Number(spans[s].start),
+        end: Number(spans[s].end),
+      })
+    }
+    if (remapped.length > 0) folded.spans = remapped
+  }
+  return folded
 }
 
 // List editing for the settings menu: the prefs store comma strings while
@@ -573,6 +597,7 @@ function sanitizeHistory(days, months, years) {
 }
 
 // Returns { day, changed }; unchanged days keep object identity.
+// Span-less days never gain the key, so old history passes through.
 function sanitizeDay(d) {
   if (!isPlainObject(d)) return { day: newDay(), changed: true }
   var total = Number(d.total) || 0
@@ -590,8 +615,12 @@ function sanitizeDay(d) {
     if (isFinite(ms) && ms >= 0) cleanApps[app] = ms
     else appsChanged = true
   }
-  if (total === d.total && !appsChanged) return { day: d, changed: false }
-  return { day: { total: total, apps: cleanApps }, changed: true }
+  var fixedSpans = sanitizeSpans(d.spans)
+  if (total === d.total && !appsChanged && !fixedSpans.changed)
+    return { day: d, changed: false }
+  var out = { total: total, apps: cleanApps }
+  if (fixedSpans.spans !== undefined) out.spans = fixedSpans.spans
+  return { day: out, changed: true }
 }
 
 // The year archive maps "YYYY" to { "YYYY-MM-DD": ms }. Returns the input
@@ -757,121 +786,319 @@ function groupedApps(apps, maxSlices, minPct) {
   return head
 }
 
-// ---- Day timeline (v2.0 demo) --------------------------------------------
-// Fixed demo buckets: the timeline strip groups the day's apps into stable
-// categories instead of per-site buckets, so no window-title rules (and no
-// adult-site defaults) are needed. Proportional demo only: history stores
-// per-app totals with no timestamps, so each block's width is its share of
-// the day. Real timestamped segments arrive with v2.0 proper.
-var DAY_TIMELINE_CATEGORIES = [
-  "Browser",
-  "Email",
-  "Code",
-  "Terminal",
-  "Chat",
-  "Media",
+// ---- App categories ------------------------------------------------------
+// Ten broad buckets describing what an app is used for, plus Other for
+// anything unclassified. Categories never judge: productivity stays a
+// separate, optional concern. Browsers keep one bucket (Web Browsing);
+// per-site splits wait for website tracking with proper permissions.
+var APP_CATEGORIES = [
+  "Development",
+  "Productivity",
+  "Communication",
+  "Education & Research",
+  "Creative",
+  "Web Browsing",
+  "Social",
+  "Entertainment",
+  "Gaming",
+  "System & Utilities",
   "Other",
 ]
 
-var TIMELINE_BROWSER_KEYS = {
+// Canonical browser keys keep one bucket via exact match; no per-site
+// split, so no window-title rules (and no adult-site defaults) exist.
+var BROWSER_CATEGORY_KEYS = {
   zen: true,
   firefox: true,
+  "firefox-developer-edition": true,
   librewolf: true,
   waterfox: true,
   "tor-browser": true,
   "mullvad-browser": true,
   "google-chrome": true,
+  "google-chrome-stable": true,
+  "google-chrome-beta": true,
+  chrome: true,
   chromium: true,
+  "chromium-browser": true,
   brave: true,
+  "brave-beta": true,
+  "brave-nightly": true,
   vivaldi: true,
   "microsoft-edge": true,
+  "edge-beta": true,
 }
 
-var TIMELINE_MATCHERS = [
+// First match wins, so specific buckets come before generic ones. Each
+// pattern tests the raw, canonical and display names.
+var CATEGORY_MATCHERS = [
   {
-    category: "Email",
-    re: /thunderbird|evolution|geary|mailspring|outlook|protonmail|tutanota|\bemail\b|\bmail\b|gmail/,
+    category: "Gaming",
+    re: /steam|lutris|heroic|minetest|minecraft|prismlauncher|multimc|pollymc|bottles|retroarch|dolphin[-_]emu|pcsx2|rpcs3|yuzu|ryujinx|suyu|\bitch\b|playonlinux|gzdoom|openmw|\bosu\b/,
   },
   {
-    category: "Code",
-    re: /code-oss|code-insiders|vscodium|codium|cursor|windsurf|neovim|\bnvim\b|\bvim\b|emacs|jetbrains|idea|pycharm|webstorm|android-studio|geany|\bkate\b|gedit|\bzed\b|opencode|aider|\bcode\b/,
+    category: "Entertainment",
+    re: /spotify|feishin|tauon|nuclear|lollypop|rhythmbox|elisa|celluloid|totem|\bvlc\b|\bmpv\b|kodi|jellyfin|plex|stremio|freetube|netflix|hulu|disney|popcorntime|ncmpcpp|\bcmus\b|\bmoc\b|mocp|ytkew|parabolic|\bclapper\b|\bshowtime\b|\beog\b|loupe|eom|ristretto/,
   },
   {
-    category: "Terminal",
-    re: /alacritty|kitty|ghostty|wezterm|konsole|gnome-terminal|gnome-console|tilix|xfce4-terminal|termite|blackbox|warp|\bfoot\b|\bst\b|terminal|console|\bshell\b|\bbash\b|\bzsh\b|\bfish\b|tmux/,
+    category: "Social",
+    re: /reddit|instagram|facebook|tiktok|tumblr|pinterest|mastodon|misskey|lemmy|cawbird|whalebird|tootle|tokodon|twitter|pinafore|hyperspace|mammoth|icecubes|\belk\b|photon/,
   },
   {
-    category: "Chat",
-    re: /discord|slack|telegram|whatsapp|messenger|\bsignal\b|teams|vesktop|element|hexchat|pidgin|\bzoom\b|jitsi/,
+    category: "Communication",
+    re: /discord|vesktop|slack|telegram|whatsapp|messenger|\bsignal\b|teams|thunderbird|evolution|geary|mailspring|outlook|protonmail|tutanota|\bemail\b|gmail|\bzoom\b|jitsi|\bmeet\b|element|nheko|cinny|hexchat|pidgin|weechat|irssi|senpai/,
   },
   {
-    category: "Media",
-    re: /spotify|\bvlc\b|\bmpv\b|steam|lutris|heroic|\bmusic\b|\bvideo\b|player|obs-studio|audacity/,
+    category: "Creative",
+    re: /blender|\bgimp\b|figma|krita|inkscape|kdenlive|shotcut|olive|pitivi|obs-studio|audacity|ardour|lmms|musescore|darktable|rawtherapee|mypaint|pinta|flowblade|openshot|shotwell|gthumb|digikam/,
+  },
+  {
+    category: "Education & Research",
+    re: /\banki\b|zotero|calibre|evince|okular|atril|xournalpp|texstudio|texmaker|goldendict|stellarium|kstars|marble|kdeedu/,
+  },
+  {
+    category: "Development",
+    re: /vscode|vscodium|codium|cursor|windsurf|code-oss|code-insiders|neovim|\bnvim\b|\bvim\b|emacs|helix|\bcode\b|jetbrains|\bidea\b|pycharm|webstorm|clion|phpstorm|rustrover|goland|rider|android-studio|docker|podman|postman|insomnia|gitkraken|lazygit|\bgit\b|\bopencode\b|aider|kubectl|scc|tokei|meld|dbeaver|pgadmin|sqlitebrowser|wireshark/,
+  },
+  {
+    category: "Productivity",
+    re: /libreoffice|soffice|\bwriter\b|\bcalc\b|calculator|\bimpress\b|notion|obsidian|todoist|logseq|anytype|typora|joplin|standardnotes|evernote|onenote|\bexcel\b|\bword\b|powerpoint|onlyoffice|calligra|endeavour|planner|errands|superproductivity|gedit|\bkate\b|mousepad|leafpad|gnome-text-editor/,
+  },
+  {
+    category: "System & Utilities",
+    re: /nautilus|nemo|\bdolphin\b|thunar|pcmanfm|caja|konqueror|yazi|\blf\b|ranger|vifm|nnn|gnome-control-center|gnome-settings|\bsettings\b|systemsettings|gparted|gnome-disks|baobab|filelight|\bhtop\b|\bbtop\b|gnome-system-monitor|missioncenter|resources|pavucontrol|helvum|blueman|nm-connection-editor|rofi|wofi|ulauncher|albert|bitwarden|\b1password\b|keepassxc|keepass|flameshot|spectacle|fastfetch|neofetch|\bssh\b|mosh|tmux|\bscreen\b|\bbash\b|\bzsh\b|\bfish\b|\bdash\b|foot|alacritty|kitty|ghostty|wezterm|konsole|gnome-terminal|gnome-console|kgx|ptyxis|tilix|xfce4-terminal|termite|\bst\b|blackbox|warp|\bterminal\b|console|\bshell\b/,
   },
 ]
 
-// One stable bucket per app name for the timeline strip. Browsers keep one
-// bucket (no per-site split); everything unmatched lands in Other.
+// One stable bucket per app name. Browsers match canonically first so a
+// browser never falls through to a looser pattern; everything unmatched
+// lands in Other.
 function appCategory(app) {
   if (!app) return "Other"
   var canon = String(canonicalApp(app)).toLowerCase()
-  if (Object.prototype.hasOwnProperty.call(TIMELINE_BROWSER_KEYS, canon))
-    return "Browser"
+  if (Object.prototype.hasOwnProperty.call(BROWSER_CATEGORY_KEYS, canon))
+    return "Web Browsing"
   var names = [
     String(app).toLowerCase(),
     canon,
     String(displayName(app)).toLowerCase(),
   ]
-  for (var m = 0; m < TIMELINE_MATCHERS.length; m++) {
+  for (var m = 0; m < CATEGORY_MATCHERS.length; m++) {
     for (var n = 0; n < names.length; n++) {
-      if (names[n] && TIMELINE_MATCHERS[m].re.test(names[n]))
-        return TIMELINE_MATCHERS[m].category
+      if (names[n] && CATEGORY_MATCHERS[m].re.test(names[n]))
+        return CATEGORY_MATCHERS[m].category
     }
   }
   return "Other"
 }
 
-// Fold an appList-shaped array into category totals:
-// [{ category, ms, pct, frac }], most-used first. Malformed entries carry
-// no time; skipping beats throwing.
-function groupByCategory(apps) {
-  var raw = Array.isArray(apps) ? apps : []
-  var totals = {}
-  var total = 0
-  for (var k = 0; k < raw.length; k++) {
-    if (!raw[k] || typeof raw[k] !== "object") continue
-    var ms = Number(raw[k].ms)
-    if (!isFinite(ms) || ms <= 0) continue
-    var cat = appCategory(raw[k].app)
-    totals[cat] = (totals[cat] || 0) + ms
-    total += ms
-  }
+// Deterministic color per category off the theme accent, so a category
+// keeps its color no matter which others share the day.
+function categoryColor(category, accentHex) {
+  var idx = APP_CATEGORIES.indexOf(category)
+  if (idx < 0) return accentHex
+  var colors = sliceColors(APP_CATEGORIES.length, accentHex)
+  return colors[idx] || accentHex
+}
+
+// ---- Day spans (v2.0) ------------------------------------------------------
+// Every credited focus chunk records { app, start, end } (epoch ms) on
+// its day, so the timeline renders real 00:00–23:59 positions. Spans are
+// detail like per-app totals: they age out with retention, never reach
+// the archive, and only the user's own reset/wipe destroys them early.
+// The spans key stays absent until the first span records, so old days
+// and old code pass through untouched.
+var MAX_DAY_SPANS = 3000
+// Read-time coalescing: adjacent same-app spans rejoin across short hops
+// (a 60s commit cadence must not dice one session into minutes).
+var SPAN_MERGE_GAP_MS = 5 * 60000
+
+function isSpan(s) {
+  if (!s || typeof s !== "object") return false
+  if (typeof s.app !== "string" || !s.app) return false
+  var a = Number(s.start)
+  var b = Number(s.end)
+  return isFinite(a) && isFinite(b) && b > a
+}
+
+// Validated span list, or undefined when the day carries none. Callers
+// must use this (never day.spans directly) so span-less days just work.
+function spanList(day) {
+  if (!day || !Array.isArray(day.spans)) return []
+  return day.spans
+}
+
+// Returns { spans, changed }; clean lists keep array identity, absent
+// stays absent, anything else rebuilds normalized and capped.
+function sanitizeSpans(value) {
+  if (value === undefined) return { spans: undefined, changed: false }
+  if (!Array.isArray(value)) return { spans: [], changed: true }
   var out = []
-  for (var c = 0; c < DAY_TIMELINE_CATEGORIES.length; c++) {
-    var name = DAY_TIMELINE_CATEGORIES[c]
-    if (totals[name] > 0) {
-      out.push({
-        category: name,
-        ms: totals[name],
-        pct: total > 0 ? Math.round((100 * totals[name]) / total) : 0,
-        frac: total > 0 ? totals[name] / total : 0,
-      })
+  var changed = false
+  for (var i = 0; i < value.length; i++) {
+    var s = value[i]
+    if (!isSpan(s)) {
+      changed = true
+      continue
     }
+    if (out.length >= MAX_DAY_SPANS) {
+      changed = true
+      continue
+    }
+    out.push({ app: String(s.app), start: Number(s.start), end: Number(s.end) })
+    if (
+      out[out.length - 1].app !== s.app ||
+      out[out.length - 1].start !== s.start ||
+      out[out.length - 1].end !== s.end
+    )
+      changed = true
   }
-  out.sort(function (a, b) {
-    return b.ms - a.ms
-  })
+  if (!changed) return { spans: value, changed: false }
+  return { spans: out, changed: true }
+}
+
+// Fresh day object with one span appended; the input returns by identity
+// when the span is invalid or the day already holds the cap.
+function appendSpan(day, app, start, end) {
+  var span = { app: String(app), start: Number(start), end: Number(end) }
+  if (!day || !isSpan(span)) return day
+  var cur = spanList(day)
+  if (cur.length >= MAX_DAY_SPANS) return day
+  var out = cur.slice()
+  out.push(span)
+  var next = Object.assign({}, day)
+  next.spans = out
+  return next
+}
+
+// Split [start, end) at local midnights into per-day portions:
+// [{ key, app, start, end }]. DST days split on the true wall-clock
+// boundary like the totals do.
+function splitSpan(app, start, end) {
+  var out = []
+  var name = String(app || "")
+  var s = Number(start)
+  var e = Number(end)
+  if (!name || !isFinite(s) || !isFinite(e) || e <= s) return out
+  var guard = 0
+  while (s < e && guard < 370) {
+    var d = new Date(s)
+    var midnight = new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate() + 1,
+    ).getTime()
+    var stop = Math.min(e, midnight)
+    if (stop <= s) break
+    var key = dayKey(d)
+    if (key) out.push({ key: key, app: name, start: s, end: stop })
+    s = stop
+    guard++
+  }
   return out
 }
 
-// One timeline derivation: category blocks with theme colors attached, so
-// views thread a single array down with no positional pairing.
-function timelineView(apps, accentHex) {
-  var groups = groupByCategory(apps)
-  var colors = sliceColors(groups.length, accentHex)
-  for (var i = 0; i < groups.length; i++)
-    groups[i].color = colors[i] || accentHex
-  return groups
+// Local-midnight bounds of a day key: { start, end }, or null when the
+// key is not a real date.
+function dayBounds(key) {
+  var d = keyToDate(key)
+  if (!d) return null
+  return {
+    start: d.getTime(),
+    end: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime(),
+  }
+}
+
+// One timeline derivation over a day's spans: { segments, categories }.
+// Segments sort by start and carry day fractions for absolute placement;
+// adjacent same-app spans rejoin across short hops; categories total the
+// merged time with stable per-category colors for the legend.
+function daySpanView(day, key, accentHex) {
+  var raw = spanList(day)
+  var ordered = []
+  for (var i = 0; i < raw.length; i++) {
+    if (isSpan(raw[i])) ordered.push(raw[i])
+  }
+  ordered.sort(function (a, b) {
+    return a.start - b.start
+  })
+  var merged = []
+  for (var j = 0; j < ordered.length; j++) {
+    var s = ordered[j]
+    var last = merged.length ? merged[merged.length - 1] : null
+    if (
+      last &&
+      last.app === s.app &&
+      Number(s.start) - last.end <= SPAN_MERGE_GAP_MS
+    ) {
+      if (Number(s.end) > last.end) last.end = Number(s.end)
+    } else {
+      merged.push({ app: s.app, start: Number(s.start), end: Number(s.end) })
+    }
+  }
+  var bounds = dayBounds(key)
+  var span = bounds ? bounds.end - bounds.start : 0
+  var segments = []
+  var totals = {}
+  for (var k = 0; k < merged.length; k++) {
+    var g = merged[k]
+    var ms = g.end - g.start
+    if (!(ms > 0)) continue
+    var category = appCategory(g.app)
+    totals[category] = (totals[category] || 0) + ms
+    var startFrac = bounds ? (g.start - bounds.start) / span : 0
+    var endFrac = bounds ? (g.end - bounds.start) / span : 0
+    segments.push({
+      app: g.app,
+      category: category,
+      start: g.start,
+      end: g.end,
+      ms: ms,
+      startFrac: Math.max(0, Math.min(1, startFrac)),
+      endFrac: Math.max(0, Math.min(1, endFrac)),
+      color: categoryColor(category, accentHex),
+    })
+  }
+  var categories = []
+  for (var c = 0; c < APP_CATEGORIES.length; c++) {
+    var name = APP_CATEGORIES[c]
+    if (totals[name] > 0) {
+      categories.push({
+        category: name,
+        ms: totals[name],
+        color: categoryColor(name, accentHex),
+      })
+    }
+  }
+  categories.sort(function (a, b) {
+    return b.ms - a.ms
+  })
+  return { segments: segments, categories: categories }
+}
+
+// Local "HH:MM" for an epoch timestamp; "" when unparseable.
+function fmtClock(ms) {
+  var d = new Date(Number(ms))
+  if (isNaN(d.getTime())) return ""
+  return pad2(d.getHours()) + ":" + pad2(d.getMinutes())
+}
+
+// Axis label for a whole hour of the day: "00:00" … "24:00".
+function hourLabel(h) {
+  var n = Math.floor(Number(h))
+  if (!isFinite(n) || n < 0 || n > 24) return ""
+  return pad2(n) + ":00"
+}
+
+// Day view: the apps donut or the 24h timeline. An explicit pick wins;
+// otherwise the retired demo toggle still opts in, so the live setting
+// enabled for it keeps working; everything else renders the donut.
+function parseDayView(value, legacyHide) {
+  var v = String(value || "")
+  if (v === "timeline" || v === "apps") return v
+  if (legacyHide === false || String(legacyHide || "") === "false")
+    return "timeline"
+  return "apps"
 }
 
 function totalFor(days, key) {
@@ -2229,10 +2456,21 @@ if (typeof module !== "undefined" && module && module.exports) {
     pruneDays: pruneDays,
     insights: insights,
     groupedApps: groupedApps,
-    DAY_TIMELINE_CATEGORIES: DAY_TIMELINE_CATEGORIES,
+    APP_CATEGORIES: APP_CATEGORIES,
     appCategory: appCategory,
-    groupByCategory: groupByCategory,
-    timelineView: timelineView,
+    categoryColor: categoryColor,
+    MAX_DAY_SPANS: MAX_DAY_SPANS,
+    SPAN_MERGE_GAP_MS: SPAN_MERGE_GAP_MS,
+    isSpan: isSpan,
+    spanList: spanList,
+    sanitizeSpans: sanitizeSpans,
+    appendSpan: appendSpan,
+    splitSpan: splitSpan,
+    dayBounds: dayBounds,
+    daySpanView: daySpanView,
+    fmtClock: fmtClock,
+    hourLabel: hourLabel,
+    parseDayView: parseDayView,
     hexToHsl: hexToHsl,
     hslToHex: hslToHex,
     sliceColors: sliceColors,

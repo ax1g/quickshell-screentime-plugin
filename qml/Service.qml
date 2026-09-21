@@ -384,10 +384,15 @@ Item {
         if (!root.ready) {
             root.todayKey = Model.dayKey(new Date());
             var prev = d[root.todayKey];
-            root.today = prev && typeof prev === "object" ? {
+            var live = prev && typeof prev === "object" ? {
                 total: prev.total || 0,
                 apps: Object.assign({}, prev.apps || {})
             } : Model.newDay();
+            // Recorded spans carry into the live day; span-less days keep
+            // their shape with no empty key.
+            if (prev && typeof prev === "object" && Array.isArray(prev.spans) && prev.spans.length > 0)
+                live.spans = prev.spans.slice();
+            root.today = live;
             root.ready = true;
             root.startupPhase = false;
             root.lastTick = Date.now();

@@ -192,3 +192,9 @@ test("corrupt history is set aside without depending on python", () => {
   assert(backup[0].includes(".corrupt-$(date +%s)"))
   assert(!backup[0].includes("|| exit 0"), "no early exit without python")
 })
+
+test("recorded spans carry from disk into the live day", () => {
+  // The load handler copies the stored span array (never the reference)
+  // and leaves span-less days without the key.
+  assert.match(service, /live\.spans = prev\.spans\.slice\(\)/)
+})

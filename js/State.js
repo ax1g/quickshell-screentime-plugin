@@ -21,10 +21,14 @@ function isSuspendGap(now, lastTick, suspendGapMs) {
 function accumulateBucket(today, app, dur) {
   // NaN <= 0 is false, so a plain dur <= 0 check lets NaN through and
   // poisons the day total. Only a positive finite duration accrues.
+  // Recorded spans ride along untouched; appends happen at the credit
+  // sites below, never here.
   if (!app || !isFinite(dur) || dur <= 0) return today
   var apps = Object.assign({}, today.apps)
   apps[app] = (apps[app] || 0) + dur
-  return { total: today.total + dur, apps: apps }
+  var out = { total: today.total + dur, apps: apps }
+  if (today && Array.isArray(today.spans)) out.spans = today.spans
+  return out
 }
 
 // Unmirrored delta of live day over history mirror, floored at zero.
@@ -54,9 +58,10 @@ function nextMidnightMs(ms) {
 }
 
 // Split [activeStart, now) across calendar days: { days, todayDur,
-// resumeAt }. Every touched history day gets a fresh object; the caller
-// owns today/todayDur and the reopened bucket at resumeAt. A multi-day
-// suspend lands day by day instead of piling onto the start day.
+// resumeAt }. Every touched history day gets a fresh object carrying its
+// credited span; the caller owns today/todayDur and the reopened bucket
+// at resumeAt. A multi-day suspend lands day by day instead of piling
+// onto the start day.
 function splitAcrossDays(state, model, app, activeStart, now, todayKey) {
   var d = Object.assign({}, state.days)
   var cursor = activeStart
@@ -65,7 +70,12 @@ function splitAcrossDays(state, model, app, activeStart, now, todayKey) {
     var chunk = Math.max(0, Math.min(now, nextMidnightMs(cursor)) - cursor)
     if (chunk <= 0) break
     var key = model.dayKey(new Date(cursor))
-    d[key] = accumulateBucket(d[key] || model.newDay(), app, chunk)
+    d[key] = model.appendSpan(
+      accumulateBucket(d[key] || model.newDay(), app, chunk),
+      app,
+      cursor,
+      cursor + chunk,
+    )
     cursor += chunk
     guard++
   }
@@ -113,7 +123,12 @@ function closeActiveBucket(
   var startDay = model.dayKey(new Date(activeStart))
   if (startDay === todayKey) {
     return {
-      today: accumulateBucket(state.today, activeApp, dur),
+      today: model.appendSpan(
+        accumulateBucket(state.today, activeApp, dur),
+        activeApp,
+        activeStart,
+        now,
+      ),
       days: state.days,
       todayKey: state.todayKey,
       activeApp: "",
@@ -133,7 +148,12 @@ function closeActiveBucket(
   return {
     today:
       split.todayDur > 0
-        ? accumulateBucket(state.today, activeApp, split.todayDur)
+        ? model.appendSpan(
+            accumulateBucket(state.today, activeApp, split.todayDur),
+            activeApp,
+            split.resumeAt,
+            now,
+          )
         : state.today,
     days: split.days,
     todayKey: state.todayKey,
@@ -183,7 +203,12 @@ function commitElapsed(
   var startDay = model.dayKey(new Date(activeStart))
   if (startDay === todayKey) {
     // Entire bucket belongs to today — simple case.
-    var newToday = accumulateBucket(state.today, activeApp, dur)
+    var newToday = model.appendSpan(
+      accumulateBucket(state.today, activeApp, dur),
+      activeApp,
+      activeStart,
+      now,
+    )
     return {
       today: newToday,
       days: state.days,
@@ -213,6 +238,14 @@ function commitElapsed(
   }
 }
 
+// Copy recorded spans onto a rebuilt day object, keeping the key absent
+// when there is nothing to carry.
+function carrySpans(out, src) {
+  if (src && Array.isArray(src.spans) && src.spans.length > 0)
+    out.spans = src.spans.slice()
+  return out
+}
+
 // Carry the live bucket into a new calendar day; null when unneeded.
 function rolloverIfNeeded(state, newKey) {
   if (newKey === state.todayKey) return null
@@ -220,7 +253,13 @@ function rolloverIfNeeded(state, newKey) {
   var prev = state.days[newKey]
   var newToday =
     prev && typeof prev === "object"
-      ? { total: prev.total || 0, apps: Object.assign({}, prev.apps || {}) }
+      ? carrySpans(
+          {
+            total: prev.total || 0,
+            apps: Object.assign({}, prev.apps || {}),
+          },
+          prev,
+        )
       : model.newDay()
   return {
     todayKey: newKey,
@@ -247,6 +286,7 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
     }
   }
   var app = state.activeApp
+  var model = modelFor(state)
   // Close against the NEW day so the split attributes each portion exactly.
   var closed = closeActiveBucket(
     state,
@@ -279,14 +319,40 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
       apps[dk] = (apps[dk] || 0) + delta.apps[dk]
       total += delta.apps[dk]
     }
-    d[state.todayKey] = { total: total, apps: apps }
+    // The flushed totals bring their spans: whatever today recorded past
+    // the mirror's length belongs to the old day too. Sorted so the cap
+    // below keeps the newest spans, not the newest-recorded ones.
+    var carried = Array.isArray(old.spans) ? old.spans.slice() : []
+    var mirror = state.days ? state.days[state.todayKey] : null
+    var mirrorLen =
+      mirror && Array.isArray(mirror.spans) ? mirror.spans.length : 0
+    var fresh =
+      state.today && Array.isArray(state.today.spans)
+        ? state.today.spans.slice(mirrorLen)
+        : []
+    var cap = model.MAX_DAY_SPANS || 3000
+    var all = carried.concat(fresh)
+    all.sort(function (a, b) {
+      return a.start - b.start
+    })
+    var mergedDay = { total: total, apps: apps }
+    if (all.length > 0)
+      mergedDay.spans = all.length > cap ? all.slice(-cap) : all
+    d[state.todayKey] = mergedDay
   }
   patch.days = d
-  // Fold post-midnight growth into the carried day.
+  // Fold post-midnight growth into the carried day with its span: the
+  // credited chunk is exactly [now - grown, now).
   var grown =
     (closed.today ? closed.today.total : 0) -
     (state.today ? state.today.total : 0)
-  if (grown > 0 && app) patch.today = accumulateBucket(patch.today, app, grown)
+  if (grown > 0 && app)
+    patch.today = model.appendSpan(
+      accumulateBucket(patch.today, app, grown),
+      app,
+      now - grown,
+      now,
+    )
   // closeActiveBucket decides lastTick (wake time on a gap, untouched
   // otherwise); the rollover carry must not lose that decision.
   if (closed.lastTick !== undefined) patch.lastTick = closed.lastTick
