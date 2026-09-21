@@ -19,6 +19,7 @@ Column {
     required property color urgent
     required property bool hideYearly
     required property bool hideDailyInsights
+    required property bool hideDayTimeline
     required property bool hideYearInsights
     required property int weekCount
     required property var weekOptions
@@ -41,6 +42,7 @@ Column {
 
     signal yearlyToggled
     signal dailyInsightsToggled
+    signal timelineToggled
     signal yearInsightsToggled
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
@@ -69,6 +71,8 @@ Column {
             root.yearlyToggled();
         else if (kind === "daily")
             root.dailyInsightsToggled();
+        else if (kind === "timeline")
+            root.timelineToggled();
         else if (kind === "retro")
             root.yearInsightsToggled();
         else if (kind === "weektotal")
@@ -103,7 +107,7 @@ Column {
             });
         }
         add("back", 0);
-        var toggleKinds = ["yearly", "daily", "retro", "weektotal", "trophy", "easter"];
+        var toggleKinds = ["yearly", "daily", "timeline", "retro", "weektotal", "trophy", "easter"];
         for (var t = 0; t < toggleKinds.length; t++)
             add("toggle", toggleKinds[t]);
         for (var s = 0; s < root.recordColorOptions.length; s++)
@@ -268,6 +272,12 @@ Column {
                         label: "Daily highlights",
                         sub: "Top app, change since yesterday, busiest day",
                         shown: !root.hideDailyInsights
+                    },
+                    {
+                        kind: "timeline",
+                        label: "Day timeline",
+                        sub: "Color-coded category strip below the donut (demo)",
+                        shown: !root.hideDayTimeline
                     },
                     {
                         kind: "retro",

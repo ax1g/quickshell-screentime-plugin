@@ -24,6 +24,7 @@ TestCase {
         urgent: "#ff5555"
         hideYearly: false
         hideDailyInsights: false
+        hideDayTimeline: false
         hideYearInsights: false
         weekCount: 12
         weekOptions: [12, 24, 36, 52]

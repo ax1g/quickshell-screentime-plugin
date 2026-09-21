@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Know your day at a glance: an optional color-coded timeline below the
+  donut breaks the active day into Browser, Email, Code, Terminal, Chat,
+  Media and Other. Off by default until v2.0 tracking lands — flip it on
+  in Settings → Display (demo widths are each category's share of the day).
+
 ## [1.6.2] - 2026-09-17
 
 ### Added

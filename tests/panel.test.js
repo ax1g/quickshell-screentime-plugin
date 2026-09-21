@@ -1096,3 +1096,36 @@ test("week header nudges the next arrow after the range text", () => {
   assert.match(trend, /recordTrophy\.visible \? recordTrophy\.implicitWidth/)
   assert.doesNotMatch(trend, /space\(76\)/)
 })
+
+test("day timeline demo sits below the donut behind a settings toggle", () => {
+  const timeline = comp("DayTimeline.qml")
+  // Hidden by default: missing prefs keep the current panel.
+  assert.match(
+    panel,
+    /hideDayTimeline: !\(root\.prefs\.hideDayTimeline === false \|\| root\.prefs\.hideDayTimeline === "false"\)/,
+  )
+  // One Model view call threaded down to the strip.
+  assert.match(panel, /Model\.timelineView\(root\.fullApps, Color\.accent\)/)
+  assert.match(panel, /DayTimeline \{/)
+  assert.match(panel, /blocks: root\.timelineBlocks/)
+  assert.match(
+    panel,
+    /visible: !root\.hideDayTimeline && root\.timelineBlocks\.length > 0/,
+  )
+  // Strip carries its own color per block and labels the proportional demo.
+  assert.match(timeline, /required property var blocks/)
+  assert.match(timeline, /modelData\.color/)
+  assert.match(timeline, /text: "DAY TIMELINE"/)
+  assert.match(timeline, /text: "DEMO"/)
+  // Settings toggle with hint registry coverage.
+  assert.match(menu, /required property bool hideDayTimeline/)
+  assert.match(menu, /signal timelineToggled/)
+  assert.match(menu, /label: "Day timeline"/)
+  assert.match(menu, /root\.timelineToggled\(\)/)
+  assert.match(menu, /shown: !root\.hideDayTimeline/)
+  assert.match(panel, /hideDayTimeline: root\.hideDayTimeline/)
+  assert.match(
+    panel,
+    /writeSetting\("hideDayTimeline", !root\.hideDayTimeline\)/,
+  )
+})

@@ -757,6 +757,123 @@ function groupedApps(apps, maxSlices, minPct) {
   return head
 }
 
+// ---- Day timeline (v2.0 demo) --------------------------------------------
+// Fixed demo buckets: the timeline strip groups the day's apps into stable
+// categories instead of per-site buckets, so no window-title rules (and no
+// adult-site defaults) are needed. Proportional demo only: history stores
+// per-app totals with no timestamps, so each block's width is its share of
+// the day. Real timestamped segments arrive with v2.0 proper.
+var DAY_TIMELINE_CATEGORIES = [
+  "Browser",
+  "Email",
+  "Code",
+  "Terminal",
+  "Chat",
+  "Media",
+  "Other",
+]
+
+var TIMELINE_BROWSER_KEYS = {
+  zen: true,
+  firefox: true,
+  librewolf: true,
+  waterfox: true,
+  "tor-browser": true,
+  "mullvad-browser": true,
+  "google-chrome": true,
+  chromium: true,
+  brave: true,
+  vivaldi: true,
+  "microsoft-edge": true,
+}
+
+var TIMELINE_MATCHERS = [
+  {
+    category: "Email",
+    re: /thunderbird|evolution|geary|mailspring|outlook|protonmail|tutanota|\bemail\b|\bmail\b|gmail/,
+  },
+  {
+    category: "Code",
+    re: /code-oss|code-insiders|vscodium|codium|cursor|windsurf|neovim|\bnvim\b|\bvim\b|emacs|jetbrains|idea|pycharm|webstorm|android-studio|geany|\bkate\b|gedit|\bzed\b|opencode|aider|\bcode\b/,
+  },
+  {
+    category: "Terminal",
+    re: /alacritty|kitty|ghostty|wezterm|konsole|gnome-terminal|gnome-console|tilix|xfce4-terminal|termite|blackbox|warp|\bfoot\b|\bst\b|terminal|console|\bshell\b|\bbash\b|\bzsh\b|\bfish\b|tmux/,
+  },
+  {
+    category: "Chat",
+    re: /discord|slack|telegram|whatsapp|messenger|\bsignal\b|teams|vesktop|element|hexchat|pidgin|\bzoom\b|jitsi/,
+  },
+  {
+    category: "Media",
+    re: /spotify|\bvlc\b|\bmpv\b|steam|lutris|heroic|\bmusic\b|\bvideo\b|player|obs-studio|audacity/,
+  },
+]
+
+// One stable bucket per app name for the timeline strip. Browsers keep one
+// bucket (no per-site split); everything unmatched lands in Other.
+function appCategory(app) {
+  if (!app) return "Other"
+  var canon = String(canonicalApp(app)).toLowerCase()
+  if (Object.prototype.hasOwnProperty.call(TIMELINE_BROWSER_KEYS, canon))
+    return "Browser"
+  var names = [
+    String(app).toLowerCase(),
+    canon,
+    String(displayName(app)).toLowerCase(),
+  ]
+  for (var m = 0; m < TIMELINE_MATCHERS.length; m++) {
+    for (var n = 0; n < names.length; n++) {
+      if (names[n] && TIMELINE_MATCHERS[m].re.test(names[n]))
+        return TIMELINE_MATCHERS[m].category
+    }
+  }
+  return "Other"
+}
+
+// Fold an appList-shaped array into category totals:
+// [{ category, ms, pct, frac }], most-used first. Malformed entries carry
+// no time; skipping beats throwing.
+function groupByCategory(apps) {
+  var raw = Array.isArray(apps) ? apps : []
+  var totals = {}
+  var total = 0
+  for (var k = 0; k < raw.length; k++) {
+    if (!raw[k] || typeof raw[k] !== "object") continue
+    var ms = Number(raw[k].ms)
+    if (!isFinite(ms) || ms <= 0) continue
+    var cat = appCategory(raw[k].app)
+    totals[cat] = (totals[cat] || 0) + ms
+    total += ms
+  }
+  var out = []
+  for (var c = 0; c < DAY_TIMELINE_CATEGORIES.length; c++) {
+    var name = DAY_TIMELINE_CATEGORIES[c]
+    if (totals[name] > 0) {
+      out.push({
+        category: name,
+        ms: totals[name],
+        pct: total > 0 ? Math.round((100 * totals[name]) / total) : 0,
+        frac: total > 0 ? totals[name] / total : 0,
+      })
+    }
+  }
+  out.sort(function (a, b) {
+    return b.ms - a.ms
+  })
+  return out
+}
+
+// One timeline derivation: category blocks with theme colors attached, so
+// views thread a single array down with no positional pairing.
+function timelineView(apps, accentHex) {
+  var groups = groupByCategory(apps)
+  var colors = sliceColors(groups.length, accentHex)
+  for (var i = 0; i < groups.length; i++)
+    groups[i].color = colors[i] || accentHex
+  return groups
+}
+
 function totalFor(days, key) {
   var d = days && days[key]
   return d && d.total ? d.total : 0
@@ -2031,6 +2148,10 @@ if (typeof module !== "undefined" && module && module.exports) {
     pruneDays: pruneDays,
     insights: insights,
     groupedApps: groupedApps,
+    DAY_TIMELINE_CATEGORIES: DAY_TIMELINE_CATEGORIES,
+    appCategory: appCategory,
+    groupByCategory: groupByCategory,
+    timelineView: timelineView,
     hexToHsl: hexToHsl,
     hslToHex: hslToHex,
     sliceColors: sliceColors,

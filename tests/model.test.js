@@ -2277,3 +2277,44 @@ test("weekRangeLabel shortens to three cases", () => {
     "Dec 28, 26 – Jan 3, 27 · W53",
   )
 })
+
+test("appCategory buckets the demo timeline without title rules", () => {
+  assert.equal(Model.appCategory("zen-bin"), "Browser")
+  assert.equal(Model.appCategory("google-chrome"), "Browser")
+  assert.equal(Model.appCategory("thunderbird"), "Email")
+  assert.equal(Model.appCategory("code"), "Code")
+  assert.equal(Model.appCategory("opencode"), "Code")
+  assert.equal(Model.appCategory("foot"), "Terminal")
+  assert.equal(Model.appCategory("discord"), "Chat")
+  assert.equal(Model.appCategory("spotify"), "Media")
+  assert.equal(Model.appCategory("nautilus"), "Other")
+  assert.equal(Model.appCategory(""), "Other")
+  assert.equal(Model.appCategory(null), "Other")
+})
+
+test("groupByCategory folds app rows into sorted category totals", () => {
+  const groups = Model.groupByCategory([
+    { app: "zen-bin", ms: 3600000, pct: 50 },
+    { app: "foot", ms: 1800000, pct: 25 },
+    { app: "discord", ms: 1800000, pct: 25 },
+  ])
+  assert.equal(groups.length, 3)
+  assert.equal(groups[0].category, "Browser")
+  assert.equal(groups[0].frac, 0.5)
+  assert.equal(groups[0].pct, 50)
+  assert.deepEqual(Model.groupByCategory([]), [])
+  assert.deepEqual(Model.groupByCategory(null), [])
+})
+
+test("timelineView attaches one theme color per block", () => {
+  const blocks = Model.timelineView(
+    [
+      { app: "zen-bin", ms: 3600000, pct: 50 },
+      { app: "foot", ms: 3600000, pct: 50 },
+    ],
+    "#e45b93",
+  )
+  assert.equal(blocks.length, 2)
+  for (const b of blocks) assert.match(b.color, /^#[0-9a-f]{6}$/)
+  assert.deepEqual(Model.timelineView([], "#e45b93"), [])
+})

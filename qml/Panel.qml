@@ -31,6 +31,10 @@ Panel {
     readonly property var prefs: ("settings" in root) && root.settings ? root.settings : ({})
     readonly property bool hideYearly: root.prefs.hideYearly === true
     readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
+    // Day-timeline demo: hidden until opted in. Missing or truthy prefs
+    // keep the current panel; only an explicit false (or "false", which
+    // the settings CLI stores as a string) shows the strip.
+    readonly property bool hideDayTimeline: !(root.prefs.hideDayTimeline === false || root.prefs.hideDayTimeline === "false")
     readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
@@ -218,6 +222,8 @@ Panel {
     // Donut shows the grouped view; the legend expands inline.
     readonly property var segments: Model.arcSegments(root.groupedApps)
     readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
+    // Day-timeline demo: one view call, threaded down to the strip.
+    readonly property var timelineBlocks: serviceReady ? Model.timelineView(root.fullApps, Color.accent) : []
     readonly property int groupedCount: root.groupedApps.length
     readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
 
@@ -665,6 +671,7 @@ Panel {
                             onBackRequested: root.openConfig(false)
                             hideYearly: root.hideYearly
                             hideDailyInsights: root.hideDailyInsights
+                            hideDayTimeline: root.hideDayTimeline
                             hideYearInsights: root.hideYearInsights
                             weekCount: root.weekCount
                             weekOptions: root.weekOptions
@@ -686,6 +693,7 @@ Panel {
                             hintMode: root.hintMode
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
+                            onTimelineToggled: root.writeSetting("hideDayTimeline", !root.hideDayTimeline)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
                             onWeekWindowSelected: function (count) {
                                 root.selectWeekWindow(count);
@@ -859,6 +867,26 @@ Panel {
                             fontFamily: root.contentFontFamily
                             accent: Color.accent
                             maxHeight: root.legendMaxHeight
+                        }
+                    }
+
+                    // ---- Day timeline demo (v2.0 preview) --------------------------
+                    // Hidden by default: new installs keep the current panel
+                    // until the toggle below opts in.
+                    Item {
+                        width: parent.width
+                        visible: !root.hideDayTimeline && root.timelineBlocks.length > 0
+                        height: visible ? dayTimeline.implicitHeight : 0
+                        implicitHeight: height
+
+                        DayTimeline {
+                            id: dayTimeline
+                            width: parent.width
+                            blocks: root.timelineBlocks
+                            foreground: root.contentForeground
+                            fontFamily: root.contentFontFamily
+                            tipBackground: root.bar ? root.bar.background : Color.background
+                            dayTotal: root.dayTotal
                         }
                     }
 
