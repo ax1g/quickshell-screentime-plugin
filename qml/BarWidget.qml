@@ -233,6 +233,9 @@ BarWidget {
             id: iconGlyph
             visible: !root.vertical && root.iconOnly
             anchors.fill: parent
+            // The timer glyph's ink sits one pixel lower than the bar icons
+            // in the configured Nerd Font despite sharing the same line box.
+            anchors.verticalCenterOffset: -1
             text: root.glyph
             fontFamily: button.fontFamily
             fontSize: button.fontSize
