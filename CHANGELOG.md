@@ -23,6 +23,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Social, not Web Browsing) off a clean rule set with no adult entries.
   Your pick persists across restarts.
 
+### Changed
+
+- The main panel grows with its content instead of scrolling.
+
 ### Fixed
 
 - Yearly retro cards now balance across both columns by measured height

@@ -411,7 +411,10 @@ Panel {
         open: root.opened
         focusTarget: keyCatcher
         contentWidth: panel.fittedContentWidth(Style.space(360))
-        contentHeight: panel.fittedContentHeight(panelColumn.implicitHeight, Style.space(480))
+        // The panel grows with its content instead of scrolling: no cap
+        // here, the framework still clamps to the screen, and j/k keep
+        // scrolling programmatically on short screens.
+        contentHeight: panel.fittedContentHeight(panelColumn.implicitHeight)
 
         PanelKeyCatcher {
             id: keyCatcher
@@ -781,7 +784,9 @@ Panel {
                 contentHeight: panelColumn.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                interactive: contentHeight > height || contentWidth > width
+                // Never user-scrollable: the panel grows to fit, and j/k
+                // move contentY directly when the screen clamps it.
+                interactive: false
 
                 Column {
                     id: panelColumn

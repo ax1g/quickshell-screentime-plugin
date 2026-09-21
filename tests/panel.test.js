@@ -1231,3 +1231,19 @@ test("RECHARGE MONTH always crowns the quietest month", () => {
   )
   assert.doesNotMatch(model, /MIN_RECHARGE_DAYS/)
 })
+
+test("main panel grows with content instead of scrolling", () => {
+  // No height cap: the framework still clamps to the screen, and j/k
+  // keep moving contentY on short screens.
+  assert.match(
+    panel,
+    /contentHeight: panel\.fittedContentHeight\(panelColumn\.implicitHeight\)/,
+  )
+  assert.doesNotMatch(
+    panel,
+    /fittedContentHeight\(panelColumn\.implicitHeight, Style\.space\(480\)\)/,
+  )
+  const scroll = panel.match(/id: panelScroll[\s\S]*?Column \{/)
+  assert(scroll, "panelScroll block exists")
+  assert(scroll[0].includes("interactive: false"))
+})
