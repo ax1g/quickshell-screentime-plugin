@@ -406,6 +406,11 @@ test("danger buttons center vertically beside early-wrapping labels", () => {
     menu,
     /text: wipeRow\.stage === 0 \? "WIPE ALL"[\s\S]*?"CAN'T UNDO!"[\s\S]*?"WIPE!"/,
   )
+  assert.match(menu, /id: resetButtonMetrics/)
+  assert.match(menu, /width: resetButtonMetrics\.advanceWidth \+ Style\.space\(20\)/)
+  assert.match(menu, /id: wipeButtonMetrics/)
+  assert.match(menu, /width: wipeButtonMetrics\.advanceWidth \+ Style\.space\(20\)/)
+  assert.match(menu, /property real buttonGap: Style\.space\(16\)/)
 })
 
 test("option pills align left under their labels", () => {
@@ -1111,6 +1116,8 @@ test("day view swaps the donut and the 24h timeline in place", () => {
     /Model\.daySpanView\(root\.activeDay, root\.activeDayKey, Color\.accent\)/,
   )
   assert.match(panel, /id: dayToggle/)
+  assert.match(panel, /id: dayViewContent/)
+  assert.match(panel, /spacing: 0/)
   assert.match(
     panel,
     /tipText: root\.dayView === "timeline" \? "Show apps donut" : "Show day timeline"/,
@@ -1135,6 +1142,7 @@ test("day view swaps the donut and the 24h timeline in place", () => {
   assert.match(timeline, /x: strip\.width \* Number\(modelData\.startFrac/)
   assert.match(timeline, /text: modelData\.label/)
   assert.match(timeline, /Model\.fmtClock\(segment\.modelData\.start\)/)
+  assert.match(timeline, /cursorShape: Qt\.PointingHandCursor/)
   assert.match(timeline, /text: "DAY TIMELINE"/)
   assert.match(timeline, /earlier time keeps totals only/)
   // The in-place toggle answers to d like the yearly g.
@@ -1171,6 +1179,7 @@ test("year graph toggles bars and heatmap in place with a persisted mode", () =>
   )
   assert.match(drawer, /visible: root\.yearGraph === "bars"/)
   assert.match(drawer, /visible: root\.yearGraph === "heatmap"/)
+  assert.match(drawer, /topPadding: root\.yearGraph === "heatmap" \? 0 : Style\.space\(10\)/)
   assert.match(drawer, /YearHeatmap \{/)
   assert.match(
     drawer,
@@ -1196,6 +1205,7 @@ test("year graph toggles bars and heatmap in place with a persisted mode", () =>
   assert.match(heatmap, /flickableDirection: Flickable\.HorizontalFlick/)
   assert.match(heatmap, /function restorePosition/)
   assert.match(heatmap, /modelData\.level, modelData\.future/)
+  assert.match(heatmap, /cursorShape: enabled \? Qt\.PointingHandCursor : Qt\.ArrowCursor/)
   assert.match(heatmap, /: "no data"/)
   assert.match(heatmap, /modelData\.labelFuture \? 0\.25 : 0\.45/)
   assert.match(heatmap, /text: "Less"/)

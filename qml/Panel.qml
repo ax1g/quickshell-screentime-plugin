@@ -862,90 +862,103 @@ Panel {
                     }
 
                     // ---- Day view switcher: donut ↔ 24h timeline ---------------
-                    // One icon flips the views in place; the pick persists.
+                    // One icon flips the views in place; the pick persists. Keep
+                    // it attached to the active view so no empty gap opens above it.
                     Item {
                         width: parent.width
-                        height: dayToggle.implicitHeight
-
-                        PagerArrow {
-                            id: dayToggle
-                            anchors.right: parent.right
-                            glyph: root.dayView === "timeline" ? "\uf200" : "\uf017"
-                            active: true
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            fontSize: Style.font.bodySmall
-                            tipText: root.dayView === "timeline" ? "Show apps donut" : "Show day timeline"
-                            tipBackground: root.bar ? root.bar.background : Color.background
-                            onClicked: root.writeSetting("dayView", root.dayView === "timeline" ? "apps" : "timeline")
-                        }
-
-                        HintBadge {
-                            label: "d"
-                            fontFamily: root.contentFontFamily
-                            accent: Color.accent
-                            show: root.hintMode
-                            anchors.top: dayToggle.top
-                            anchors.right: dayToggle.right
-                        }
-                    }
-
-                    // ---- Per-app donut + legend ------------------------------------
-                    Item {
-                        width: parent.width
-                        visible: root.dayView === "apps"
-                        height: visible ? Math.max(root.ringSize, root.legendMaxHeight) : 0
+                        height: dayViewContent.implicitHeight
                         implicitHeight: height
 
-                        DonutChart {
-                            id: donutChart
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            segments: root.segments
-                            sliceColors: root.sliceColors
-                            ringSize: root.ringSize
-                            activeDayLabel: root.activeDayLabel
-                            dayTotal: root.dayTotal
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            accent: Color.accent
-                        }
-
-                        AppLegend {
-                            anchors.left: donutChart.right
-                            anchors.leftMargin: Style.space(16)
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            height: root.legendMaxHeight
-                            rows: root.expanded ? root.fullApps : root.groupedApps
-                            expanded: root.expanded
-                            groupedCount: root.groupedCount
-                            sliceColors: root.sliceColors
-                            otherColor: root.otherColor
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            accent: Color.accent
-                            maxHeight: root.legendMaxHeight
-                        }
-                    }
-
-                    // ---- 24h timeline (same slot as the donut) --------------------
-                    Item {
-                        width: parent.width
-                        visible: root.dayView === "timeline"
-                        height: visible ? dayTimeline.implicitHeight : 0
-                        implicitHeight: height
-
-                        DayTimeline {
-                            id: dayTimeline
+                        Column {
+                            id: dayViewContent
                             width: parent.width
-                            segments: root.daySpans ? root.daySpans.segments : []
-                            categories: root.daySpans ? root.daySpans.categories : []
-                            axis: root.daySpans ? root.daySpans.axis : []
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            tipBackground: root.bar ? root.bar.background : Color.background
-                            dayTotal: root.dayTotal
+                            spacing: 0
+
+                            Item {
+                                width: parent.width
+                                height: dayToggle.implicitHeight
+
+                                PagerArrow {
+                                    id: dayToggle
+                                    anchors.right: parent.right
+                                    glyph: root.dayView === "timeline" ? "\uf200" : "\uf017"
+                                    active: true
+                                    foreground: root.contentForeground
+                                    fontFamily: root.contentFontFamily
+                                    fontSize: Style.font.bodySmall
+                                    tipText: root.dayView === "timeline" ? "Show apps donut" : "Show day timeline"
+                                    tipBackground: root.bar ? root.bar.background : Color.background
+                                    onClicked: root.writeSetting("dayView", root.dayView === "timeline" ? "apps" : "timeline")
+                                }
+
+                                HintBadge {
+                                    label: "d"
+                                    fontFamily: root.contentFontFamily
+                                    accent: Color.accent
+                                    show: root.hintMode
+                                    anchors.top: dayToggle.top
+                                    anchors.right: dayToggle.right
+                                }
+                            }
+
+                            // ---- Per-app donut + legend --------------------------------
+                            Item {
+                                width: parent.width
+                                visible: root.dayView === "apps"
+                                height: visible ? Math.max(root.ringSize, root.legendMaxHeight) : 0
+                                implicitHeight: height
+
+                                DonutChart {
+                                    id: donutChart
+                                    anchors.left: parent.left
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    segments: root.segments
+                                    sliceColors: root.sliceColors
+                                    ringSize: root.ringSize
+                                    activeDayLabel: root.activeDayLabel
+                                    dayTotal: root.dayTotal
+                                    foreground: root.contentForeground
+                                    fontFamily: root.contentFontFamily
+                                    accent: Color.accent
+                                }
+
+                                AppLegend {
+                                    anchors.left: donutChart.right
+                                    anchors.leftMargin: Style.space(16)
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: root.legendMaxHeight
+                                    rows: root.expanded ? root.fullApps : root.groupedApps
+                                    expanded: root.expanded
+                                    groupedCount: root.groupedCount
+                                    sliceColors: root.sliceColors
+                                    otherColor: root.otherColor
+                                    foreground: root.contentForeground
+                                    fontFamily: root.contentFontFamily
+                                    accent: Color.accent
+                                    maxHeight: root.legendMaxHeight
+                                }
+                            }
+
+                            // ---- 24h timeline (same slot as the donut) ----------------
+                            Item {
+                                width: parent.width
+                                visible: root.dayView === "timeline"
+                                height: visible ? dayTimeline.implicitHeight : 0
+                                implicitHeight: height
+
+                                DayTimeline {
+                                    id: dayTimeline
+                                    width: parent.width
+                                    segments: root.daySpans ? root.daySpans.segments : []
+                                    categories: root.daySpans ? root.daySpans.categories : []
+                                    axis: root.daySpans ? root.daySpans.axis : []
+                                    foreground: root.contentForeground
+                                    fontFamily: root.contentFontFamily
+                                    tipBackground: root.bar ? root.bar.background : Color.background
+                                    dayTotal: root.dayTotal
+                                }
+                            }
                         }
                     }
 

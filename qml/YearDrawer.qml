@@ -256,7 +256,7 @@ Item {
                 id: heatGrid
                 width: parent.width
                 spacing: Style.space(6)
-                topPadding: Style.space(10)
+                topPadding: root.yearGraph === "heatmap" ? 0 : Style.space(10)
                 bottomPadding: Style.space(2)
 
                 readonly property var months: root.yearMonths

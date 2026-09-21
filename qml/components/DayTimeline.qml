@@ -77,6 +77,7 @@ Column {
                     id: segmentMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
                 }
 
                 // Exact app and clock range on dwell.

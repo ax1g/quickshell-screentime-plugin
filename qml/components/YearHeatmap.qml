@@ -145,6 +145,7 @@ Column {
                                     anchors.margins: -2
                                     hoverEnabled: true
                                     enabled: cellBox.modelData !== null && cellBox.modelData.future !== true
+                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 }
 
                                 ScreenTip {

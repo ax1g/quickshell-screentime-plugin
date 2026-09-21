@@ -1588,6 +1588,7 @@ Column {
                 height: Math.max(resetLabels.implicitHeight, resetBtnRow.height)
 
                 property int stage: 0
+                property real buttonGap: Style.space(16)
 
                 Timer {
                     id: resetRevertTimer
@@ -1600,7 +1601,7 @@ Column {
                     id: resetLabels
                     anchors.left: parent.left
                     anchors.top: parent.top
-                    width: parent.width - resetBtnRow.width - Style.space(12)
+                    width: parent.width - resetBtnRow.width - resetRow.buttonGap
                     spacing: Style.space(2)
 
                     Text {
@@ -1629,9 +1630,19 @@ Column {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
 
+                    // Reserve the widest confirmation state so labels never
+                    // reflow when the button text changes mid-confirmation.
+                    TextMetrics {
+                        id: resetButtonMetrics
+                        text: "REALLY?"
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: true
+                    }
+
                     Rectangle {
                         id: resetBox
-                        width: resetState.implicitWidth + Style.space(20)
+                        width: resetButtonMetrics.advanceWidth + Style.space(20)
                         height: resetState.implicitHeight + Style.space(10)
                         radius: Style.space(4)
                         readonly property bool warning: resetRow.stage > 0 || resetAction.containsMouse
@@ -1695,6 +1706,7 @@ Column {
                 height: Math.max(wipeLabels.implicitHeight, wipeBtnRow.height)
 
                 property int stage: 0
+                property real buttonGap: Style.space(16)
 
                 Timer {
                     id: wipeRevertTimer
@@ -1707,7 +1719,7 @@ Column {
                     id: wipeLabels
                     anchors.left: parent.left
                     anchors.top: parent.top
-                    width: parent.width - wipeBtnRow.width - Style.space(12)
+                    width: parent.width - wipeBtnRow.width - wipeRow.buttonGap
                     spacing: Style.space(2)
 
                     Text {
@@ -1737,9 +1749,19 @@ Column {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
 
+                    // The warning state is widest; keep the label column
+                    // stable through the staged wipe confirmation.
+                    TextMetrics {
+                        id: wipeButtonMetrics
+                        text: "CAN'T UNDO!"
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: true
+                    }
+
                     Rectangle {
                         id: wipeBox
-                        width: wipeState.implicitWidth + Style.space(20)
+                        width: wipeButtonMetrics.advanceWidth + Style.space(20)
                         height: wipeState.implicitHeight + Style.space(10)
                         radius: Style.space(4)
                         readonly property bool warning: wipeRow.stage > 0 || wipeAction.containsMouse
