@@ -291,7 +291,7 @@ Item {
 
                     PagerArrow {
                         id: graphToggle
-                        anchors.left: parent.left
+                        anchors.right: parent.right
                         glyph: root.yearGraph === "heatmap" ? "\uf0c9" : "\uf00a"
                         active: true
                         foreground: root.foreground
@@ -308,7 +308,7 @@ Item {
                         accent: root.accent
                         show: root.hintMode
                         anchors.top: graphToggle.top
-                        anchors.left: graphToggle.left
+                        anchors.right: graphToggle.right
                     }
                 }
 

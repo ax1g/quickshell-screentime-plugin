@@ -864,7 +864,7 @@ Panel {
 
                         PagerArrow {
                             id: dayToggle
-                            anchors.left: parent.left
+                            anchors.right: parent.right
                             glyph: root.dayView === "timeline" ? "\uf200" : "\uf017"
                             active: true
                             foreground: root.contentForeground
@@ -881,7 +881,7 @@ Panel {
                             accent: Color.accent
                             show: root.hintMode
                             anchors.top: dayToggle.top
-                            anchors.left: dayToggle.left
+                            anchors.right: dayToggle.right
                         }
                     }
 
