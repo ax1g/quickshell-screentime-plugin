@@ -58,11 +58,17 @@ function canonicalApp(name) {
 }
 
 // Display label: Chromium windows fold to hostname, reverse-DNS IDs to the
-// last segment, binaries pass through. Steam classes arrive pre-resolved
-// by python/resolve_app.py. Never touches the filesystem.
+// last segment, per-site buckets to their domain, binaries pass through.
+// Steam classes arrive pre-resolved by python/resolve_app.py. Never
+// touches the filesystem.
 function displayName(app) {
   if (!app) return ""
   var s = String(app)
+
+  // Per-site browser buckets (see siteForTitle) carry their own prefix so
+  // they can never be confused with a real compositor appId.
+  if (s.indexOf(SITE_PREFIX) === 0)
+    return s.slice(SITE_PREFIX.length).toLowerCase()
 
   var webApp = s.match(CHROMIUM_WEB_APP_RE)
   if (webApp) return webApp[2].toLowerCase()
@@ -71,6 +77,150 @@ function displayName(app) {
   var last = s.split(".").pop()
   if (!last) return s.toLowerCase()
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
+}
+
+// ---- Per-site tracking inside browsers -----------------------------------
+// The compositor exposes a browser as a single appId, so every tab lands
+// in one bucket and the timeline cannot tell work docs from social feeds.
+// The window title is the only per-tab signal available without driving
+// the browser itself, rendered as "<page title> - Browser Name".
+//
+// A title matching a rule tracks as "site:<label>"; anything unmatched
+// stays on the browser's own key, which keeps working as unclassified
+// Web Browsing instead of fragmenting into one row per page title. The
+// prefix cannot collide with a compositor appId, which keeps
+// canonicalApp and CHROMIUM_WEB_APP_RE untouched.
+var SITE_PREFIX = "site:"
+
+// Trailing browser name to strip before matching. Chromium builds use
+// " - ", Firefox-family builds use an em dash; both are covered.
+var BROWSER_TITLE_SUFFIX_RE = new RegExp(
+  "\\s*[-\u2013\u2014|]\\s*(?:" +
+    [
+      "Google Chrome",
+      "Chromium",
+      "Brave",
+      "Vivaldi",
+      "Microsoft.?\\s?Edge",
+      "Mozilla Firefox",
+      "Firefox(?: Developer Edition)?",
+      "Zen Browser",
+      "Zen",
+      "LibreWolf",
+      "Waterfox",
+      "Tor Browser",
+      "Mullvad Browser",
+    ].join("|") +
+    ")\\s*$",
+  "i",
+)
+
+// Unread counters ("(56) WhatsApp") and media glyphs change constantly
+// while the site does not. Stripping them keeps a rule matching the same
+// key instead of churning buckets every time a notification lands.
+var TITLE_NOISE_RE = /^\s*(?:\(\d+\+?\)|\[\d+\+?\]|\u25b6|\u23f8|\u25cf)\s*/
+
+// Compiled rule cache: rules re-test on every title change, and title
+// changes are frequent enough to make recompiling wasteful.
+var SITE_RULE_CACHE = {}
+
+function siteRuleRegExp(pattern, flags) {
+  var f = flags || "i"
+  var key = f + "\u0000" + pattern
+  if (Object.prototype.hasOwnProperty.call(SITE_RULE_CACHE, key))
+    return SITE_RULE_CACHE[key]
+  var re = null
+  try {
+    re = new RegExp(pattern, f)
+  } catch (e) {
+    re = null
+  }
+  SITE_RULE_CACHE[key] = re
+  return re
+}
+
+// True for any app whose canonical key is a browser, i.e. the apps whose
+// single bucket is worth splitting per site.
+function isBrowserApp(app) {
+  if (!app) return false
+  var key = String(canonicalApp(app)).toLowerCase()
+  return Object.prototype.hasOwnProperty.call(BROWSER_CATEGORY_KEYS, key)
+}
+
+// Title as the rules see it: browser suffix and notification noise removed.
+function normalizeTitle(title) {
+  if (!title) return ""
+  var t = String(title).replace(BROWSER_TITLE_SUFFIX_RE, "")
+  var prev
+  do {
+    prev = t
+    t = t.replace(TITLE_NOISE_RE, "")
+  } while (t !== prev)
+  return t.trim()
+}
+
+// First matching rule wins, so rules read specific-to-generic. Returns ""
+// when nothing matches, which keeps the time on the browser key.
+function siteForTitle(title, rules) {
+  var t = normalizeTitle(title)
+  if (!t) return ""
+  var list = rules && rules.length ? rules : defaultSiteRules()
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i]
+    if (!r || !r.match || !r.site) continue
+    var re = siteRuleRegExp(String(r.match), r.flags)
+    if (re && re.test(t)) return String(r.site)
+  }
+  return ""
+}
+
+function siteKey(label) {
+  return label ? SITE_PREFIX + String(label) : ""
+}
+
+function isSiteKey(app) {
+  return !!app && String(app).indexOf(SITE_PREFIX) === 0
+}
+
+// Seed rules owned by the tracker: high-traffic work, social and media
+// sites whose titles reliably name them. Deliberately free of adult-site
+// entries — untracked tastes stay untracked tastes.
+function defaultSiteRules() {
+  return [
+    { match: "\\bWhatsApp\\b", site: "whatsapp.com" },
+    { match: "\\bMessenger\\b", site: "messenger.com" },
+    { match: "\\bTelegram\\b", site: "telegram.org" },
+    { match: "\\bDiscord\\b", site: "discord.com" },
+    { match: "\\bSlack\\b", site: "slack.com" },
+    { match: "\\bMicrosoft Teams\\b", site: "teams.microsoft.com" },
+    { match: "\\bZoom\\b", site: "zoom.us" },
+    { match: "\\bGmail\\b", site: "gmail.com" },
+    { match: "\\bOutlook\\b|\\bHotmail\\b", site: "outlook.com" },
+    { match: "\\bGoogle Meet\\b", site: "meet.google.com" },
+    { match: "\\bFacebook\\b", site: "facebook.com" },
+    { match: "\\bInstagram\\b", site: "instagram.com" },
+    { match: "\\bTikTok\\b", site: "tiktok.com" },
+    { match: "/ X$|\\bTwitter\\b", site: "x.com" },
+    { match: "\\bLinkedIn\\b", site: "linkedin.com" },
+    { match: "\\bReddit\\b|^r/", site: "reddit.com" },
+    { match: "\\bYouTube\\b", site: "youtube.com" },
+    { match: "\\bTwitch\\b", site: "twitch.tv" },
+    { match: "\\bNetflix\\b", site: "netflix.com" },
+    { match: "\\bSpotify\\b", site: "spotify.com" },
+    { match: "\\bGitHub\\b", site: "github.com" },
+    { match: "\\bGitLab\\b", site: "gitlab.com" },
+    { match: "\\bStack Overflow\\b", site: "stackoverflow.com" },
+    {
+      match: "\\bGoogle (?:Docs|Sheets|Slides|Drive)\\b",
+      site: "docs.google.com",
+    },
+    { match: "\\bGoogle (?:Calendar|Agenda)\\b", site: "calendar.google.com" },
+    { match: "\\bNotion\\b", site: "notion.so" },
+    { match: "\\bFigma\\b", site: "figma.com" },
+    { match: "\\bChatGPT\\b", site: "chatgpt.com" },
+    { match: "\\bClaude\\b", site: "claude.ai" },
+    { match: "\\bWikipedia\\b", site: "wikipedia.org" },
+  ]
 }
 
 // User tracking prefs: ignored apps and custom aliases. Both accept the
@@ -92,13 +242,22 @@ function parseIgnoredApps(value) {
 
 // True when name matches the ignore list as raw, canonical or display
 // name, so "zen-bin" is caught by an entry for "zen" and vice versa.
+// Site buckets match their bare domain and its first segment, so
+// "facebook" ignores site:facebook.com without "com" nuking every site.
 function isIgnoredApp(name, ignoredList) {
   if (!name || !ignoredList || ignoredList.length === 0) return false
+  var raw = String(name).trim().toLowerCase()
   var candidates = [
-    String(name).trim().toLowerCase(),
+    raw,
     String(canonicalApp(name)).toLowerCase(),
     String(displayName(name)).toLowerCase(),
   ]
+  if (raw.indexOf(SITE_PREFIX) === 0) {
+    var bare = raw.slice(SITE_PREFIX.length)
+    candidates.push(bare)
+    var dot = bare.indexOf(".")
+    if (dot > 0) candidates.push(bare.slice(0, dot))
+  }
   for (var i = 0; i < candidates.length; i++) {
     if (candidates[i] && ignoredList.indexOf(candidates[i]) !== -1) return true
   }
@@ -838,11 +997,11 @@ var CATEGORY_MATCHERS = [
   },
   {
     category: "Entertainment",
-    re: /spotify|feishin|tauon|nuclear|lollypop|rhythmbox|elisa|celluloid|totem|\bvlc\b|\bmpv\b|kodi|jellyfin|plex|stremio|freetube|netflix|hulu|disney|popcorntime|ncmpcpp|\bcmus\b|\bmoc\b|mocp|ytkew|parabolic|\bclapper\b|\bshowtime\b|\beog\b|loupe|eom|ristretto/,
+    re: /spotify|feishin|tauon|nuclear|lollypop|rhythmbox|elisa|celluloid|totem|\bvlc\b|\bmpv\b|kodi|jellyfin|plex|stremio|freetube|netflix|hulu|disney|popcorntime|ncmpcpp|\bcmus\b|\bmoc\b|mocp|ytkew|parabolic|\bclapper\b|\bshowtime\b|\beog\b|loupe|eom|ristretto|youtube|youtu\.be|twitch|vimeo|dailymotion/,
   },
   {
     category: "Social",
-    re: /reddit|instagram|facebook|tiktok|tumblr|pinterest|mastodon|misskey|lemmy|cawbird|whalebird|tootle|tokodon|twitter|pinafore|hyperspace|mammoth|icecubes|\belk\b|photon/,
+    re: /reddit|instagram|facebook|tiktok|tumblr|pinterest|mastodon|misskey|lemmy|cawbird|whalebird|tootle|tokodon|twitter|pinafore|hyperspace|mammoth|icecubes|\belk\b|photon|linkedin|x\.com/,
   },
   {
     category: "Communication",
@@ -854,15 +1013,15 @@ var CATEGORY_MATCHERS = [
   },
   {
     category: "Education & Research",
-    re: /\banki\b|zotero|calibre|evince|okular|atril|xournalpp|texstudio|texmaker|goldendict|stellarium|kstars|marble|kdeedu/,
+    re: /\banki\b|zotero|calibre|evince|okular|atril|xournalpp|texstudio|texmaker|goldendict|stellarium|kstars|marble|kdeedu|wikipedia|developer\.mozilla|arxiv|\bedx\b|coursera|khanacademy/,
   },
   {
     category: "Development",
-    re: /vscode|vscodium|codium|cursor|windsurf|code-oss|code-insiders|neovim|\bnvim\b|\bvim\b|emacs|helix|\bcode\b|jetbrains|\bidea\b|pycharm|webstorm|clion|phpstorm|rustrover|goland|rider|android-studio|docker|podman|postman|insomnia|gitkraken|lazygit|\bgit\b|\bopencode\b|aider|kubectl|scc|tokei|meld|dbeaver|pgadmin|sqlitebrowser|wireshark/,
+    re: /vscode|vscodium|codium|cursor|windsurf|code-oss|code-insiders|neovim|\bnvim\b|\bvim\b|emacs|helix|\bcode\b|jetbrains|\bidea\b|pycharm|webstorm|clion|phpstorm|rustrover|goland|rider|android-studio|docker|podman|postman|insomnia|gitkraken|lazygit|\bgit\b|\bopencode\b|aider|kubectl|scc|tokei|meld|dbeaver|pgadmin|sqlitebrowser|wireshark|github|gitlab|bitbucket|stackoverflow|stackexchange/,
   },
   {
     category: "Productivity",
-    re: /libreoffice|soffice|\bwriter\b|\bcalc\b|calculator|\bimpress\b|notion|obsidian|todoist|logseq|anytype|typora|joplin|standardnotes|evernote|onenote|\bexcel\b|\bword\b|powerpoint|onlyoffice|calligra|endeavour|planner|errands|superproductivity|gedit|\bkate\b|mousepad|leafpad|gnome-text-editor/,
+    re: /libreoffice|soffice|\bwriter\b|\bcalc\b|calculator|\bimpress\b|notion|obsidian|todoist|logseq|anytype|typora|joplin|standardnotes|evernote|onenote|\bexcel\b|\bword\b|powerpoint|onlyoffice|calligra|endeavour|planner|errands|superproductivity|gedit|\bkate\b|mousepad|leafpad|gnome-text-editor|docs\.google|drive\.google|calendar\.google|\bchatgpt\b|\bclaude\b|gemini|deepseek|perplexity|\bgrok\b|copilot/,
   },
   {
     category: "System & Utilities",
@@ -871,12 +1030,17 @@ var CATEGORY_MATCHERS = [
 ]
 
 // One stable bucket per app name. Browsers match canonically first so a
-// browser never falls through to a looser pattern; everything unmatched
-// lands in Other.
+// browser never falls through to a looser pattern; unclassified sites
+// stay Web Browsing (general browser activity), while anything else
+// unmatched lands in Other.
 function appCategory(app) {
   if (!app) return "Other"
+  var site = isSiteKey(app)
   var canon = String(canonicalApp(app)).toLowerCase()
-  if (Object.prototype.hasOwnProperty.call(BROWSER_CATEGORY_KEYS, canon))
+  if (
+    !site &&
+    Object.prototype.hasOwnProperty.call(BROWSER_CATEGORY_KEYS, canon)
+  )
     return "Web Browsing"
   var names = [
     String(app).toLowerCase(),
@@ -889,7 +1053,9 @@ function appCategory(app) {
         return CATEGORY_MATCHERS[m].category
     }
   }
-  return "Other"
+  // Classified nowhere: sites fall back to general Web Browsing, real
+  // apps to Other.
+  return site ? "Web Browsing" : "Other"
 }
 
 // Deterministic color per category off the theme accent, so a category
@@ -2395,6 +2561,13 @@ if (typeof module !== "undefined" && module && module.exports) {
     pad2: pad2,
     qmlBrowserAliases: qmlBrowserAliases,
     canonicalApp: canonicalApp,
+    SITE_PREFIX: SITE_PREFIX,
+    isBrowserApp: isBrowserApp,
+    normalizeTitle: normalizeTitle,
+    siteForTitle: siteForTitle,
+    siteKey: siteKey,
+    isSiteKey: isSiteKey,
+    defaultSiteRules: defaultSiteRules,
     displayName: displayName,
     parseIgnoredApps: parseIgnoredApps,
     isIgnoredApp: isIgnoredApp,

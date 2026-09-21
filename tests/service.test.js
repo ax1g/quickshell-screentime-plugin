@@ -119,7 +119,10 @@ test("tracking prefs filter ignored apps and rename via aliases", () => {
   assert.match(service, /Model\.parseIgnoredApps\(ignored\)/)
   assert.match(service, /Model\.parseAppAliases\(aliases\)/)
   assert.match(service, /Model\.isIgnoredApp\(appId, root\.ignoredApps\)/)
-  assert.match(service, /Model\.resolveAppName\(app, root\.appAliases\)/)
+  assert.match(
+    service,
+    /root\.trackingKeyFor\(app, tl && tl\.title \? tl\.title : ""\)/,
+  )
 })
 
 test("resetAll wipes days, months and archive, then persists", () => {
@@ -197,4 +200,36 @@ test("recorded spans carry from disk into the live day", () => {
   // The load handler copies the stored span array (never the reference)
   // and leaves span-less days without the key.
   assert.match(service, /live\.spans = prev\.spans\.slice\(\)/)
+})
+
+test("browser tabs split into site buckets off the window title", () => {
+  // The title binding (not toplevel changes) drives tab switches.
+  assert.match(
+    service,
+    /readonly property string activeTitle: ToplevelManager\.activeToplevel/,
+  )
+  assert.match(service, /onActiveTitleChanged: root\.refreshSite\(\)/)
+  // Site key first, browser key as the unclassified fallback.
+  assert.match(service, /function browserSiteKey\(appId, title\)/)
+  assert.match(service, /Model\.siteKey\(Model\.siteForTitle\(title\)\)/)
+  assert.match(service, /function trackingKeyFor\(appId, title\)/)
+  assert.match(
+    service,
+    /root\.browserSiteKey\(appId, title\) \|\| Model\.resolveAppName\(appId, root\.appAliases\)/,
+  )
+})
+
+test("refreshSite rotates only on resolved-key changes", () => {
+  const fn = service.match(/function refreshSite\(\) \{[\s\S]*?\n    \}/)
+  assert(fn, "refreshSite block exists")
+  // Guards: pre-ready, resolving terminals, lock and screensaver pauses,
+  // and non-browser windows never rotate.
+  assert(fn[0].includes("if (!root.ready || root.resolveInFlight)"))
+  assert(fn[0].includes("if (root.sessionLocked || root.screensaverActive)"))
+  assert(fn[0].includes("Model.isBrowserApp(Model.canonicalApp(root.rawApp))"))
+  // Same resolved key (e.g. a ticking unread counter) churns nothing.
+  assert(fn[0].includes("if (!want || want === root.activeApp)"))
+  assert(fn[0].includes("State.closeActiveBucket"))
+  assert(fn[0].includes("root.activeApp = want"))
+  assert(fn[0].includes("root.persist()"))
 })

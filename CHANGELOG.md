@@ -18,6 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (Development, Productivity, Communication, Education & Research,
   Creative, Web Browsing, Social, Entertainment, Gaming,
   System & Utilities, Other), with hour ticks and exact times on hover.
+  Browser tabs split into per-site buckets (facebook.com counts as
+  Social, not Web Browsing) off a clean rule set with no adult entries.
   Your pick persists across restarts.
 
 ### Fixed

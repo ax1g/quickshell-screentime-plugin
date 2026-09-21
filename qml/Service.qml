@@ -73,6 +73,12 @@ Item {
     property double activeStart: 0
     // Raw compositor appId; activeApp is the resolved name.
     property string rawApp: ""
+    // The active toplevel's title is the only per-tab signal the
+    // compositor offers. It changes on tab switches WITHOUT the toplevel
+    // changing, so this binding — not onActiveToplevelChanged — drives
+    // site switches inside a browser window.
+    readonly property string activeTitle: ToplevelManager.activeToplevel && ToplevelManager.activeToplevel.title ? ToplevelManager.activeToplevel.title : ""
+    onActiveTitleChanged: root.refreshSite()
     property string resolveForApp: ""
     property bool resolveInFlight: false
     // Generation tokens stop stale terminal resolves misattributing.
@@ -212,6 +218,42 @@ Item {
         return true;
     }
 
+    // Tracking key for a browser window: its site bucket when the title
+    // matches a rule, "" otherwise so the caller keeps the browser key.
+    function browserSiteKey(appId, title) {
+        if (!Model.isBrowserApp(Model.canonicalApp(appId)))
+            return "";
+        return Model.siteKey(Model.siteForTitle(title));
+    }
+
+    // Key the focused window should accrue to right now.
+    function trackingKeyFor(appId, title) {
+        return root.browserSiteKey(appId, title) || Model.resolveAppName(appId, root.appAliases);
+    }
+
+    // Tab switches inside a browser never touch activeToplevel, so the
+    // bucket rotates here. Only a change in the RESOLVED key rotates it:
+    // "(56) WhatsApp" and "(57) WhatsApp" both resolve to whatsapp.com,
+    // so a ticking unread counter cannot churn buckets.
+    function refreshSite() {
+        if (!root.ready || root.resolveInFlight)
+            return;
+        // Paused: leave the bucket closed rather than reopening on a title
+        // change that arrives while locked or with the screensaver up.
+        if (root.sessionLocked || root.screensaverActive)
+            return;
+        if (!Model.isBrowserApp(Model.canonicalApp(root.rawApp)))
+            return;
+        var want = root.trackingKeyFor(root.rawApp, root.activeTitle);
+        if (!want || want === root.activeApp)
+            return;
+        var now = Date.now();
+        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+        root.activeApp = want;
+        root.activeStart = Date.now();
+        root.persist();
+    }
+
     function switchActive() {
         // Pre-ready focus events open unguarded buckets (and defeat the
         // lastTick baseline); the load handlers call back once ready.
@@ -223,8 +265,7 @@ Item {
         var tl = ToplevelManager.activeToplevel;
         var app = tl && tl.appId ? tl.appId : "";
         root.rawApp = app;
-        root.resolveInFlight = false;
-        // Paused (locked or screensaver up): keep the bucket closed.
+        root.resolveInFlight = false;        // Paused (locked or screensaver up): keep the bucket closed.
         // Toplevel events still fire under lock; reopening here would
         // accrue straight through the pause.
         if (root.sessionLocked || root.screensaverActive) {
@@ -242,7 +283,7 @@ Item {
             root.activeStart = 0;
             root.beginResolve();
         } else {
-            root.activeApp = Model.resolveAppName(app, root.appAliases);
+            root.activeApp = root.trackingKeyFor(app, tl && tl.title ? tl.title : "");
             root.activeStart = app ? now : 0;
         }
     }

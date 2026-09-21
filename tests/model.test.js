@@ -2619,3 +2619,68 @@ test("parseHeatmapPos restores only its own year", () => {
   assert.equal(Model.parseHeatmapPos(undefined, 2026), -1)
   assert.equal(Model.parseHeatmapPos(null, 2026), -1)
 })
+
+test("normalizeTitle strips browser suffixes and notification noise", () => {
+  assert.equal(Model.normalizeTitle("WhatsApp - Google Chrome"), "WhatsApp")
+  assert.equal(Model.normalizeTitle("Inbox — Mozilla Firefox"), "Inbox")
+  assert.equal(Model.normalizeTitle("(56) WhatsApp - Brave"), "WhatsApp")
+  assert.equal(Model.normalizeTitle("Docs - Zen Browser"), "Docs")
+  assert.equal(Model.normalizeTitle(""), "")
+  assert.equal(Model.normalizeTitle(null), "")
+})
+
+test("siteForTitle matches clean rules first-win, else empty", () => {
+  assert.equal(Model.siteForTitle("Facebook - Zen Browser"), "facebook.com")
+  assert.equal(
+    Model.siteForTitle("Quarterly Report - Google Docs - Google Chrome"),
+    "docs.google.com",
+  )
+  assert.equal(Model.siteForTitle("Some random blog post - Firefox"), "")
+  assert.equal(Model.siteForTitle("", []), "")
+  assert.equal(
+    Model.siteForTitle("GitHub - Chromium", [{ match: "hub", site: "x" }]),
+    "x",
+  )
+  assert.equal(Model.siteKey("x.com"), "site:x.com")
+  assert.equal(Model.siteKey(""), "")
+  assert.equal(Model.isSiteKey("site:x.com"), true)
+  assert.equal(Model.isSiteKey("zen"), false)
+  assert.equal(Model.isBrowserApp("zen-bin"), true)
+  assert.equal(Model.isBrowserApp("code"), false)
+})
+
+test("default site rules ship no adult entries", () => {
+  const rules = JSON.stringify(Model.defaultSiteRules())
+  assert.doesNotMatch(rules, /\b(xvideos|xnxx|pornhub|xhamster|onlyfans)\b/i)
+  assert.ok(Model.defaultSiteRules().length > 20)
+})
+
+test("site buckets categorize by domain, unknown sites stay browsing", () => {
+  const cases = [
+    ["site:facebook.com", "Social"],
+    ["site:x.com", "Social"],
+    ["site:youtube.com", "Entertainment"],
+    ["site:twitch.tv", "Entertainment"],
+    ["site:github.com", "Development"],
+    ["site:stackoverflow.com", "Development"],
+    ["site:gmail.com", "Communication"],
+    ["site:whatsapp.com", "Communication"],
+    ["site:docs.google.com", "Productivity"],
+    ["site:notion.so", "Productivity"],
+    ["site:chatgpt.com", "Productivity"],
+    ["site:wikipedia.org", "Education & Research"],
+    ["site:figma.com", "Creative"],
+    ["site:random-blog-xyz.com", "Web Browsing"],
+  ]
+  for (const [app, want] of cases)
+    assert.equal(Model.appCategory(app), want, app)
+  assert.equal(Model.displayName("site:facebook.com"), "facebook.com")
+})
+
+test("ignore entries catch site buckets by domain", () => {
+  assert.equal(Model.isIgnoredApp("site:facebook.com", ["facebook"]), true)
+  assert.equal(Model.isIgnoredApp("site:facebook.com", ["facebook.com"]), true)
+  assert.equal(Model.isIgnoredApp("site:facebook.com", ["com"]), false)
+  assert.equal(Model.isIgnoredApp("site:facebook.com", ["chrome"]), false)
+  assert.equal(Model.isIgnoredApp("zen-bin", ["zen"]), true)
+})
