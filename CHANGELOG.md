@@ -17,6 +17,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Media and Other. Off by default until v2.0 tracking lands — flip it on
   in Settings → Display (demo widths are each category's share of the day).
 
+### Fixed
+
+- Yearly retro cards now balance across both columns by measured height
+  instead of piling up on the left.
+- RECHARGE MONTH always crowns the quietest tracked month — no more
+  waiting two weeks for a new month to qualify.
+
 ## [1.6.2] - 2026-09-17
 
 ### Added

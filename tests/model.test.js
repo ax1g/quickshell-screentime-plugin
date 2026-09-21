@@ -1091,24 +1091,25 @@ test("TOP MONTHS medals months with middle dots", () => {
   )
 })
 
-test("RECHARGE MONTH skips a thin current month when history exists", () => {
-  // Sep has the least time (30min) but only one tracked day: with older
-  // months on record it must not win by new-month triviality.
+test("RECHARGE MONTH crowns the quietest month with no coverage gate", () => {
+  // Sep has the least time (30min) on a single tracked day: with no gate
+  // it wins outright instead of deferring to older months.
   const months = { "2026-03": 10 * HOUR_MS, "2026-01": 2 * HOUR_MS }
   const days = { "2026-09-05": { total: 30 * 60000, apps: {} } }
   const cards = Model.yearFacts(days, months, {}, 2026, "2026-09-06")
   assert.match(
     cards.find((c) => c.label === "RECHARGE MONTH").value,
-    /Jan · 2h/,
+    /Sep · 1h/,
   )
 })
 
-test("RECHARGE MONTH falls back to the current month when it is all there is", () => {
+test("RECHARGE MONTH shows even when a single month is all there is", () => {
   const days = { "2026-09-05": { total: HOUR_MS, apps: {} } }
   const cards = Model.yearFacts(days, {}, {}, 2026, "2026-09-06")
-  // Single month: quietest is also the top, so the card stays hidden
-  // rather than crowning an empty default.
-  assert.ok(!cards.some((c) => c.label === "RECHARGE MONTH"))
+  assert.match(
+    cards.find((c) => c.label === "RECHARGE MONTH").value,
+    /Sep · 1h/,
+  )
 })
 
 test("RECHARGE MONTH accepts the current month after two weeks of data", () => {
@@ -1503,10 +1504,9 @@ test("mergeYear excludes future month lumps like future days", () => {
   assert.equal(Model.yearTotal({}, months, 2026, {}, "2026-08-19"), 3600000)
 })
 
-test("yearFacts accepts a string year without bypassing the recharge guard", () => {
-  // Current month (Aug) is the quietest but has only 3 tracked days, so the
-  // coverage guard excludes it and RECHARGE MONTH falls to Mar. A string
-  // year must behave identically, not let Aug auto-win.
+test("yearFacts treats a string year exactly like a number", () => {
+  // Current month (Aug) is the quietest: with no coverage gate it wins
+  // for both year shapes identically.
   const days = {
     "2026-03-10": { total: 5 * 3600000, apps: {} },
     "2026-06-10": { total: 2 * 3600000, apps: {} },
@@ -1517,7 +1517,7 @@ test("yearFacts accepts a string year without bypassing the recharge guard", () 
   const recharge = (cards) =>
     (cards.find((c) => c.label === "RECHARGE MONTH") || {}).value
   assert.equal(recharge(num), recharge(str))
-  assert.ok(recharge(num).startsWith("Jun"))
+  assert.ok(recharge(num).startsWith("Aug"))
 })
 
 test("yearFacts derives card colors from the theme accent", () => {

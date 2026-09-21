@@ -1599,8 +1599,6 @@ function yearTotal(days, months, year, years, todayKey) {
 var YEAR_HOURS = 8760
 var YEAR_HOURS_LEAP = 8784
 var MIN_ACTIVE_DAY_MS = 60 * 1000
-// Tracked days a current month needs before it can be RECHARGE MONTH.
-var MIN_RECHARGE_DAYS = 14
 
 // Days with data in one year-month of a yearDayTotals list.
 function monthCoverage(dayTotals, year, month) {
@@ -1868,8 +1866,8 @@ function applyRetention(days, years, todayKey, keepDays) {
 // Yearly retro cards [{ glyph, label, value, sub, color }]; day-scale
 // cards need per-day coverage, months-only years get the trio.
 function yearFacts(days, months, years, year, todayKey, accentHex) {
-  // Normalize once: downstream strict compares (recharge guard, coverage)
-  // must not treat "2026" as a different year from 2026.
+  // Normalize once: downstream strict compares (coverage) must not
+  // treat "2026" as a different year from 2026.
   year = Number(year)
   return yearFactsFromSummary(
     yearSummary(days, months, years, year, todayKey),
@@ -1901,23 +1899,11 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     return b.ms - a.ms
   })
 
-  // The current month needs two tracked weeks to qualify as recharge.
-  var tk = String(todayKey || "").split("-")
-  var tkYear = Number(tk[0])
-  var tkMonth = Number(tk[1]) - 1
-  var pool = []
-  for (var q = 0; q < top.length; q++) {
-    if (
-      year !== tkYear ||
-      top[q].month !== tkMonth ||
-      monthCoverage(dayTotals, year, top[q].month) >= MIN_RECHARGE_DAYS
-    )
-      pool.push(top[q])
-  }
-  if (pool.length === 0) pool = top
+  // The quietest tracked month is the recharge, no coverage gate: even
+  // a brand-new month takes the crown when it is all there is.
   var quietest = null
-  for (q = 0; q < pool.length; q++) {
-    if (!quietest || pool[q].ms < quietest.ms) quietest = pool[q]
+  for (var q = 0; q < top.length; q++) {
+    if (!quietest || top[q].ms < quietest.ms) quietest = top[q]
   }
 
   out.push({
@@ -1948,7 +1934,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     })
   }
 
-  if (quietest && quietest !== top[0]) {
+  if (quietest) {
     out.push({
       glyph: "\uF06C",
       label: "RECHARGE MONTH",

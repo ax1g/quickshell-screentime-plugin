@@ -1195,3 +1195,25 @@ test("year graph toggles bars and heatmap in place with a persisted mode", () =>
     /writeSetting\("yearGraph", root\.yearGraph === "heatmap" \? "bars" : "heatmap"\)/,
   )
 })
+
+test("retro cards split by measured heights with a deferred pass", () => {
+  const drawer = qml("YearDrawer.qml")
+  // Greedy shortest-column masonry, not estimated line scores.
+  assert.match(drawer, /function splitCards\(\)/)
+  assert.match(drawer, /function measuredHeights\(\)/)
+  assert.match(drawer, /measureTimer\.restart\(\)/)
+  assert.match(drawer, /id: measureTimer/)
+  assert.match(drawer, /id: leftColumn/)
+  assert.match(drawer, /id: rightColumn/)
+  // Re-splits run on facts/width changes only — never on heights —
+  // so layout cannot loop against itself.
+  assert.doesNotMatch(drawer, /onHeightChanged/)
+})
+
+test("RECHARGE MONTH always crowns the quietest month", () => {
+  const model = require("node:fs").readFileSync(
+    require("node:path").join(__dirname, "..", "js", "Model.js"),
+    "utf8",
+  )
+  assert.doesNotMatch(model, /MIN_RECHARGE_DAYS/)
+})

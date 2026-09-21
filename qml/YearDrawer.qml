@@ -403,29 +403,49 @@ Item {
                     property var leftCards: []
                     property var rightCards: []
 
-                    // Columns drift independently; cards keep own height.
+                    // Masonry split: each card lands in the currently shorter
+                    // column, measured in real pixels once delegates exist,
+                    // estimated before. Runs on facts/width changes only —
+                    // never on heights — so a re-split cannot loop against
+                    // its own layout; the deferred pass swaps estimates for
+                    // measurements after delegates polish.
                     function splitCards() {
                         var cards = root.yearFacts;
+                        var measured = measuredHeights();
                         var left = [];
                         var right = [];
-                        var leftScore = 0;
-                        var rightScore = 0;
+                        var leftH = 0;
+                        var rightH = 0;
                         for (var i = 0; i < cards.length; i++) {
-                            var score = cardScore(cards[i]);
-                            if (leftScore <= rightScore) {
+                            var h = measured[String(cards[i].label)] || estimateHeight(cards[i]);
+                            if (leftH <= rightH) {
                                 left.push(cards[i]);
-                                leftScore += score;
+                                leftH += h + Style.space(8);
                             } else {
                                 right.push(cards[i]);
-                                rightScore += score;
+                                rightH += h + Style.space(8);
                             }
                         }
                         yearlyInsightsGrid.leftCards = left;
                         yearlyInsightsGrid.rightCards = right;
                     }
 
-                    function cardScore(card) {
-                        return estimateLines(String(card.value || "")) + estimateLines(String(card.sub || ""));
+                    function measuredHeights() {
+                        var out = {};
+                        var cols = [leftColumn, rightColumn];
+                        for (var c = 0; c < cols.length; c++) {
+                            var kids = cols[c].children;
+                            for (var k = 0; k < kids.length; k++) {
+                                if (kids[k].label !== undefined && kids[k].implicitHeight > 0)
+                                    out[String(kids[k].label)] = kids[k].implicitHeight;
+                            }
+                        }
+                        return out;
+                    }
+
+                    function estimateHeight(card) {
+                        var lines = estimateLines(String(card.value || "")) + estimateLines(String(card.sub || ""));
+                        return (lines + 2) * (Style.font.bodySmall + 4) + Style.space(20);
                     }
 
                     function estimateLines(text) {
@@ -435,20 +455,35 @@ Item {
                         return Math.max(1, Math.ceil(text.length / charsPerLine));
                     }
 
-                    onWidthChanged: splitCards()
+                    onWidthChanged: {
+                        splitCards();
+                        measureTimer.restart();
+                    }
 
                     Connections {
                         target: root
                         function onYearFactsChanged() {
                             yearlyInsightsGrid.splitCards();
+                            measureTimer.restart();
                         }
                     }
 
-                    Component.onCompleted: splitCards()
+                    Component.onCompleted: {
+                        splitCards();
+                        measureTimer.restart();
+                    }
+
+                    Timer {
+                        id: measureTimer
+                        interval: 100
+                        repeat: false
+                        onTriggered: yearlyInsightsGrid.splitCards()
+                    }
 
                     // Outer-id reads are idiomatic in delegates; muted for the linter.
                     // qmllint disable unqualified
                     CardColumn {
+                        id: leftColumn
                         width: (parent.width - Style.space(8)) / 2
                         cards: yearlyInsightsGrid.leftCards
                         foreground: root.foreground
@@ -456,6 +491,7 @@ Item {
                     }
 
                     CardColumn {
+                        id: rightColumn
                         width: (parent.width - Style.space(8)) / 2
                         cards: yearlyInsightsGrid.rightCards
                         foreground: root.foreground
