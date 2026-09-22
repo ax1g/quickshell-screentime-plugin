@@ -2357,6 +2357,30 @@ test("sanitizeSpans keeps clean lists by identity and rebuilds the rest", () => 
   assert.equal(capped.changed, true)
 })
 
+test("appendSpan coalesces exactly contiguous spans for the same app", () => {
+  const day = {
+    total: 0,
+    apps: {},
+    spans: [{ app: "zen", start: 1000, end: 2000 }],
+  }
+  const merged = Model.appendSpan(day, "zen", 2000, 3000)
+  assert.notEqual(merged, day)
+  assert.deepEqual(merged.spans, [{ app: "zen", start: 1000, end: 3000 }])
+  assert.deepEqual(day.spans, [{ app: "zen", start: 1000, end: 2000 }])
+})
+
+test("appendSpan keeps non-contiguous and different-app spans separate", () => {
+  const day = {
+    total: 0,
+    apps: {},
+    spans: [{ app: "zen", start: 1000, end: 2000 }],
+  }
+  const gapped = Model.appendSpan(day, "zen", 2001, 3000)
+  assert.equal(gapped.spans.length, 2)
+  const differentApp = Model.appendSpan(day, "foot", 2000, 3000)
+  assert.equal(differentApp.spans.length, 2)
+})
+
 test("appendSpan returns the input when there is nothing to record", () => {
   const day = { total: 0, apps: {} }
   assert.equal(Model.appendSpan(day, "zen", 2, 2), day)
@@ -2366,6 +2390,18 @@ test("appendSpan returns the input when there is nothing to record", () => {
   for (let i = 0; i < Model.MAX_DAY_SPANS; i++)
     full.spans.push({ app: "zen", start: i * 2 + 1, end: i * 2 + 2 })
   assert.equal(Model.appendSpan(full, "zen", 1, 2), full)
+  const continued = Model.appendSpan(
+    full,
+    "zen",
+    full.spans[full.spans.length - 1].end,
+    Model.MAX_DAY_SPANS * 2 + 2,
+  )
+  assert.equal(continued.spans.length, Model.MAX_DAY_SPANS)
+  assert.equal(
+    continued.spans[continued.spans.length - 1].end,
+    Model.MAX_DAY_SPANS * 2 + 2,
+  )
+  assert.equal(full.spans[full.spans.length - 1].end, Model.MAX_DAY_SPANS * 2)
   const grown = Model.appendSpan(day, "zen", 1000, 2000)
   assert.notEqual(grown, day)
   assert.deepEqual(grown.spans, [{ app: "zen", start: 1000, end: 2000 }])

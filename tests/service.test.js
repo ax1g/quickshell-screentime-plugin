@@ -119,10 +119,7 @@ test("tracking prefs filter ignored apps and rename via aliases", () => {
   assert.match(service, /Model\.parseIgnoredApps\(ignored\)/)
   assert.match(service, /Model\.parseAppAliases\(aliases\)/)
   assert.match(service, /Model\.isIgnoredApp\(appId, root\.ignoredApps\)/)
-  assert.match(
-    service,
-    /root\.trackingKeyFor\(app, tl && tl\.title \? tl\.title : ""\)/,
-  )
+  assert.match(service, /root\.trackingKeyFor\(app\)/)
 })
 
 test("resetAll wipes days, months and archive, then persists", () => {
@@ -202,20 +199,28 @@ test("recorded spans carry from disk into the live day", () => {
   assert.match(service, /live\.spans = prev\.spans\.slice\(\)/)
 })
 
-test("browser tabs split into site buckets off the window title", () => {
+test("browser totals keep site labels for daily timeline spans", () => {
   // The title binding (not toplevel changes) drives tab switches.
   assert.match(
     service,
     /readonly property string activeTitle: ToplevelManager\.activeToplevel/,
   )
   assert.match(service, /onActiveTitleChanged: root\.refreshSite\(\)/)
-  // Site key first, browser key as the unclassified fallback.
+  // The main app bucket is the resolved browser, while the span preserves
+  // its site key when a browser title resolves.
   assert.match(service, /function browserSiteKey\(appId, title\)/)
   assert.match(service, /Model\.siteKey\(Model\.siteForTitle\(title\)\)/)
-  assert.match(service, /function trackingKeyFor\(appId, title\)/)
+  assert.match(service, /function trackingKeyFor\(appId\)/)
+  assert.match(service, /function spanKeyFor\(appId, title\)/)
   assert.match(
     service,
-    /root\.browserSiteKey\(appId, title\) \|\| Model\.resolveAppName\(appId, root\.appAliases\)/,
+    /root\.browserSiteKey\(appId, title\) \|\| root\.trackingKeyFor\(appId\)/,
+  )
+  assert.match(service, /property string activeSpanApp: ""/)
+  assert.match(service, /root\.activeApp = root\.trackingKeyFor\(app\)/)
+  assert.match(
+    service,
+    /root\.activeSpanApp = root\.spanKeyFor\(app, tl && tl\.title \? tl\.title : ""\)/,
   )
 })
 
@@ -228,8 +233,27 @@ test("refreshSite rotates only on resolved-key changes", () => {
   assert(fn[0].includes("if (root.sessionLocked || root.screensaverActive)"))
   assert(fn[0].includes("Model.isBrowserApp(Model.canonicalApp(root.rawApp))"))
   // Same resolved key (e.g. a ticking unread counter) churns nothing.
-  assert(fn[0].includes("if (!want || want === root.activeApp)"))
+  assert(fn[0].includes("if (!want || want === root.activeSpanApp)"))
   assert(fn[0].includes("State.closeActiveBucket"))
-  assert(fn[0].includes("root.activeApp = want"))
+  assert(fn[0].includes("root.activeSpanApp = want"))
   assert(fn[0].includes("root.persist()"))
+})
+
+test("event-driven closures roll over before recording", () => {
+  for (const name of [
+    "setTrackingPrefs",
+    "refreshSite",
+    "switchActive",
+    "setSessionLocked",
+    "setScreensaverActive",
+  ]) {
+    const fn = service.match(
+      new RegExp("function " + name + "\\([^)]*\\) \\{[\\s\\S]*?\\n    \\}"),
+    )
+    assert(fn, name + " block exists")
+    assert(
+      fn[0].includes("root.rolloverIfNeeded(now)"),
+      name + " rolls over before close",
+    )
+  }
 })

@@ -1138,12 +1138,24 @@ function sanitizeSpans(value) {
   return { spans: out, changed: true }
 }
 
-// Fresh day object with one span appended; the input returns by identity
-// when the span is invalid or the day already holds the cap.
+// Fresh day object with one span appended; contiguous tail spans coalesce
+// before the cap so an ongoing session can continue without losing data.
 function appendSpan(day, app, start, end) {
   var span = { app: String(app), start: Number(start), end: Number(end) }
   if (!day || !isSpan(span)) return day
   var cur = spanList(day)
+  var last = cur.length ? cur[cur.length - 1] : null
+  if (last && last.app === span.app && last.end === span.start) {
+    var merged = cur.slice()
+    merged[merged.length - 1] = {
+      app: last.app,
+      start: last.start,
+      end: span.end,
+    }
+    var continued = Object.assign({}, day)
+    continued.spans = merged
+    return continued
+  }
   if (cur.length >= MAX_DAY_SPANS) return day
   var out = cur.slice()
   out.push(span)

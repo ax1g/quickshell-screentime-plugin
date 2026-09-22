@@ -1061,6 +1061,33 @@ test("closeActiveBucket records the credited span", () => {
   assert.deepEqual(result.today.spans, [{ app: "zen", start: t0, end: t1 }])
 })
 
+test("browser aggregate keeps its site on the recorded span", () => {
+  const t0 = localTime(2026, 8, 21, 7, 0, 0)
+  const t1 = localTime(2026, 8, 21, 7, 10, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: t0,
+    lastTick: t1,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    t0,
+    t1,
+    "2026-09-21",
+    30000,
+    t1,
+    "site:example.com",
+  )
+  assert.deepEqual(result.today.apps, { zen: 600000 })
+  assert.deepEqual(result.today.spans, [
+    { app: "site:example.com", start: t0, end: t1 },
+  ])
+})
+
 test("closeActiveBucket drops spans with suspend gaps and clock jumps", () => {
   const t0 = localTime(2026, 8, 21, 7, 0, 0)
   const t1 = localTime(2026, 8, 21, 7, 10, 0)
@@ -1182,6 +1209,37 @@ test("advanceRollover carries spans across midnight in order", () => {
     { app: "zen", start: midnight, end: m1 },
   ])
   assert.equal(result.today.total, 300000)
+})
+
+test("advanceRollover preserves a site label across midnight", () => {
+  const m0 = localTime(2026, 8, 21, 23, 59, 58)
+  const m1 = localTime(2026, 8, 22, 0, 0, 2)
+  const midnight = localTime(2026, 8, 22, 0, 0, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: m0,
+    lastTick: m1,
+  }
+  const result = State.advanceRollover(
+    state,
+    m1,
+    "2026-09-22",
+    30000,
+    m1,
+    "site:example.com",
+  )
+  assert.deepEqual(result.days["2026-09-21"].apps, { zen: 2000 })
+  assert.deepEqual(result.days["2026-09-21"].spans, [
+    { app: "site:example.com", start: m0, end: midnight },
+  ])
+  assert.deepEqual(result.today.apps, { zen: 2000 })
+  assert.deepEqual(result.today.spans, [
+    { app: "site:example.com", start: midnight, end: m1 },
+  ])
+  assert.equal(result.activeSpanApp, "site:example.com")
 })
 
 test("accumulateBucket preserves spans without recording", () => {

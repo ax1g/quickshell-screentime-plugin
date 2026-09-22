@@ -70,6 +70,9 @@ Item {
     property var years: ({})
 
     property string activeApp: ""
+    // Aggregate key for apps/donut stays browser-level; spans retain the
+    // site key so the daily timeline can still name each tab destination.
+    property string activeSpanApp: ""
     property double activeStart: 0
     // Raw compositor appId; activeApp is the resolved name.
     property string rawApp: ""
@@ -128,6 +131,8 @@ Item {
             root.todayKey = patch.todayKey;
         if (patch.activeApp !== undefined)
             root.activeApp = patch.activeApp;
+        if (patch.activeSpanApp !== undefined)
+            root.activeSpanApp = patch.activeSpanApp;
         if (patch.activeStart !== undefined)
             root.activeStart = patch.activeStart;
         if (patch.lastTick !== undefined)
@@ -165,8 +170,10 @@ Item {
         // focus switch.
         if (root.ready && root.activeApp && Model.isIgnoredApp(root.activeApp, root.ignoredApps)) {
             var now = Date.now();
-            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.rolloverIfNeeded(now);
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             root.persist();
         }
@@ -199,6 +206,8 @@ Item {
             var renamed = Model.resolveAppName(previous, map);
             if (renamed !== previous)
                 root.activeApp = renamed;
+            if (root.activeSpanApp === previous)
+                root.activeSpanApp = root.activeApp;
             root.activeStart = now;
         }
         root.persist();
@@ -226,13 +235,18 @@ Item {
         return Model.siteKey(Model.siteForTitle(title));
     }
 
-    // Key the focused window should accrue to right now.
-    function trackingKeyFor(appId, title) {
-        return root.browserSiteKey(appId, title) || Model.resolveAppName(appId, root.appAliases);
+    // Main-panel totals always accrue to the resolved app, not a tab site.
+    function trackingKeyFor(appId) {
+        return Model.resolveAppName(appId, root.appAliases);
+    }
+
+    // Timeline spans retain a browser site's identity when the title names it.
+    function spanKeyFor(appId, title) {
+        return root.browserSiteKey(appId, title) || root.trackingKeyFor(appId);
     }
 
     // Tab switches inside a browser never touch activeToplevel, so the
-    // bucket rotates here. Only a change in the RESOLVED key rotates it:
+    // span rotates here. Only a change in the RESOLVED key rotates it:
     // "(56) WhatsApp" and "(57) WhatsApp" both resolve to whatsapp.com,
     // so a ticking unread counter cannot churn buckets.
     function refreshSite() {
@@ -244,13 +258,14 @@ Item {
             return;
         if (!Model.isBrowserApp(Model.canonicalApp(root.rawApp)))
             return;
-        var want = root.trackingKeyFor(root.rawApp, root.activeTitle);
-        if (!want || want === root.activeApp)
+        var want = root.spanKeyFor(root.rawApp, root.activeTitle);
+        if (!want || want === root.activeSpanApp)
             return;
         var now = Date.now();
-        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
-        root.activeApp = want;
-        root.activeStart = Date.now();
+        root.rolloverIfNeeded(now);
+        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+        root.activeSpanApp = want;
+        root.activeStart = now;
         root.persist();
     }
 
@@ -260,7 +275,8 @@ Item {
         if (!root.ready)
             return;
         var now = Date.now();
-        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+        root.rolloverIfNeeded(now);
+        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
         root.persist();
         var tl = ToplevelManager.activeToplevel;
         var app = tl && tl.appId ? tl.appId : "";
@@ -270,20 +286,24 @@ Item {
         // accrue straight through the pause.
         if (root.sessionLocked || root.screensaverActive) {
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             return;
         }
         if (app && !root.shouldTrack(app)) {
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             return;
         }
         if (app && (root.isTerminal(app) || root.isSteamApp(app))) {
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             root.beginResolve();
         } else {
-            root.activeApp = root.trackingKeyFor(app, tl && tl.title ? tl.title : "");
+            root.activeApp = root.trackingKeyFor(app);
+            root.activeSpanApp = root.spanKeyFor(app, tl && tl.title ? tl.title : "");
             root.activeStart = app ? now : 0;
         }
     }
@@ -308,6 +328,7 @@ Item {
             root.resolveForApp = "";
             return;
         }
+        root.rolloverIfNeeded();
         var patch = State.applyResolvedApp(root, name, root.resolveForApp, root.todayKey, root.suspendGapMs, root.lastTick);
         // Always clear, even on no-op, so refresh isn't watchdog-gated.
         root.resolveInFlight = false;
@@ -320,14 +341,15 @@ Item {
     function commitElapsed(now) {
         if (!root.ready || !root.activeApp || !root.activeStart)
             return;
-        applyState(State.commitElapsed(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+        applyState(State.commitElapsed(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
     }
 
-    function rolloverIfNeeded() {
+    function rolloverIfNeeded(now) {
         var key = Model.dayKey(new Date());
-        var now = Date.now();
+        if (now === undefined)
+            now = Date.now();
         // One transition owns midnight (close+carry+reopen); no ordering slip.
-        var patch = State.advanceRollover(root, now, key, root.suspendGapMs, root.lastTick);
+        var patch = State.advanceRollover(root, now, key, root.suspendGapMs, root.lastTick, root.activeSpanApp);
         if (!patch)
             return;
         applyState(patch);
@@ -625,7 +647,9 @@ Item {
             if (root.debugLogging)
                 console.warn("agx.screen-time: lock started");
             var now = Date.now();
-            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.rolloverIfNeeded(now);
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+            root.activeSpanApp = "";
             root.persist();
         } else {
             var endedAt = Date.now();
@@ -651,7 +675,9 @@ Item {
             if (root.debugLogging)
                 console.warn("agx.screen-time: screensaver started");
             var now = Date.now();
-            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.rolloverIfNeeded(now);
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+            root.activeSpanApp = "";
             root.persist();
         } else {
             var endedAt = Date.now();
@@ -793,7 +819,8 @@ Item {
         onTriggered: {
             var now = Date.now();
             if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs)) {
-                applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+                applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+                root.activeSpanApp = "";
                 // Roll past midnight before reopening, or wake seconds land on yesterday.
                 root.rolloverIfNeeded();
                 root.persist();

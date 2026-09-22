@@ -62,7 +62,15 @@ function nextMidnightMs(ms) {
 // credited span; the caller owns today/todayDur and the reopened bucket
 // at resumeAt. A multi-day suspend lands day by day instead of piling
 // onto the start day.
-function splitAcrossDays(state, model, app, activeStart, now, todayKey) {
+function splitAcrossDays(
+  state,
+  model,
+  app,
+  activeStart,
+  now,
+  todayKey,
+  spanApp,
+) {
   var d = Object.assign({}, state.days)
   var cursor = activeStart
   var guard = 0
@@ -72,7 +80,7 @@ function splitAcrossDays(state, model, app, activeStart, now, todayKey) {
     var key = model.dayKey(new Date(cursor))
     d[key] = model.appendSpan(
       accumulateBucket(d[key] || model.newDay(), app, chunk),
-      app,
+      spanApp || app,
       cursor,
       cursor + chunk,
     )
@@ -91,6 +99,7 @@ function closeActiveBucket(
   todayKey,
   suspendGapMs,
   lastTick,
+  spanApp,
 ) {
   if (!activeApp || !activeStart) return state
   if (isSuspendGap(now, lastTick, suspendGapMs)) {
@@ -120,12 +129,13 @@ function closeActiveBucket(
   if (dur <= 0) return state
 
   var model = modelFor(state)
+  var recordedApp = spanApp || activeApp
   var startDay = model.dayKey(new Date(activeStart))
   if (startDay === todayKey) {
     return {
       today: model.appendSpan(
         accumulateBucket(state.today, activeApp, dur),
-        activeApp,
+        recordedApp,
         activeStart,
         now,
       ),
@@ -144,13 +154,14 @@ function closeActiveBucket(
     activeStart,
     now,
     todayKey,
+    recordedApp,
   )
   return {
     today:
       split.todayDur > 0
         ? model.appendSpan(
             accumulateBucket(state.today, activeApp, split.todayDur),
-            activeApp,
+            recordedApp,
             split.resumeAt,
             now,
           )
@@ -172,6 +183,7 @@ function commitElapsed(
   todayKey,
   suspendGapMs,
   lastTick,
+  spanApp,
 ) {
   if (!activeApp || !activeStart) return state
   if (isSuspendGap(now, lastTick, suspendGapMs)) {
@@ -200,12 +212,13 @@ function commitElapsed(
   if (dur <= 0) return state
 
   var model = modelFor(state)
+  var recordedApp = spanApp || activeApp
   var startDay = model.dayKey(new Date(activeStart))
   if (startDay === todayKey) {
     // Entire bucket belongs to today — simple case.
     var newToday = model.appendSpan(
       accumulateBucket(state.today, activeApp, dur),
-      activeApp,
+      recordedApp,
       activeStart,
       now,
     )
@@ -227,6 +240,7 @@ function commitElapsed(
     activeStart,
     now,
     todayKey,
+    recordedApp,
   )
   return {
     today: state.today,
@@ -273,7 +287,7 @@ function rolloverIfNeeded(state, newKey) {
 // A backward day jump (clock stepped back) carries nothing: the live
 // bucket drops and the day stays put instead of billing evening time
 // onto yesterday morning.
-function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
+function advanceRollover(state, now, newKey, suspendGapMs, lastTick, spanApp) {
   if (newKey === state.todayKey) return null
   if (newKey < state.todayKey) {
     return {
@@ -296,9 +310,11 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
     newKey,
     suspendGapMs,
     lastTick,
+    spanApp,
   )
   var patch = rolloverIfNeeded(closed, newKey)
   patch.activeApp = app
+  patch.activeSpanApp = spanApp || app
   patch.activeStart = app ? now : 0
   // Carry the split-off yesterday portion along or lose it.
   var d = Object.assign({}, closed.days)
@@ -349,7 +365,7 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
   if (grown > 0 && app)
     patch.today = model.appendSpan(
       accumulateBucket(patch.today, app, grown),
-      app,
+      spanApp || app,
       now - grown,
       now,
     )
@@ -394,6 +410,7 @@ function applyResolvedApp(
   return {
     resolveInFlight: false,
     activeApp: name,
+    activeSpanApp: name,
     activeStart: name ? now : 0,
     today: closed.today,
     days: closed.days,

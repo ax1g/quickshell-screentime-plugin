@@ -18,10 +18,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (Development, Productivity, Communication, Education & Research,
   Creative, Web Browsing, Social, Entertainment, Gaming,
   System & Utilities, Other), with session ticks and exact times on
-  hover. Sub-minute blips stay in the totals but off the strip.
-  Browser tabs split into per-site buckets (facebook.com counts as
-  Social, not Web Browsing) off a clean rule set with no adult entries.
-  Your pick persists across restarts.
+  hover. Sub-minute blips stay in the totals but off the strip. Browser
+  apps stay grouped in the main view, while the timeline identifies sites
+  from a clean rule set with no adult entries. Your pick persists across
+  restarts.
 
 ### Changed
 
@@ -29,6 +29,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Daily timeline sessions now keep recording through long focus periods
+  and correctly split at midnight when you switch apps, change tabs, or lock.
 - Yearly retro cards now balance across both columns by measured height
   instead of piling up on the left.
 - RECHARGE MONTH always crowns the quietest tracked month — no more
