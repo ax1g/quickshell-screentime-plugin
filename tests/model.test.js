@@ -2407,6 +2407,56 @@ test("appendSpan returns the input when there is nothing to record", () => {
   assert.deepEqual(grown.spans, [{ app: "zen", start: 1000, end: 2000 }])
 })
 
+test("mergeSpans unions same-app overlaps without touching gaps", () => {
+  // Write-time coalescing folds post-save growth into the tail span, so
+  // the live list shares a prefix with the mirror at shifted positions.
+  const united = Model.mergeSpans(
+    [{ app: "zen", start: 1000, end: 61000 }],
+    [{ app: "zen", start: 1000, end: 121000 }],
+  )
+  assert.deepEqual(united, [{ app: "zen", start: 1000, end: 121000 }])
+  // Exact repeats dedupe: a repeated flush never double-counts.
+  assert.deepEqual(
+    Model.mergeSpans(united, [{ app: "zen", start: 1000, end: 121000 }]),
+    united,
+  )
+  // Different apps never merge, even when adjacent; gaps stay visible.
+  assert.deepEqual(
+    Model.mergeSpans(
+      [{ app: "zen", start: 1000, end: 2000 }],
+      [{ app: "foot", start: 2000, end: 3000 }],
+    ),
+    [
+      { app: "zen", start: 1000, end: 2000 },
+      { app: "foot", start: 2000, end: 3000 },
+    ],
+  )
+})
+
+test("mergeSpans sorts, validates and tolerates junk", () => {
+  assert.deepEqual(
+    Model.mergeSpans(
+      [
+        { app: "foot", start: 5000, end: 6000 },
+        { nope: 1 },
+      ],
+      "junk",
+    ),
+    [{ app: "foot", start: 5000, end: 6000 }],
+  )
+  assert.deepEqual(Model.mergeSpans(undefined, undefined), [])
+  assert.deepEqual(
+    Model.mergeSpans(
+      [{ app: "zen", start: 9000, end: 9500 }],
+      [{ app: "zen", start: 1000, end: 2000 }],
+    ),
+    [
+      { app: "zen", start: 1000, end: 2000 },
+      { app: "zen", start: 9000, end: 9500 },
+    ],
+  )
+})
+
 test("splitSpan cuts at local midnights", () => {
   const t0 = new Date(2026, 8, 21, 23, 55, 0).getTime()
   const t1 = new Date(2026, 8, 22, 0, 5, 0).getTime()

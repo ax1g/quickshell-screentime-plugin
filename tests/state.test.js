@@ -454,6 +454,46 @@ test("advanceRollover preserves unmirrored live data in the old day", () => {
   assert.equal(result.today.total, 5000)
 })
 
+test("advanceRollover unions coalesced spans instead of slicing by length", () => {
+  // Mirror saved one 60s span; two more 60s commits coalesced into the
+  // live tail without changing its length. Positional slicing would see
+  // nothing past the mirror's count and drop 120s of spans while
+  // flushing their totals — the union keeps every millisecond covered.
+  const before = localTime(2026, 7, 15, 23, 59, 50)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const dayStart = localTime(2026, 7, 15, 0, 0, 0)
+  const state = {
+    todayKey: "2026-08-15",
+    today: {
+      total: 180000,
+      apps: { editor: 180000 },
+      spans: [{ app: "editor", start: dayStart, end: dayStart + 180000 }],
+    },
+    days: {
+      "2026-08-15": {
+        total: 60000,
+        apps: { editor: 60000 },
+        spans: [{ app: "editor", start: dayStart, end: dayStart + 60000 }],
+      },
+    },
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before,
+  }
+  const result = State.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    before,
+  )
+  assert.ok(result)
+  const old = result.days["2026-08-15"]
+  assert.equal(old.total, 190000)
+  const covered = old.spans.reduce((a, s) => a + (s.end - s.start), 0)
+  assert.equal(covered, 190000)
+})
+
 test("advanceRollover with no open bucket just carries the day", () => {
   const after = localTime(2026, 7, 16, 0, 0, 5)
   const state = {
@@ -1200,10 +1240,10 @@ test("advanceRollover carries spans across midnight in order", () => {
     lastTick: m1,
   }
   const result = State.advanceRollover(state, m1, "2026-09-22", 30000, m1)
+  // One continuous zen session 22:55–00:00: the union rejoins the
+  // contiguous spans instead of keeping slice-position artifacts.
   assert.deepEqual(result.days["2026-09-21"].spans, [
-    { app: "zen", start: m0 - 3600000, end: m0 - 1800000 },
-    { app: "zen", start: m0 - 1800000, end: m0 },
-    { app: "zen", start: m0, end: midnight },
+    { app: "zen", start: m0 - 3600000, end: midnight },
   ])
   assert.deepEqual(result.today.spans, [
     { app: "zen", start: midnight, end: m1 },

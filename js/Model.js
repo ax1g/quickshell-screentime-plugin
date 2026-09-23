@@ -1164,6 +1164,43 @@ function appendSpan(day, app, start, end) {
   return next
 }
 
+// Union of two span lists into one sorted, non-overlapping (per app)
+// list. Same-app spans that touch or overlap rejoin; different apps
+// never merge, so every positive gap stays visible. Position-free, so
+// a midnight flush is idempotent and write-time tail coalescing can
+// never strand post-save session growth span-less while its totals
+// flush. Returns a fresh array; inputs pass through untouched.
+function mergeSpans(a, b) {
+  var all = []
+  var lists = [a, b]
+  for (var i = 0; i < lists.length; i++) {
+    var list = lists[i]
+    if (!Array.isArray(list)) continue
+    for (var j = 0; j < list.length; j++) {
+      if (isSpan(list[j]))
+        all.push({
+          app: String(list[j].app),
+          start: Number(list[j].start),
+          end: Number(list[j].end),
+        })
+    }
+  }
+  all.sort(function (x, y) {
+    return x.start - y.start
+  })
+  var out = []
+  for (var k = 0; k < all.length; k++) {
+    var s = all[k]
+    var last = out.length ? out[out.length - 1] : null
+    if (last && last.app === s.app && s.start <= last.end) {
+      if (s.end > last.end) last.end = s.end
+    } else {
+      out.push({ app: s.app, start: s.start, end: s.end })
+    }
+  }
+  return out
+}
+
 // Split [start, end) at local midnights into per-day portions:
 // [{ key, app, start, end }]. DST days split on the true wall-clock
 // boundary like the totals do.
@@ -2690,6 +2727,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     spanList: spanList,
     sanitizeSpans: sanitizeSpans,
     appendSpan: appendSpan,
+    mergeSpans: mergeSpans,
     splitSpan: splitSpan,
     dayBounds: dayBounds,
     daySpanView: daySpanView,

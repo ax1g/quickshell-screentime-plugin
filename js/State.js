@@ -335,25 +335,21 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick, spanApp) {
       apps[dk] = (apps[dk] || 0) + delta.apps[dk]
       total += delta.apps[dk]
     }
-    // The flushed totals bring their spans: whatever today recorded past
-    // the mirror's length belongs to the old day too. Sorted so the cap
-    // below keeps the newest spans, not the newest-recorded ones.
-    var carried = Array.isArray(old.spans) ? old.spans.slice() : []
-    var mirror = state.days ? state.days[state.todayKey] : null
-    var mirrorLen =
-      mirror && Array.isArray(mirror.spans) ? mirror.spans.length : 0
-    var fresh =
-      state.today && Array.isArray(state.today.spans)
-        ? state.today.spans.slice(mirrorLen)
-        : []
+    // The flushed totals bring their spans via interval union, not
+    // positional slicing: write-time tail coalescing shifts indices
+    // without changing length, so "everything past the mirror's span
+    // count" strands post-save session growth span-less while its
+    // totals flush. Merging by interval is idempotent, so a repeated
+    // flush can never double-count. Sorted so the cap below keeps the
+    // newest spans.
+    var united = model.mergeSpans(
+      old.spans,
+      state.today ? state.today.spans : [],
+    )
     var cap = model.MAX_DAY_SPANS || 3000
-    var all = carried.concat(fresh)
-    all.sort(function (a, b) {
-      return a.start - b.start
-    })
     var mergedDay = { total: total, apps: apps }
-    if (all.length > 0)
-      mergedDay.spans = all.length > cap ? all.slice(-cap) : all
+    if (united.length > 0)
+      mergedDay.spans = united.length > cap ? united.slice(-cap) : united
     d[state.todayKey] = mergedDay
   }
   patch.days = d
