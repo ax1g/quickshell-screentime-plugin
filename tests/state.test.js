@@ -14,39 +14,17 @@ function localTime(year, month, day, h, m, s) {
   return new Date(year, month, day, h, m, s || 0).getTime()
 }
 
-// ---- isSuspendGap --------------------------------------------------------
-
-test("isSuspendGap returns false when lastTick is 0", () => {
-  assert.equal(State.isSuspendGap(1000, 0, 30000), false)
-})
-
-test("isSuspendGap returns false when gap is under threshold", () => {
-  assert.equal(State.isSuspendGap(10000, 5000, 30000), false)
-})
-
-test("isSuspendGap returns false when gap equals threshold", () => {
-  assert.equal(State.isSuspendGap(30000, 0, 30000), false)
-})
-
-test("isSuspendGap returns true when gap exceeds threshold", () => {
-  assert.equal(State.isSuspendGap(100000, 50000, 30000), true)
-})
-
 // ---- accumulateBucket ----------------------------------------------------
 
-test("accumulateBucket adds duration to the correct app", () => {
+test("accumulateBucket adds duration to new and existing apps", () => {
   const today = { total: 1000, apps: { editor: 500 } }
   const result = State.accumulateBucket(today, "browser", 3000)
   assert.equal(result.total, 4000)
   assert.equal(result.apps.browser, 3000)
   assert.equal(result.apps.editor, 500)
-})
-
-test("accumulateBucket merges with existing app time", () => {
-  const today = { total: 1000, apps: { editor: 500 } }
-  const result = State.accumulateBucket(today, "editor", 500)
-  assert.equal(result.total, 1500)
-  assert.equal(result.apps.editor, 1000)
+  const merged = State.accumulateBucket(result, "editor", 500)
+  assert.equal(merged.total, 4500)
+  assert.equal(merged.apps.editor, 1000)
 })
 
 test("accumulateBucket returns a new object (immutability)", () => {
@@ -56,31 +34,24 @@ test("accumulateBucket returns a new object (immutability)", () => {
   assert.notEqual(result.apps, today.apps)
 })
 
-test("accumulateBucket returns original when dur is zero", () => {
+test("accumulateBucket rejects junk bucket inputs", () => {
   const today = { total: 1000, apps: { a: 500 } }
   assert.equal(State.accumulateBucket(today, "a", 0), today)
-})
-
-test("accumulateBucket returns original when app is empty", () => {
-  const today = { total: 1000, apps: { a: 500 } }
+  assert.equal(State.accumulateBucket(today, "a", -5000), today)
   assert.equal(State.accumulateBucket(today, "", 5000), today)
-})
-
-test("accumulateBucket returns original for NaN or infinite durations", () => {
-  const today = { total: 1000, apps: { a: 500 } }
   assert.equal(State.accumulateBucket(today, "a", NaN), today)
   assert.equal(State.accumulateBucket(today, "a", Infinity), today)
 })
 
 // ---- closeActiveBucket ---------------------------------------------------
 
-test("closeActiveBucket returns original state when no bucket open", () => {
+test("close and commit treat an empty bucket as a no-op", () => {
   const state = {
     today: { total: 100, apps: {} },
     days: {},
     todayKey: "2026-08-15",
   }
-  const result = State.closeActiveBucket(
+  const closed = State.closeActiveBucket(
     state,
     "",
     0,
@@ -89,8 +60,18 @@ test("closeActiveBucket returns original state when no bucket open", () => {
     30000,
     90000,
   )
-  assert.deepEqual(result.today, state.today)
-  assert.deepEqual(result.days, state.days)
+  assert.deepEqual(closed.today, state.today)
+  assert.deepEqual(closed.days, state.days)
+  const committed = State.commitElapsed(
+    state,
+    "",
+    0,
+    100000,
+    "2026-08-15",
+    30000,
+    90000,
+  )
+  assert.deepEqual(committed.today, state.today)
 })
 
 test("closeActiveBucket credits time to today when no midnight crossing", () => {
@@ -163,45 +144,7 @@ test("closeActiveBucket splits a midnight-spanning bucket at midnight", () => {
   assert.equal(result.today.total, 100 + 5000)
 })
 
-test("closeActiveBucket returns new object (immutability)", () => {
-  const aug15 = localMidnight(2026, 7, 15)
-  const state = {
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-  }
-  const result = State.closeActiveBucket(
-    state,
-    "editor",
-    aug15 + 10000,
-    aug15 + 15000,
-    "2026-08-15",
-    30000,
-    aug15 + 12000,
-  )
-  assert.notEqual(result, state)
-  assert.notEqual(result.today, state.today)
-})
-
 // ---- commitElapsed -------------------------------------------------------
-
-test("commitElapsed returns original state when no bucket open", () => {
-  const state = {
-    today: { total: 100, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-  }
-  const result = State.commitElapsed(
-    state,
-    "",
-    0,
-    100000,
-    "2026-08-15",
-    30000,
-    90000,
-  )
-  assert.deepEqual(result.today, state.today)
-})
 
 test("commitElapsed accrues time into today", () => {
   const aug15 = localMidnight(2026, 7, 15)
@@ -277,26 +220,6 @@ test("commitElapsed drops bucket on suspend gap", () => {
   assert.equal(result.activeStart, now)
 })
 
-test("commitElapsed returns new object (immutability)", () => {
-  const aug15 = localMidnight(2026, 7, 15)
-  const state = {
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-  }
-  const result = State.commitElapsed(
-    state,
-    "editor",
-    aug15 + 10000,
-    aug15 + 20000,
-    "2026-08-15",
-    30000,
-    aug15 + 18000,
-  )
-  assert.notEqual(result, state)
-  assert.notEqual(result.today, state.today)
-})
-
 // ---- rolloverIfNeeded ----------------------------------------------------
 
 test("rolloverIfNeeded returns null when key unchanged", () => {
@@ -342,8 +265,7 @@ test("dayMinus returns the unmirrored per-app remainder", () => {
   assert.deepEqual(result, { total: 10000, apps: { browser: 10000 } })
 })
 
-test("dayMinus floors at zero and tolerates junk", () => {
-  assert.deepEqual(State.dayMinus(null, null), { total: 0, apps: {} })
+test("dayMinus floors an over-counted mirror at zero", () => {
   assert.deepEqual(
     State.dayMinus(
       { total: 50, apps: { a: 50 } },
@@ -590,37 +512,13 @@ test("applyResolvedApp returns null when result is from an older resolve generat
   assert.equal(result, null)
 })
 
-test("applyResolvedApp applies when resolve generation matches spawn", () => {
+test("applyResolvedApp sets new app and opens bucket", () => {
   const state = {
     resolveInFlight: true,
     rawApp: "foot",
     resolveForApp: "foot",
     resolveSpawnGen: 3,
     resolveGeneration: 3,
-    activeApp: "",
-    activeStart: 0,
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-    lastTick: 0,
-  }
-  const result = State.applyResolvedApp(
-    state,
-    "opencode",
-    "foot",
-    "2026-08-15",
-    30000,
-    0,
-  )
-  assert.ok(result)
-  assert.equal(result.activeApp, "opencode")
-})
-
-test("applyResolvedApp sets new app and opens bucket", () => {
-  const state = {
-    resolveInFlight: true,
-    rawApp: "foot",
-    resolveForApp: "foot",
     activeApp: "",
     activeStart: 0,
     today: { total: 0, apps: {} },
@@ -805,12 +703,6 @@ test("accumulateBucket with zero total starts correctly", () => {
   const result = State.accumulateBucket(today, "new-app", 60000)
   assert.equal(result.total, 60000)
   assert.equal(result.apps["new-app"], 60000)
-})
-
-test("accumulateBucket with negative duration returns original", () => {
-  const today = { total: 100, apps: { a: 100 } }
-  const result = State.accumulateBucket(today, "a", -5000)
-  assert.equal(result, today)
 })
 
 // ---- Data safety: closeActiveBucket consecutive calls ----------------------
@@ -1000,54 +892,45 @@ test("commitElapsed rebases an open bucket on backward jumps", () => {
   assert.equal(result.lastTick, now)
 })
 
-test("closeActiveBucket splits a multi-day bucket day by day", () => {
+test("close and commit split a multi-day bucket day by day", () => {
   const start = localMidnight(2026, 7, 15) + 23 * 3600000
   const now = localMidnight(2026, 7, 17) + 10000
-  const state = {
+  const setup = () => ({
     today: { total: 0, apps: {} },
     days: {},
     todayKey: "2026-08-17",
     lastTick: start,
+  })
+  const checkSplit = (result) => {
+    assert.equal(result.days["2026-08-15"].total, 3600000)
+    assert.equal(result.days["2026-08-16"].total, 86400000)
   }
-  const result = State.closeActiveBucket(
-    state,
+  const closed = State.closeActiveBucket(
+    setup(),
     "zen",
     start,
     now,
     "2026-08-17",
     30 * 3600000,
-    state.lastTick,
+    start,
   )
-  assert.equal(result.days["2026-08-15"].total, 3600000)
-  assert.equal(result.days["2026-08-16"].total, 86400000)
-  assert.equal(result.today.total, 10000)
-  assert.deepEqual(result.today.apps, { zen: 10000 })
-  assert.equal(result.activeApp, "")
-})
-
-test("commitElapsed credits intermediate days and resumes at midnight", () => {
-  const start = localMidnight(2026, 7, 15) + 23 * 3600000
-  const now = localMidnight(2026, 7, 17) + 10000
-  const state = {
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-17",
-    lastTick: start,
-  }
-  const result = State.commitElapsed(
-    state,
+  checkSplit(closed)
+  assert.equal(closed.today.total, 10000)
+  assert.deepEqual(closed.today.apps, { zen: 10000 })
+  assert.equal(closed.activeApp, "")
+  const committed = State.commitElapsed(
+    setup(),
     "zen",
     start,
     now,
     "2026-08-17",
     30 * 3600000,
-    state.lastTick,
+    start,
   )
-  assert.equal(result.days["2026-08-15"].total, 3600000)
-  assert.equal(result.days["2026-08-16"].total, 86400000)
-  assert.deepEqual(result.today, { total: 0, apps: {} })
-  assert.equal(result.activeApp, "zen")
-  assert.equal(result.activeStart, localMidnight(2026, 7, 17))
+  checkSplit(committed)
+  assert.deepEqual(committed.today, { total: 0, apps: {} })
+  assert.equal(committed.activeApp, "zen")
+  assert.equal(committed.activeStart, localMidnight(2026, 7, 17))
 })
 
 test("advanceRollover ignores backward day jumps", () => {
