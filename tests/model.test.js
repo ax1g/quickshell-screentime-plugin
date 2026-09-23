@@ -2436,10 +2436,7 @@ test("mergeSpans unions same-app overlaps without touching gaps", () => {
 test("mergeSpans sorts, validates and tolerates junk", () => {
   assert.deepEqual(
     Model.mergeSpans(
-      [
-        { app: "foot", start: 5000, end: 6000 },
-        { nope: 1 },
-      ],
+      [{ app: "foot", start: 5000, end: 6000 }, { nope: 1 }],
       "junk",
     ),
     [{ app: "foot", start: 5000, end: 6000 }],
@@ -2531,7 +2528,9 @@ test("daySpanView sizes spans to the session, not midnight", () => {
     "#e45b93",
   )
   assert.equal(split.segments.length, 2)
-  // Sub-minute blips stay in the totals but off the strip.
+  // Every span renders, down to 3s blips: the strip accounts for
+  // exactly the recorded time instead of hiding blips and absorbing
+  // gaps.
   const blips = Model.daySpanView(
     {
       total: 3000,
@@ -2541,8 +2540,9 @@ test("daySpanView sizes spans to the session, not midnight", () => {
     "2026-09-21",
     "#e45b93",
   )
-  assert.deepEqual(blips.segments, [])
-  assert.deepEqual(blips.categories, [])
+  assert.equal(blips.segments.length, 1)
+  assert.equal(blips.segments[0].ms, 3000)
+  assert.equal(blips.categories[0].ms, 3000)
   assert.deepEqual(Model.daySpanView(null, "2026-09-21", "#e45b93"), {
     segments: [],
     categories: [],
@@ -2554,6 +2554,27 @@ test("daySpanView sizes spans to the session, not midnight", () => {
     Model.daySpanView({ total: 1, apps: {} }, "junk", "#e45b93").segments,
     [],
   )
+})
+
+test("daySpanView segments and categories sum to the recorded spans", () => {
+  const t0 = new Date(2026, 8, 21, 7, 0, 0).getTime()
+  const spans = [
+    { app: "zen", start: t0, end: t0 + 3000 },
+    { app: "zen", start: t0 + 60000, end: t0 + 120000 },
+    { app: "foot", start: t0 + 120000, end: t0 + 125000 },
+  ]
+  const view = Model.daySpanView(
+    { total: 68000, apps: { zen: 63000, foot: 5000 }, spans },
+    "2026-09-21",
+    "#e45b93",
+  )
+  // Blip, gapped session and adjacent other-app span: three bars, and
+  // the untracked 57s gap between them renders as empty track.
+  assert.equal(view.segments.length, 3)
+  const segMs = view.segments.reduce((a, s) => a + s.ms, 0)
+  assert.equal(segMs, 68000)
+  const catMs = view.categories.reduce((a, c) => a + c.ms, 0)
+  assert.equal(catMs, segMs)
 })
 
 test("fmtClock renders day times", () => {

@@ -1075,13 +1075,6 @@ function categoryColor(category, accentHex) {
 // The spans key stays absent until the first span records, so old days
 // and old code pass through untouched.
 var MAX_DAY_SPANS = 3000
-// Spans below a minute never render: like the donut's app list, the
-// timeline only shows meaningful entries, so 3s focus blips stay in the
-// totals but off the strip.
-var MIN_SPAN_MS = 60000
-// Read-time coalescing: adjacent same-app spans rejoin across short hops
-// (a 60s commit cadence must not dice one session into minutes).
-var SPAN_MERGE_GAP_MS = 5 * 60000
 
 // Axis tick fractions for a session range: wide sessions take five
 // ticks, narrow ones fewer, so minute labels never collide.
@@ -1243,9 +1236,11 @@ function dayBounds(key) {
 // axis, sessionStart, sessionEnd }. The track spans the user session —
 // first span start to last span end — so bars size relative to the day
 // lived, not to a fixed midnight grid: the first span fills the strip
-// and earlier spans shrink as later usage extends the session. Adjacent
-// same-app spans rejoin across short hops; sub-minute remnants never
-// render. Segments sort by start and carry session fractions for
+// and earlier spans shrink as later usage extends the session. Every
+// recorded span renders, so the strip accounts for exactly the day's
+// tracked time: sub-minute blips show as ticks and only truly
+// contiguous same-app spans rejoin, leaving every positive gap
+// visible. Segments sort by start and carry session fractions for
 // absolute placement; categories total the rendered time with stable
 // per-category colors for the legend; axis ticks the session range.
 function daySpanView(day, key, accentHex) {
@@ -1268,20 +1263,13 @@ function daySpanView(day, key, accentHex) {
   for (var j = 0; j < ordered.length; j++) {
     var s = ordered[j]
     var last = merged.length ? merged[merged.length - 1] : null
-    if (
-      last &&
-      last.app === s.app &&
-      Number(s.start) - last.end <= SPAN_MERGE_GAP_MS
-    ) {
+    if (last && last.app === s.app && Number(s.start) <= last.end) {
       if (Number(s.end) > last.end) last.end = Number(s.end)
     } else {
       merged.push({ app: s.app, start: Number(s.start), end: Number(s.end) })
     }
   }
-  var kept = []
-  for (var w = 0; w < merged.length; w++) {
-    if (merged[w].end - merged[w].start >= MIN_SPAN_MS) kept.push(merged[w])
-  }
+  var kept = merged
   if (!kept.length) return empty
   var sessionStart = kept[0].start
   var sessionEnd = kept[kept.length - 1].end
@@ -2720,8 +2708,6 @@ if (typeof module !== "undefined" && module && module.exports) {
     appCategory: appCategory,
     categoryColor: categoryColor,
     MAX_DAY_SPANS: MAX_DAY_SPANS,
-    SPAN_MERGE_GAP_MS: SPAN_MERGE_GAP_MS,
-    MIN_SPAN_MS: MIN_SPAN_MS,
     axisFracs: axisFracs,
     isSpan: isSpan,
     spanList: spanList,
