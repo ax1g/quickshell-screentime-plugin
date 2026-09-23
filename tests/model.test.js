@@ -1429,6 +1429,11 @@ test("weekView trophy follows the best week to its page", () => {
   assert.equal(Model.weekView(days, "2026-08-19", 2, 1).isRecord, true)
 })
 
+test("weekView crowns nothing with a single data week", () => {
+  const days = { "2026-08-18": { total: 2 * HOUR_MS_VIEW, apps: {} } }
+  assert.equal(Model.weekView(days, "2026-08-19", 2, 0).isRecord, false)
+})
+
 test("weekView tolerates an out-of-range offset", () => {
   const view = Model.weekView({}, "2026-08-19", 2, 9)
   assert.equal(view.week, null)
