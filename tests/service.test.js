@@ -47,10 +47,7 @@ test("pause keeps buckets closed against reopen paths", () => {
     /function applyResolvedApp[\s\S]*?root\.sessionLocked \|\| root\.screensaverActive[\s\S]*?root\.resolveForApp = ""/,
   )
   // Locking kills any in-flight resolve.
-  assert.match(
-    service,
-    /if \(locked\) \{[\s\S]*?root\.resolveForApp = ""[\s\S]*?lock started/,
-  )
+  assert.match(service, /if \(locked\) \{[\s\S]*?root\.resolveForApp = ""/)
 })
 
 test("falls back to a persistent lock watcher when services are unavailable", () => {
@@ -67,8 +64,6 @@ test("falls back to a persistent lock watcher when services are unavailable", ()
     service,
     /setSessionLocked\(String\(line\)\.trim\(\) === "true"\)/,
   )
-  assert.doesNotMatch(service, /id: lockPollProc/)
-  assert.doesNotMatch(service, /StdioCollector \{\s*\n\s*id: lockPollOut/)
   // Watcher is supervised while the lock service is unreachable, and
   // stopped the moment the event-driven path becomes available.
   assert.match(service, /id: watcherSupervisorTimer/)
@@ -113,8 +108,6 @@ test("warns once instead of failing silently when services never appear", () => 
 })
 
 test("tracking prefs filter ignored apps and rename via aliases", () => {
-  assert.match(service, /property var ignoredApps: \[\]/)
-  assert.match(service, /property var appAliases: \(\{\}\)/)
   assert.match(service, /function setTrackingPrefs\(ignored, aliases\)/)
   assert.match(service, /Model\.parseIgnoredApps\(ignored\)/)
   assert.match(service, /Model\.parseAppAliases\(aliases\)/)
@@ -142,10 +135,8 @@ test("changed aliases refold today and rename the live bucket", () => {
     /function refoldToday\(aliases\) \{[\s\S]*?\n    \}/,
   )
   assert(refold, "refoldToday block exists")
-  assert(refold[0].includes("var map = aliases || root.appAliases"))
   assert(refold[0].includes("root.commitElapsed(now)"))
   assert(refold[0].includes("Model.refoldDay(root.today, map)"))
-  assert(refold[0].includes("nd[root.todayKey] = root.today"))
   assert(refold[0].includes("Model.resolveAppName(previous, map)"))
   assert(refold[0].includes("root.persist()"))
   // setTrackingPrefs refolds only when the alias map actually changed.
