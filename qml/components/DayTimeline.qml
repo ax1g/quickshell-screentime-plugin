@@ -57,8 +57,8 @@ Column {
     Rectangle {
         id: strip
         width: parent.width
-        height: Style.space(16)
-        radius: Style.space(8)
+        height: Style.space(36)
+        radius: Style.space(18)
         clip: true
         color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.10)
 

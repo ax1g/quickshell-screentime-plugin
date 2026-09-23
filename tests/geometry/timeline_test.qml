@@ -72,14 +72,14 @@ TestCase {
     }
 
     function test_segmentsSitAtDayFractions() {
-        // The strip is the 16px rect holding the repeater; its rectangle
+        // The strip is the 36px rect holding the repeater; its rectangle
         // children are the segments (mouse areas are no rectangles).
         var all = [];
         collect(timeline, all);
         var strip = null;
         for (var i = 0; i < all.length; i++) {
             var it = all[i];
-            if (it.height !== Style.space(16) || it.width <= 2)
+            if (it.height !== Style.space(36) || it.width <= 2)
                 continue;
             var kids = it.children;
             for (var k = 0; k < kids.length; k++) {
