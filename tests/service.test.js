@@ -257,3 +257,16 @@ test("event-driven closures roll over before recording", () => {
     )
   }
 })
+
+test("heartbeat wake across midnight flushes instead of bare-carrying", () => {
+  const fn = service.match(/id: heartbeatTimer[\s\S]*?\n    \}/)
+  assert(fn, "heartbeatTimer block exists")
+  assert(
+    fn[0].includes("State.isSuspendGap(now, root.lastTick, root.suspendGapMs)"),
+  )
+  // The suspend branch rolls over through the flushing transition, so
+  // unmirrored time tracked before the sleep lands on the old day with
+  // its spans instead of evaporating at the carry.
+  assert(fn[0].includes("root.rolloverIfNeeded(now)"))
+  assert(!fn[0].includes("State.rolloverIfNeeded"))
+})

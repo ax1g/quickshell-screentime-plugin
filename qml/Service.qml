@@ -821,8 +821,12 @@ Item {
             if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs)) {
                 applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
                 root.activeSpanApp = "";
-                // Roll past midnight before reopening, or wake seconds land on yesterday.
-                root.rolloverIfNeeded();
+                // Full rollover, never the bare carry: unmirrored time
+                // tracked before the suspend flushes into the old day
+                // instead of evaporating when the wake crosses midnight.
+                // Then roll past midnight before reopening, or wake
+                // seconds land on yesterday.
+                root.rolloverIfNeeded(now);
                 root.persist();
                 root.switchActive();
             } else {
