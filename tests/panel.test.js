@@ -814,6 +814,10 @@ test("year graph toggles bars and heatmap in place with a persisted mode", () =>
   assert.match(panel, /yearGraph: root\.yearGraph/)
   assert.match(drawer, /signal yearGraphSelected\(string mode\)/)
   assert.match(panel, /writeSetting\("yearGraph", mode\)/)
+  // The toggle docks by the Back button, mirroring the main
+  // panel's day toggle by the settings gear.
+  assert.match(drawer, /id: graphToggle/)
+  assert.match(drawer, /anchors\.right: backCorner\.left/)
   // The drawer swaps the graphs where the month bars lived.
   assert.match(drawer, /visible: root\.yearGraph === "bars"/)
   assert.match(drawer, /visible: root\.yearGraph === "heatmap"/)

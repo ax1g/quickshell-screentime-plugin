@@ -139,7 +139,7 @@ Item {
             anchors.left: yearHeroIcon.right
             anchors.leftMargin: Style.space(14)
             anchors.right: parent.right
-            anchors.rightMargin: backCorner.implicitWidth + Style.space(12)
+            anchors.rightMargin: backCorner.implicitWidth + graphToggle.implicitWidth + Style.space(20)
             anchors.top: parent.top
             spacing: 0
 
@@ -212,6 +212,47 @@ Item {
             }
         }
 
+        // Graph switcher by the Back button, mirroring the main
+        // panel's day toggle by the settings gear: one icon flips
+        // bars ↔ heatmap in place; the pick persists in settings.
+        Text {
+            id: graphToggle
+            text: root.yearGraph === "heatmap" ? "\uf0c9" : "\uf00a"
+            color: graphToggleMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            anchors.right: backCorner.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: backCorner.verticalCenter
+        }
+
+        MouseArea {
+            id: graphToggleMouse
+            anchors.fill: graphToggle
+            anchors.margins: -Style.space(4)
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.yearGraphSelected(root.yearGraph === "heatmap" ? "bars" : "heatmap")
+
+            ScreenTip {
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                tipBackground: root.panelBackground
+
+                hovered: graphToggleMouse.containsMouse
+                tipText: root.yearGraph === "heatmap" ? "Show month bars" : "Show heatmap"
+            }
+        }
+
+        HintBadge {
+            label: "g"
+            fontFamily: root.fontFamily
+            accent: root.accent
+            show: root.hintMode
+            anchors.top: graphToggle.top
+            anchors.right: graphToggle.right
+        }
+
         BackButton {
             id: backCorner
             anchors.right: parent.right
@@ -256,7 +297,6 @@ Item {
                 id: heatGrid
                 width: parent.width
                 spacing: Style.space(6)
-                topPadding: root.yearGraph === "heatmap" ? 0 : Style.space(10)
                 bottomPadding: Style.space(2)
 
                 readonly property var months: root.yearMonths
@@ -281,35 +321,6 @@ Item {
                     text: "8888h"
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                }
-
-                // Graph switcher: one icon flips bars ↔ heatmap in place;
-                // the pick persists in settings.
-                Item {
-                    width: parent.width
-                    height: graphToggle.implicitHeight
-
-                    PagerArrow {
-                        id: graphToggle
-                        anchors.right: parent.right
-                        glyph: root.yearGraph === "heatmap" ? "\uf0c9" : "\uf00a"
-                        active: true
-                        foreground: root.foreground
-                        fontFamily: root.fontFamily
-                        fontSize: Style.font.bodySmall
-                        tipText: root.yearGraph === "heatmap" ? "Show month bars" : "Show heatmap"
-                        tipBackground: root.panelBackground
-                        onClicked: root.yearGraphSelected(root.yearGraph === "heatmap" ? "bars" : "heatmap")
-                    }
-
-                    HintBadge {
-                        label: "g"
-                        fontFamily: root.fontFamily
-                        accent: root.accent
-                        show: root.hintMode
-                        anchors.top: graphToggle.top
-                        anchors.right: graphToggle.right
-                    }
                 }
 
                 // One graph shows at a time; layout snaps to the visible one.
