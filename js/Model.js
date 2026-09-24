@@ -1552,7 +1552,9 @@ function dayBounds(key) {
 // contiguous same-app spans rejoin, leaving every positive gap
 // visible. Segments sort by start and carry session fractions for
 // absolute placement; categories total the rendered time with stable
-// per-category colors for the legend; axis ticks the session range.
+// per-category colors for the legend, each carrying its per-app rows
+// (most-used first) for the collapsible legend; axis ticks the session
+// range.
 function daySpanView(day, key, accentHex) {
   var empty = {
     segments: [],
@@ -1587,11 +1589,18 @@ function daySpanView(day, key, accentHex) {
   if (!(range > 0)) return empty
   var segments = []
   var totals = {}
+  var appTotals = {}
   for (var k = 0; k < kept.length; k++) {
     var g = kept[k]
     var ms = g.end - g.start
     var category = appCategory(g.app)
     totals[category] = (totals[category] || 0) + ms
+    var perApp = appTotals[category]
+    if (!perApp) {
+      perApp = {}
+      appTotals[category] = perApp
+    }
+    perApp[g.app] = (perApp[g.app] || 0) + ms
     segments.push({
       app: g.app,
       category: category,
@@ -1607,10 +1616,20 @@ function daySpanView(day, key, accentHex) {
   for (var c = 0; c < APP_CATEGORIES.length; c++) {
     var name = APP_CATEGORIES[c]
     if (totals[name] > 0) {
+      var apps = []
+      var perApp = appTotals[name] || {}
+      for (var app in perApp) {
+        if (!Object.prototype.hasOwnProperty.call(perApp, app)) continue
+        apps.push({ app: app, ms: perApp[app] })
+      }
+      apps.sort(function (a, b) {
+        return b.ms - a.ms
+      })
       categories.push({
         category: name,
         ms: totals[name],
         color: categoryColor(name, accentHex),
+        apps: apps,
       })
     }
   }

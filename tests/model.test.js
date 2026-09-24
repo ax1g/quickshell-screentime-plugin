@@ -2524,6 +2524,35 @@ test("expandedAppList keeps every millisecond on the books", () => {
   )
 })
 
+test("daySpanView categories carry per-app rows, most-used first", () => {
+  const t0 = new Date(2026, 8, 21, 7, 0, 0).getTime()
+  const view = Model.daySpanView(
+    {
+      total: 0,
+      apps: {},
+      spans: [
+        { app: "zen", start: t0, end: t0 + 60000 },
+        { app: "firefox", start: t0 + 60000, end: t0 + 420000 },
+        { app: "foot", start: t0 + 420000, end: t0 + 480000 },
+      ],
+    },
+    "2026-09-21",
+    "#e45b93",
+  )
+  const browsing = view.categories.find((c) => c.category === "Web Browsing")
+  assert.deepEqual(
+    browsing.apps.map((a) => [a.app, a.ms]),
+    [
+      ["firefox", 360000],
+      ["zen", 60000],
+    ],
+  )
+  assert.equal(
+    browsing.apps.reduce((a, r) => a + r.ms, 0),
+    browsing.ms,
+  )
+})
+
 test("fmtClock renders day times", () => {
   assert.equal(
     Model.fmtClock(new Date(2026, 8, 21, 7, 5, 0).getTime()),

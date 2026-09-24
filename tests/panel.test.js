@@ -798,6 +798,7 @@ test("browsers expand into merged site rows via setting", () => {
 })
 
 test("day view swaps the donut page and the timeline page", () => {
+  const timeline = comp("DayTimeline.qml")
   // Donut by default; the retired demo toggle still opts in.
   assert.match(
     panel,
@@ -838,6 +839,11 @@ test("day view swaps the donut page and the timeline page", () => {
   assert.match(panel, /HourlyChart \{/)
   assert.match(panel, /hours: root\.dayHours \? root\.dayHours\.hours : \[\]/)
   assert.match(panel, /peakHour: root\.dayHours \? root\.dayHours\.peakHour : -1/)
+  // Legend categories collapse to per-site rows, collapsed by default.
+  assert.match(timeline, /property var expanded/)
+  assert.match(timeline, /function toggleCategory/)
+  assert.match(timeline, /onClicked: root\.toggleCategory/)
+  assert.match(timeline, /Model\.displayName\(modelData\.app\)/)
   // The hero toggle answers to d like the yearly g.
   assert.match(panel, /tag === "d"/)
 })

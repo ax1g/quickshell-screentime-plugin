@@ -19,8 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Education & Research, Creative, Web Browsing, Social, Entertainment,
   Gaming, System & Utilities, Other), with session ticks and exact
   times on hover. An hourly rhythm chart breaks the day into 24 bars
-  with your peak hour called out. Browser apps stay grouped in the
-  main view, while the timeline identifies sites from a
+  with your peak hour called out. Timeline categories collapse to
+  per-site rows, collapsed by default. Browser apps stay grouped in
+  the main view, while the timeline identifies sites from a
   clean rule set with no adult entries. Your pick persists across
   restarts.
 - Screen limits replace screen goals: Off/4/6/8/10/12h presets framed

@@ -127,7 +127,23 @@ Column {
         }
     }
 
-    // One row per category present in the spans, most-used first.
+    // One collapsible row per category present in the spans,
+    // most-used first and collapsed by default; expanding reveals the
+    // per-site rows underneath, most-used first. Expansion is local
+    // display state: it survives data refreshes and never touches the
+    // recorded spans.
+    property var expanded: ({})
+
+    function toggleCategory(name) {
+        var next = Object.assign({}, root.expanded);
+        next[name] = !next[name];
+        root.expanded = next;
+    }
+
+    function isExpanded(name) {
+        return root.expanded ? root.expanded[name] === true : false;
+    }
+
     Column {
         width: parent.width
         spacing: Style.space(4)
@@ -136,46 +152,118 @@ Column {
         Repeater {
             model: root.categories
 
-            Item {
-                id: legendRow
+            Column {
+                id: catDelegate
                 required property var modelData
                 width: parent.width
-                height: Math.max(dot.height, legendLabel.implicitHeight)
+                spacing: Style.space(2)
 
-                Rectangle {
-                    id: dot
-                    width: Style.space(8)
-                    height: Style.space(8)
-                    radius: Style.space(4)
-                    color: legendRow.modelData.color || "transparent"
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
+                Item {
+                    id: legendRow
+                    width: parent.width
+                    height: Math.max(expandGlyph.implicitHeight, legendLabel.implicitHeight)
+
+                    Text {
+                        id: expandGlyph
+                        text: root.isExpanded(catDelegate.modelData.category) ? "▼" : "▶"
+                        color: root.foreground
+                        opacity: 0.6
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Rectangle {
+                        id: dot
+                        width: Style.space(8)
+                        height: Style.space(8)
+                        radius: Style.space(4)
+                        color: catDelegate.modelData.color || "transparent"
+                        anchors.left: expandGlyph.right
+                        anchors.leftMargin: Style.space(8)
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        id: legendLabel
+                        text: catDelegate.modelData.category
+                        color: root.foreground
+                        opacity: 0.75
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        anchors.left: dot.right
+                        anchors.leftMargin: Style.space(8)
+                        anchors.right: legendTime.left
+                        anchors.rightMargin: Style.space(8)
+                        anchors.verticalCenter: parent.verticalCenter
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        id: legendTime
+                        text: Model.fmt(catDelegate.modelData.ms)
+                        color: root.foreground
+                        opacity: 0.45
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.toggleCategory(catDelegate.modelData.category)
+                    }
                 }
 
-                Text {
-                    id: legendLabel
-                    text: legendRow.modelData.category
-                    color: root.foreground
-                    opacity: 0.75
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    anchors.left: dot.right
-                    anchors.leftMargin: Style.space(8)
-                    anchors.right: legendTime.left
-                    anchors.rightMargin: Style.space(8)
-                    anchors.verticalCenter: parent.verticalCenter
-                    elide: Text.ElideRight
-                }
+                Repeater {
+                    model: root.isExpanded(catDelegate.modelData.category) ? catDelegate.modelData.apps : []
 
-                Text {
-                    id: legendTime
-                    text: Model.fmt(legendRow.modelData.ms)
-                    color: root.foreground
-                    opacity: 0.45
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
+                    Item {
+                        required property var modelData
+                        width: parent.width
+                        height: Math.max(appDot.height, appLabel.implicitHeight)
+
+                        Rectangle {
+                            id: appDot
+                            width: Style.space(6)
+                            height: Style.space(6)
+                            radius: Style.space(3)
+                            color: catDelegate.modelData.color || "transparent"
+                            anchors.left: parent.left
+                            anchors.leftMargin: Style.space(16)
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            id: appLabel
+                            text: Model.displayName(modelData.app)
+                            color: root.foreground
+                            opacity: 0.75
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            anchors.left: appDot.right
+                            anchors.leftMargin: Style.space(8)
+                            anchors.right: appTime.left
+                            anchors.rightMargin: Style.space(8)
+                            anchors.verticalCenter: parent.verticalCenter
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            id: appTime
+                            text: Model.fmt(modelData.ms)
+                            color: root.foreground
+                            opacity: 0.45
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
                 }
             }
         }

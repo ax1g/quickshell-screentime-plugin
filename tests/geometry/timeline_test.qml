@@ -27,9 +27,9 @@ TestCase {
             { app: "discord", category: "Communication", start: 27000000, end: 27960000, ms: 960000, startFrac: 0.652, endFrac: 1.0, color: "#e4d15b" }
         ]
         categories: [
-            { category: "Communication", ms: 960000, color: "#e4d15b" },
-            { category: "Web Browsing", ms: 600000, color: "#e45b93" },
-            { category: "System & Utilities", ms: 60000, color: "#d54b23" }
+            { category: "Communication", ms: 960000, color: "#e4d15b", apps: [{ app: "discord", ms: 960000 }] },
+            { category: "Web Browsing", ms: 600000, color: "#e45b93", apps: [{ app: "zen", ms: 600000 }] },
+            { category: "System & Utilities", ms: 60000, color: "#d54b23", apps: [{ app: "foot", ms: 60000 }] }
         ]
         axis: [
             { frac: 0, label: "07:00" },
@@ -116,6 +116,21 @@ TestCase {
             var row = findText(label);
             verify(row !== null && row.height > 0 && ancestorsOccupy(row), label + " occupies");
         }
+    }
+
+    function test_categoryExpandsToApps() {
+        // Collapsed by default: no app rows exist until clicked.
+        verify(findText("discord") === null, "apps hidden while collapsed");
+        var row = findText("Communication");
+        verify(row !== null, "category row exists");
+        var cell = row.parent;
+        mouseClick(cell, cell.width / 2, cell.height / 2);
+        wait(200);
+        var app = findText("discord");
+        verify(app !== null && app.height > 0 && ancestorsOccupy(app), "app row expands");
+        mouseClick(cell, cell.width / 2, cell.height / 2);
+        wait(200);
+        verify(findText("discord") === null, "second click collapses");
     }
 
     function test_hourlyBarsOccupy() {
