@@ -943,6 +943,14 @@ Panel {
                                         dayTotal: root.dayTotal
                                     }
 
+                                    PanelSeparator {
+                                        width: parent.width
+                                        visible: hourlyChart.visible
+                                        height: visible ? 1 : 0
+                                        foreground: root.contentForeground
+                                        strength: 0.12
+                                    }
+
                                     HourlyChart {
                                         id: hourlyChart
                                         width: parent.width

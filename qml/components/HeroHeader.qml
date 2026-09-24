@@ -148,10 +148,10 @@ Item {
     // Day view toggle; sits with the settings gear at the top.
     Text {
         id: dayToggle
-        text: heroHeader.dayView === "timeline" ? "\uf200" : "\uf017"
+        text: heroHeader.dayView === "timeline" ? "\uf200" : "\uf080"
         color: dayToggleMouse.containsMouse ? heroHeader.foreground : Qt.darker(heroHeader.foreground, 1.4)
         font.family: heroHeader.fontFamily
-        font.pixelSize: Style.font.bodySmall
+        font.pixelSize: Style.font.caption
         anchors.right: configGear.left
         anchors.rightMargin: Style.space(8)
         anchors.verticalCenter: configGear.verticalCenter
