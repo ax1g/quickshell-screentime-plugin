@@ -137,6 +137,39 @@ TestCase {
         wide.destroy();
     }
 
+    function test_scrollBarFloatsOverGrid() {
+        // The scroll indicator overlays the grid instead of taking a
+        // layout row: nested scroll chrome in the flow reads as a
+        // broken page. A full year overflows, so the bar must exist.
+        var wide = wideComponent.createObject(heatmap.parent, {
+            width: 360,
+            foreground: "#ffffff",
+            fontFamily: "monospace",
+            accent: "#e45b93",
+            panelBackground: "#101315",
+            currentMonth: "Sep",
+            savedWeek: -1,
+            weeks: buildYear()
+        });
+        verify(wide !== null && wide.canScroll, "wide fixture overflows");
+        var all = [];
+        collect(wide, all);
+        var bar = null;
+        var flick = null;
+        for (var i = 0; i < all.length; i++) {
+            var kind = String(all[i]);
+            if (kind.indexOf("QQuickRectangle") === 0 && all[i].width > 100 && all[i].height <= 4)
+                bar = all[i];
+            if (kind.indexOf("QQuickFlickable") === 0)
+                flick = all[i];
+        }
+        verify(bar !== null && flick !== null, "bar and grid exist");
+        verify(bar.parent === flick.parent, "bar overlays the grid wrapper");
+        verify(bar.parent !== wide, "bar takes no layout row in the column");
+        verify(bar.y + bar.height <= flick.parent.height + 1, "bar sits on the grid edge");
+        wide.destroy();
+    }
+
     function test_restoresSavedWeek() {
         // A stored position beats the month default, sticky per year.
         var wide = wideComponent.createObject(heatmap.parent, {

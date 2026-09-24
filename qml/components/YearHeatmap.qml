@@ -70,91 +70,98 @@ Column {
     onCurrentMonthChanged: restorePosition()
     Component.onCompleted: Qt.callLater(restorePosition)
 
-    Flickable {
-        id: heatScroll
+    // The scroll indicator floats over the grid's bottom edge instead
+    // of taking a layout row: nested scroll chrome in the flow reads
+    // as a broken page, while an overlay keeps the affordance free.
+    Item {
         width: parent.width
         height: root.labelH + root.gridH + Style.space(4)
-        contentWidth: gridRow.width
-        contentHeight: height
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        flickableDirection: Flickable.HorizontalFlick
-        interactive: contentWidth > width
-        onMovementEnded: {
-            var week = Math.round(heatScroll.contentX / root.colStep);
-            var maxWeek = Math.max(0, root.weeks.length - 1);
-            root.positionSaved(Math.max(0, Math.min(week, maxWeek)));
-        }
 
-        Column {
-            spacing: Style.space(4)
-
-            // Month labels ride above their week columns and scroll with
-            // the grid, clipped to the row so tight neighbours never
-            // paint over each other.
-            Item {
-                width: gridRow.width
-                height: root.labelH
-                clip: true
-
-                Repeater {
-                    model: root.weeks
-
-                    Text {
-                        required property var modelData
-                        required property int index
-                        text: modelData.label || ""
-                        visible: text !== ""
-                        color: root.foreground
-                        opacity: modelData.labelFuture ? 0.25 : 0.45
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
-                        x: index * root.colStep
-                        width: root.colStep * 4
-                        elide: Text.ElideRight
-                    }
-                }
+        Flickable {
+            id: heatScroll
+            anchors.fill: parent
+            contentWidth: gridRow.width
+            contentHeight: height
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.HorizontalFlick
+            interactive: contentWidth > width
+            onMovementEnded: {
+                var week = Math.round(heatScroll.contentX / root.colStep);
+                var maxWeek = Math.max(0, root.weeks.length - 1);
+                root.positionSaved(Math.max(0, Math.min(week, maxWeek)));
             }
 
-            Row {
-                id: gridRow
-                spacing: root.gap
+            Column {
+                spacing: Style.space(4)
 
-                Repeater {
-                    model: root.weeks
+                // Month labels ride above their week columns and scroll with
+                // the grid, clipped to the row so tight neighbours never
+                // paint over each other.
+                Item {
+                    width: gridRow.width
+                    height: root.labelH
+                    clip: true
 
-                    Column {
-                        id: weekCol
-                        required property var modelData
-                        spacing: root.gap
+                    Repeater {
+                        model: root.weeks
 
-                        Repeater {
-                            model: weekCol.modelData.days
+                        Text {
+                            required property var modelData
+                            required property int index
+                            text: modelData.label || ""
+                            visible: text !== ""
+                            color: root.foreground
+                            opacity: modelData.labelFuture ? 0.25 : 0.45
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            x: index * root.colStep
+                            width: root.colStep * 4
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
 
-                            Rectangle {
-                                id: cellBox
-                                required property var modelData
-                                width: root.cell
-                                height: root.cell
-                                radius: Math.min(2, root.cell / 3)
-                                color: modelData ? root.levelColor(modelData.level, modelData.future) : "transparent"
+                Row {
+                    id: gridRow
+                    spacing: root.gap
 
-                                MouseArea {
-                                    id: cellMouse
-                                    anchors.fill: parent
-                                    anchors.margins: -2
-                                    hoverEnabled: true
-                                    enabled: cellBox.modelData !== null && cellBox.modelData.future !== true
-                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                }
+                    Repeater {
+                        model: root.weeks
 
-                                ScreenTip {
-                                    foreground: root.foreground
-                                    fontFamily: root.fontFamily
-                                    tipBackground: root.panelBackground
+                        Column {
+                            id: weekCol
+                            required property var modelData
+                            spacing: root.gap
 
-                                    hovered: cellMouse.containsMouse && cellBox.modelData !== null && cellBox.modelData.future !== true
-                                    tipText: cellBox.modelData ? Model.formatDate(cellBox.modelData.date) + " \u00b7 " + (cellBox.modelData.ms > 0 ? Model.fmt(cellBox.modelData.ms) : "no data") : ""
+                            Repeater {
+                                model: weekCol.modelData.days
+
+                                Rectangle {
+                                    id: cellBox
+                                    required property var modelData
+                                    width: root.cell
+                                    height: root.cell
+                                    radius: Math.min(2, root.cell / 3)
+                                    color: modelData ? root.levelColor(modelData.level, modelData.future) : "transparent"
+
+                                    MouseArea {
+                                        id: cellMouse
+                                        anchors.fill: parent
+                                        anchors.margins: -2
+                                        hoverEnabled: true
+                                        enabled: cellBox.modelData !== null && cellBox.modelData.future !== true
+                                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                    }
+
+                                    ScreenTip {
+                                        foreground: root.foreground
+                                        fontFamily: root.fontFamily
+                                        tipBackground: root.panelBackground
+
+                                        hovered: cellMouse.containsMouse && cellBox.modelData !== null && cellBox.modelData.future !== true
+                                        tipText: cellBox.modelData ? Model.formatDate(cellBox.modelData.date) + " \u00b7 " + (cellBox.modelData.ms > 0 ? Model.fmt(cellBox.modelData.ms) : "no data") : ""
+                                    }
                                 }
                             }
                         }
@@ -162,20 +169,16 @@ Column {
                 }
             }
         }
-    }
 
-    // Thin horizontal bar, same idiom as the vertical scrollbars: only
-    // visible while the year overflows.
-    Item {
-        width: parent.width
-        height: Math.max(2, Style.space(2))
-        visible: heatScroll.contentWidth > heatScroll.width
-
+        // Thin horizontal bar over the grid's bottom edge, same idiom
+        // as the vertical scrollbars: only visible while the year
+        // overflows.
         Rectangle {
+            visible: heatScroll.contentWidth > heatScroll.width
             property real ratio: heatScroll.contentWidth > 0 ? heatScroll.width / heatScroll.contentWidth : 0
             width: Math.max(Style.space(16), heatScroll.width * ratio)
-            height: parent.height
-            radius: height / 2
+            height: Math.max(2, Style.space(2))
+            anchors.bottom: parent.bottom
             color: root.foreground
             opacity: 0.25
             x: (heatScroll.width - width) * (heatScroll.contentWidth > heatScroll.width ? heatScroll.contentX / (heatScroll.contentWidth - heatScroll.width) : 0)
