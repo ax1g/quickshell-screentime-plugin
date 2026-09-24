@@ -200,7 +200,7 @@ function defaultSiteRules() {
     { match: "\\bFacebook\\b", site: "facebook.com" },
     { match: "\\bInstagram\\b", site: "instagram.com" },
     { match: "\\bTikTok\\b", site: "tiktok.com" },
-    { match: "/ X$|\\bTwitter\\b", site: "x.com" },
+    { match: " X$|\\bTwitter\\b|\\bx\\.com\\b", site: "x.com" },
     { match: "\\bLinkedIn\\b", site: "linkedin.com" },
     { match: "\\bReddit\\b|^r/", site: "reddit.com" },
     { match: "\\bYouTube\\b", site: "youtube.com" },
@@ -1190,7 +1190,7 @@ var CATEGORY_MATCHERS = [
   },
   {
     category: "Social",
-    re: /reddit|instagram|facebook|tiktok|tumblr|pinterest|mastodon|misskey|lemmy|cawbird|whalebird|tootle|tokodon|twitter|pinafore|hyperspace|mammoth|icecubes|\belk\b|photon|linkedin|x\.com|snapchat|bluesky|bsky/,
+    re: /reddit|instagram|facebook|tiktok|tumblr|pinterest|mastodon|misskey|lemmy|cawbird|whalebird|tootle|tokodon|twitter|pinafore|hyperspace|mammoth|icecubes|\belk\b|photon|linkedin|(?:^|[:/])x\.com|snapchat|bluesky|bsky/,
   },
   {
     category: "Communication",
