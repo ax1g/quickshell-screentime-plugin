@@ -104,7 +104,9 @@ Column {
 
                 Text {
                     id: hourLabel
-                    text: hourText
+                    // Every third hour labels the columns; all 24 would
+                    // collide in panel width, like weekday labels never do.
+                    text: hour % 3 === 0 ? hourText : ""
                     color: root.foreground
                     opacity: hasData ? 1.0 : 0.45
                     font.family: root.fontFamily
