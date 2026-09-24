@@ -22,12 +22,15 @@ Item {
     required property double dayTotal
     required property string activeDayKey
     required property string activeDayLabel
+    // Day view toggle state; the timeline page lives beside the gear.
+    required property string dayView
     // Daily goal progress from Model.goalProgress; null when the goal is off.
     required property var goalProgress
 
     signal expandToggled
     signal calendarToggled
     signal configToggled
+    signal dayViewToggled
 
     width: parent.width
     height: implicitHeight
@@ -142,6 +145,47 @@ Item {
         // qmllint enable unqualified
     }
 
+    // Day view toggle; sits with the settings gear at the top.
+    Text {
+        id: dayToggle
+        text: heroHeader.dayView === "timeline" ? "\uf200" : "\uf017"
+        color: dayToggleMouse.containsMouse ? heroHeader.foreground : Qt.darker(heroHeader.foreground, 1.4)
+        font.family: heroHeader.fontFamily
+        font.pixelSize: Style.font.bodySmall
+        anchors.right: configGear.left
+        anchors.rightMargin: Style.space(8)
+        anchors.verticalCenter: configGear.verticalCenter
+    }
+
+    MouseArea {
+        id: dayToggleMouse
+        anchors.fill: dayToggle
+        anchors.margins: -Style.space(4)
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: heroHeader.dayViewToggled()
+
+        // Parented to the toggle's own hit area so the tip centers
+        // above the icon, like the gear's.
+        ScreenTip {
+            foreground: heroHeader.foreground
+            fontFamily: heroHeader.fontFamily
+            tipBackground: heroHeader.tipBackground
+
+            hovered: dayToggleMouse.containsMouse
+            tipText: heroHeader.dayView === "timeline" ? "Show apps donut" : "Show day timeline"
+        }
+    }
+
+    HintBadge {
+        label: "d"
+        fontFamily: heroHeader.fontFamily
+        accent: heroHeader.accent
+        show: heroHeader.hintMode
+        anchors.top: dayToggle.top
+        anchors.right: dayToggle.right
+    }
+
     // Config gear; opens the prefs slide-over drawer.
     Text {
         id: configGear
@@ -245,7 +289,7 @@ Item {
         anchors.left: heroIcon.right
         anchors.leftMargin: Style.space(14)
         anchors.right: parent.right
-        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + Style.space(24)
+        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + dayToggle.implicitWidth + Style.space(32)
         anchors.top: parent.top
         spacing: 0
 

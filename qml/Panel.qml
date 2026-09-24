@@ -229,6 +229,8 @@ Panel {
     readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
     // Day-timeline spans: one view call, threaded down to the strip.
     readonly property var daySpans: serviceReady ? Model.daySpanView(root.activeDay, root.activeDayKey, Color.accent) : null
+    // Experimental hourly rhythm for the timeline page; same day, same spans.
+    readonly property var dayHours: serviceReady ? Model.dayHourlyView(root.activeDay, Color.accent) : null
     readonly property int groupedCount: root.groupedApps.length
     readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
 
@@ -804,6 +806,7 @@ Panel {
                         calendarEnabled: !root.hideYearly
                         easterEggs: !root.hideEasterEggs
                         configOpen: root.configOpen
+                        dayView: root.dayView
                         dayTotal: root.dayTotal
                         activeDayKey: root.activeDayKey
                         activeDayLabel: root.activeDayLabel
@@ -814,12 +817,14 @@ Panel {
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)
+                        onDayViewToggled: root.writeSetting("dayView", root.dayView === "timeline" ? "apps" : "timeline")
                     }
 
                     // First-run coach marks; hidden once anything is tracked.
+                    // Main-panel exclusive: the timeline page explains itself.
                     Item {
                         width: parent.width
-                        visible: root.showOnboarding
+                        visible: root.showOnboarding && root.dayView === "apps"
                         height: visible ? onboardingColumn.implicitHeight : 0
                         implicitHeight: height
 
@@ -861,9 +866,10 @@ Panel {
                         }
                     }
 
-                    // ---- Day view switcher: donut ↔ 24h timeline ---------------
-                    // One icon flips the views in place; the pick persists. Keep
-                    // it attached to the active view so no empty gap opens above it.
+                    // ---- Day view: donut page ↔ timeline page -------------------
+                    // The timeline page shows only the strip, its legend
+                    // and the experimental hourly chart; every other
+                    // section stays exclusive to the main (donut) panel.
                     Item {
                         width: parent.width
                         height: dayViewContent.implicitHeight
@@ -873,33 +879,6 @@ Panel {
                             id: dayViewContent
                             width: parent.width
                             spacing: 0
-
-                            Item {
-                                width: parent.width
-                                height: dayToggle.implicitHeight
-
-                                PagerArrow {
-                                    id: dayToggle
-                                    anchors.right: parent.right
-                                    glyph: root.dayView === "timeline" ? "\uf200" : "\uf017"
-                                    active: true
-                                    foreground: root.contentForeground
-                                    fontFamily: root.contentFontFamily
-                                    fontSize: Style.font.bodySmall
-                                    tipText: root.dayView === "timeline" ? "Show apps donut" : "Show day timeline"
-                                    tipBackground: root.bar ? root.bar.background : Color.background
-                                    onClicked: root.writeSetting("dayView", root.dayView === "timeline" ? "apps" : "timeline")
-                                }
-
-                                HintBadge {
-                                    label: "d"
-                                    fontFamily: root.contentFontFamily
-                                    accent: Color.accent
-                                    show: root.hintMode
-                                    anchors.top: dayToggle.top
-                                    anchors.right: dayToggle.right
-                                }
-                            }
 
                             // ---- Per-app donut + legend --------------------------------
                             Item {
@@ -940,32 +919,49 @@ Panel {
                                 }
                             }
 
-                            // ---- 24h timeline (same slot as the donut) ----------------
+                            // ---- Timeline page: strip, legend, hourly rhythm ---------
                             Item {
                                 width: parent.width
                                 visible: root.dayView === "timeline"
-                                height: visible ? dayTimeline.implicitHeight : 0
+                                height: visible ? timelinePage.implicitHeight : 0
                                 implicitHeight: height
 
-                                DayTimeline {
-                                    id: dayTimeline
+                                Column {
+                                    id: timelinePage
                                     width: parent.width
-                                    segments: root.daySpans ? root.daySpans.segments : []
-                                    categories: root.daySpans ? root.daySpans.categories : []
-                                    axis: root.daySpans ? root.daySpans.axis : []
-                                    foreground: root.contentForeground
-                                    fontFamily: root.contentFontFamily
-                                    tipBackground: root.bar ? root.bar.background : Color.background
-                                    dayTotal: root.dayTotal
+                                    spacing: hourlyChart.visible ? Style.space(12) : 0
+
+                                    DayTimeline {
+                                        id: dayTimeline
+                                        width: parent.width
+                                        segments: root.daySpans ? root.daySpans.segments : []
+                                        categories: root.daySpans ? root.daySpans.categories : []
+                                        axis: root.daySpans ? root.daySpans.axis : []
+                                        foreground: root.contentForeground
+                                        fontFamily: root.contentFontFamily
+                                        tipBackground: root.bar ? root.bar.background : Color.background
+                                        dayTotal: root.dayTotal
+                                    }
+
+                                    HourlyChart {
+                                        id: hourlyChart
+                                        width: parent.width
+                                        hours: root.dayHours ? root.dayHours.hours : []
+                                        maxMs: root.dayHours ? root.dayHours.maxMs : 0
+                                        peakHour: root.dayHours ? root.dayHours.peakHour : -1
+                                        accent: Color.accent
+                                        foreground: root.contentForeground
+                                        fontFamily: root.contentFontFamily
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // ---- Week trend + insights (only on SHOW MORE) -----------------
+                    // ---- Week trend + insights (main panel SHOW MORE only) --------
                     Item {
                         width: parent.width
-                        visible: root.expanded
+                        visible: root.expanded && root.dayView === "apps"
                         height: visible ? patternsColumn.implicitHeight : 0
                         implicitHeight: height
 

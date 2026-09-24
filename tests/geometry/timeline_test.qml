@@ -118,6 +118,41 @@ TestCase {
         }
     }
 
+    function test_hourlyBarsOccupy() {
+        // The experimental chart renders one bar slot per hour; hours
+        // with recorded time occupy vertical space, empty ones do not.
+        var hours = [];
+        for (var h = 0; h < 24; h++)
+            hours.push({ hour: h, ms: h === 9 ? 3600000 : (h === 10 ? 1200000 : 0), color: "#e45b93" });
+        var chart = hourlyComponent.createObject(timeline.parent, {
+            width: 360,
+            hours: hours,
+            maxMs: 3600000,
+            peakHour: 9,
+            accent: "#e45b93",
+            foreground: "#ffffff",
+            fontFamily: "monospace"
+        });
+        verify(chart !== null, "hourly chart instantiates");
+        var all = [];
+        var stack = [chart];
+        while (stack.length) {
+            var it = stack.pop();
+            all.push(it);
+            for (var i = 0; i < it.children.length; i++)
+                stack.push(it.children[i]);
+        }
+        var bars = 0;
+        for (var j = 0; j < all.length; j++) {
+            if (String(all[j]).indexOf("QQuickRectangle") === 0 && all[j].height > 0)
+                bars++;
+        }
+        // Exactly the two nonzero hours render bars; the title, peak
+        // label and ticks render text.
+        verify(bars === 2, "two nonzero hours draw bars: " + bars);
+        chart.destroy();
+    }
+
     function test_emptyStateExplains() {
         var note = emptyComponent.createObject(timeline.parent, {
             width: 360,
@@ -156,6 +191,18 @@ TestCase {
             segments: []
             categories: []
             axis: []
+        }
+    }
+
+    Component {
+        id: hourlyComponent
+        HourlyChart {
+            accent: "#e45b93"
+            foreground: "#ffffff"
+            fontFamily: "monospace"
+            maxMs: 0
+            peakHour: -1
+            hours: []
         }
     }
 }

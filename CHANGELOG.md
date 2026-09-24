@@ -13,14 +13,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the scroll position, persist across restarts. The heatmap opens
   on the current month and mutes future days.
 - Know your day at a glance: flip the panel between the apps donut and
-  a timeline of your session with a toggle icon — every focus span
-  lands at its time in the session, colored by one of ten categories
-  (Development, Productivity, Communication, Education & Research,
-  Creative, Web Browsing, Social, Entertainment, Gaming,
-  System & Utilities, Other), with session ticks and exact times on
-  hover. Sub-minute blips stay in the totals but off the strip. Browser
-  apps stay grouped in the main view, while the timeline identifies sites
-  from a clean rule set with no adult entries. Your pick persists across
+  a timeline of your session with the toggle by the settings gear —
+  every focus span lands at its time in the session, colored by one of
+  ten categories (Development, Productivity, Communication,
+  Education & Research, Creative, Web Browsing, Social, Entertainment,
+  Gaming, System & Utilities, Other), with session ticks and exact
+  times on hover. An experimental hourly rhythm chart breaks the day
+  into 24 bars with your peak hour called out. Browser apps stay
+  grouped in the main view, while the timeline identifies sites from a
+  clean rule set with no adult entries. Your pick persists across
   restarts.
 
 ### Changed

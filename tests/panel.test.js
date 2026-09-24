@@ -762,12 +762,18 @@ test("year pager, back buttons and gear carry tooltips", () => {
     /tipBackground: root\.bar \? root\.bar\.background : Color\.background/,
   )
 })
-test("day view swaps the donut and the 24h timeline in place", () => {
+test("day view swaps the donut page and the timeline page", () => {
   // Donut by default; the retired demo toggle still opts in.
   assert.match(
     panel,
     /Model\.parseDayView\(root\.prefs\.dayView, root\.prefs\.hideDayTimeline\)/,
   )
+  // The toggle lives with the settings gear at the top.
+  assert.match(hero, /required property string dayView/)
+  assert.match(hero, /signal dayViewToggled/)
+  assert.match(hero, /id: dayToggle/)
+  assert.match(panel, /dayView: root\.dayView/)
+  assert.match(panel, /onDayViewToggled/)
   // One Model view call over the active day's spans, threaded down.
   assert.match(
     panel,
@@ -785,6 +791,17 @@ test("day view swaps the donut and the 24h timeline in place", () => {
     panel,
     /writeSetting\("dayView", root\.dayView === "timeline" \? "apps" : "timeline"\)/,
   )
+  // The timeline page shows only the strip, its legend and the
+  // experimental chart; onboarding and the week patterns stay
+  // exclusive to the main panel.
+  assert.match(
+    panel,
+    /visible: root\.showOnboarding && root\.dayView === "apps"/,
+  )
+  assert.match(panel, /visible: root\.expanded && root\.dayView === "apps"/)
+  assert.match(panel, /Model\.dayHourlyView\(root\.activeDay, Color\.accent\)/)
+  assert.match(panel, /HourlyChart \{/)
+  assert.match(panel, /hours: root\.dayHours \? root\.dayHours\.hours : \[\]/)
   // The in-place toggle answers to d like the yearly g.
   assert.match(panel, /tag === "d"/)
 })
