@@ -1098,6 +1098,41 @@ function appList(today) {
   return out
 }
 
+// Expanded app list for the browser-expansion setting: per-site rows
+// merged across browsers (all youtube.com time lands in one row no
+// matter which browser played it) plus plain buckets for everything
+// else, in the same shape as appList so the donut and legend agree.
+// Falls back to appList on span-less days and when spans cover less
+// than 99% of the total (mixed-era days), so the list never
+// understates the day it renders.
+function expandedAppList(day) {
+  var total = day && day.total ? day.total : 0
+  var spans = spanList(day)
+  var byApp = {}
+  var spanMs = 0
+  for (var i = 0; i < spans.length; i++) {
+    if (!isSpan(spans[i])) continue
+    var ms = Number(spans[i].end) - Number(spans[i].start)
+    byApp[spans[i].app] = (byApp[spans[i].app] || 0) + ms
+    spanMs += ms
+  }
+  if (!(spanMs >= total * 0.99)) return appList(day)
+  var out = []
+  for (var app in byApp) {
+    if (!Object.prototype.hasOwnProperty.call(byApp, app)) continue
+    if (byApp[app] < 60000) continue
+    out.push({
+      app: app,
+      ms: byApp[app],
+      pct: total > 0 ? Math.round((100 * byApp[app]) / total) : 0,
+    })
+  }
+  out.sort(function (a, b) {
+    return b.ms - a.ms
+  })
+  return out
+}
+
 // Tail folds into "Other" past maxSlices or below minPct. Both params are
 // required: QML's JS engine has no default parameters.
 var DONUT_MAX_SLICES = 6
@@ -2947,6 +2982,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     fmtWords: fmtWords,
 
     appList: appList,
+    expandedAppList: expandedAppList,
     DONUT_MAX_SLICES: DONUT_MAX_SLICES,
     DONUT_MIN_PCT: DONUT_MIN_PCT,
     totalFor: totalFor,

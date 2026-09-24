@@ -2427,6 +2427,64 @@ test("dayHourlyView stays empty without spans", () => {
   )
 })
 
+test("expandedAppList merges site rows across browsers", () => {
+  const t0 = new Date(2026, 8, 21, 7, 0, 0).getTime()
+  const day = {
+    total: 600000,
+    apps: { zen: 300000, firefox: 180000, opencode: 120000 },
+    spans: [
+      // zen and firefox both played youtube: one merged row.
+      { app: "site:youtube.com", start: t0, end: t0 + 120000 },
+      { app: "site:youtube.com", start: t0 + 120000, end: t0 + 300000 },
+      // Unmatched browser titles stay on the browser bucket.
+      { app: "zen", start: t0 + 300000, end: t0 + 420000 },
+      { app: "firefox", start: t0 + 420000, end: t0 + 480000 },
+      { app: "opencode", start: t0 + 480000, end: t0 + 600000 },
+    ],
+  }
+  const out = Model.expandedAppList(day)
+  assert.deepEqual(
+    out.map((e) => [e.app, e.ms]),
+    [
+      ["site:youtube.com", 300000],
+      ["zen", 120000],
+      ["opencode", 120000],
+      ["firefox", 60000],
+    ],
+  )
+  assert.equal(
+    out.reduce((a, e) => a + e.ms, 0),
+    600000,
+  )
+})
+
+test("expandedAppList falls back when spans cannot cover the day", () => {
+  // Span-less days render the grouped view they always had.
+  const plain = { total: 60000, apps: { zen: 60000 } }
+  assert.deepEqual(Model.expandedAppList(plain), Model.appList(plain))
+  // Mixed-era days (old totals, new spans) understate, so they fall
+  // back too instead of showing a partial list.
+  const partial = {
+    total: 600000,
+    apps: { zen: 600000 },
+    spans: [{ app: "site:youtube.com", start: 1000, end: 61000 }],
+  }
+  assert.deepEqual(Model.expandedAppList(partial), Model.appList(partial))
+  // Sub-minute blips stay in the totals but off the list, like appList.
+  const blip = {
+    total: 63000,
+    apps: { zen: 63000 },
+    spans: [
+      { app: "site:youtube.com", start: 1000, end: 61000 },
+      { app: "zen", start: 61000, end: 64000 },
+    ],
+  }
+  assert.deepEqual(
+    Model.expandedAppList(blip).map((e) => e.app),
+    ["site:youtube.com"],
+  )
+})
+
 test("fmtClock renders day times", () => {
   assert.equal(
     Model.fmtClock(new Date(2026, 8, 21, 7, 5, 0).getTime()),
