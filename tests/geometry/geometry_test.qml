@@ -24,6 +24,7 @@ TestCase {
         urgent: "#ff5555"
         hideYearly: false
         hideTimeline: false
+        expandBrowser: false
         hideDailyInsights: false
         hideYearInsights: false
         weekCount: 12
@@ -165,6 +166,8 @@ TestCase {
         var t = findText("Yearly overview");
         verify(t !== null, "toggle label exists");
         verify(t !== null && t.height > 0 && ancestorsOccupy(t), "toggle row occupies");
+        var expand = findText("Expand browsers by site");
+        verify(expand !== null && expand.height > 0 && ancestorsOccupy(expand), "expand row occupies");
     }
 
     function test_resetButtonOccupies() {

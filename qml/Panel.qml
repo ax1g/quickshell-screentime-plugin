@@ -32,6 +32,7 @@ Panel {
     readonly property bool hideYearly: root.prefs.hideYearly === true
     readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
     readonly property bool hideTimeline: root.prefs.hideTimeline === true
+    readonly property bool expandBrowser: root.prefs.expandBrowser === true
     // Day view: the apps donut or the 24h timeline. A hidden timeline
     // forces the donut and hides the hero icon; unset prefs render the
     // donut; the retired demo toggle still opts in, so its live setting
@@ -155,8 +156,12 @@ Panel {
     readonly property double dayTotal: root.activeDay ? (root.activeDay.total || 0) : 0
 
     // Gated on service.ready: unloaded history would label NaN-NaN-NaN.
-    readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
-    readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
+    // Expanded browsers list per-site rows merged across browsers;
+    // grouped apps keep one bucket per app. Donut and legend derive
+    // from the same source so they always agree.
+    readonly property var listedApps: serviceReady ? (root.expandBrowser ? Model.expandedAppList(root.activeDay) : Model.appList(root.activeDay)) : []
+    readonly property var groupedApps: serviceReady ? Model.groupedApps(root.listedApps, Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
+    readonly property var fullApps: serviceReady ? root.listedApps : []
     // Single derivation for the paginated week trend; offset clamps to pages.
     readonly property var weekView: serviceReady ? Model.weekView(root.days, root.todayKey, root.weekCount, Math.max(0, Math.min(root.weekOffset, root.maxWeekOffset))) : null
     // Its Sunday anchors "Busiest day (7d)" to the visible week.
@@ -704,6 +709,7 @@ Panel {
                             onBackRequested: root.openConfig(false)
                             hideYearly: root.hideYearly
                             hideTimeline: root.hideTimeline
+                            expandBrowser: root.expandBrowser
                             hideDailyInsights: root.hideDailyInsights
                             hideYearInsights: root.hideYearInsights
                             weekCount: root.weekCount
@@ -726,6 +732,7 @@ Panel {
                             hintMode: root.hintMode
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
                             onTimelineToggled: root.writeSetting("hideTimeline", !root.hideTimeline)
+                            onExpandBrowserToggled: root.writeSetting("expandBrowser", !root.expandBrowser)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
                             onWeekWindowSelected: function (count) {

@@ -787,6 +787,16 @@ test("timeline hides completely via setting, with its icon", () => {
   assert.match(hero, /visible: !heroHeader\.hideTimeline/)
 })
 
+test("browsers expand into merged site rows via setting", () => {
+  assert.match(panel, /expandBrowser: root\.prefs\.expandBrowser === true/)
+  // Donut and legend share one source list so they always agree.
+  assert.match(panel, /Model\.expandedAppList\(root\.activeDay\)/)
+  assert.match(panel, /Model\.groupedApps\(root\.listedApps/)
+  assert.match(menu, /signal expandBrowserToggled/)
+  assert.match(panel, /writeSetting\("expandBrowser", !root\.expandBrowser\)/)
+  assert.match(menu, /shown: root\.expandBrowser/)
+})
+
 test("day view swaps the donut page and the timeline page", () => {
   // Donut by default; the retired demo toggle still opts in.
   assert.match(

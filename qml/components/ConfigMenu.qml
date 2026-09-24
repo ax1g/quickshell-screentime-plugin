@@ -21,6 +21,7 @@ Column {
     required property bool hideDailyInsights
     required property bool hideYearInsights
     required property bool hideTimeline
+    required property bool expandBrowser
     required property int weekCount
     required property var weekOptions
     required property bool weekTotalAsPct
@@ -44,6 +45,7 @@ Column {
     signal dailyInsightsToggled
     signal yearInsightsToggled
     signal timelineToggled
+    signal expandBrowserToggled
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
     signal trophyToggled
@@ -71,6 +73,8 @@ Column {
             root.yearlyToggled();
         else if (kind === "timeline")
             root.timelineToggled();
+        else if (kind === "expand")
+            root.expandBrowserToggled();
         else if (kind === "daily")
             root.dailyInsightsToggled();
         else if (kind === "retro")
@@ -107,7 +111,7 @@ Column {
             });
         }
         add("back", 0);
-        var toggleKinds = ["yearly", "timeline", "daily", "retro", "weektotal", "trophy", "easter"];
+        var toggleKinds = ["yearly", "timeline", "expand", "daily", "retro", "weektotal", "trophy", "easter"];
         for (var t = 0; t < toggleKinds.length; t++)
             add("toggle", toggleKinds[t]);
         for (var s = 0; s < root.recordColorOptions.length; s++)
@@ -272,6 +276,12 @@ Column {
                         label: "Day timeline",
                         sub: "Session strip and hourly rhythm beside the gear",
                         shown: !root.hideTimeline
+                    },
+                    {
+                        kind: "expand",
+                        label: "Expand browsers by site",
+                        sub: "One row per site across browsers, zen keeps the rest",
+                        shown: root.expandBrowser
                     },
                     {
                         kind: "daily",

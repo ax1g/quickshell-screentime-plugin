@@ -31,7 +31,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for a donut-only panel.
 - The timeline names 180+ work, social and entertainment sites, from
   Linear and Figma to Chess.com and Crunchyroll — everything else still
-  groups under its browser.
+  groups under its browser. Flip on per-site rows in Settings to split
+  browsers into one row per site across the donut and the list.
 
 ### Changed
 
