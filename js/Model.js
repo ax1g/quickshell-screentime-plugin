@@ -592,11 +592,14 @@ function refoldDay(day, aliases) {
     var remapped = []
     for (var s = 0; s < spans.length; s++) {
       if (!isSpan(spans[s])) continue
-      remapped.push({
+      var entry = {
         app: resolveAppName(spans[s].app, aliases),
         start: Number(spans[s].start),
         end: Number(spans[s].end),
-      })
+      }
+      if (typeof spans[s].src === "string" && spans[s].src)
+        entry.src = resolveAppName(spans[s].src, aliases)
+      remapped.push(entry)
     }
     if (remapped.length > 0) folded.spans = remapped
   }
@@ -1100,31 +1103,59 @@ function appList(today) {
 
 // Expanded app list for the browser-expansion setting: per-site rows
 // merged across browsers (all youtube.com time lands in one row no
-// matter which browser played it) plus plain buckets for everything
+// matter which browser played it) plus per-app rows for everything
 // else, in the same shape as appList so the donut and legend agree.
-// Falls back to appList on span-less days and when spans cover less
-// than 99% of the total (mixed-era days), so the list never
-// understates the day it renders.
+// Site attribution rides on each span's source bucket: a browser keeps
+// its total minus the site time recorded from it, so rows always sum
+// to the day. Span-less days render exactly like appList; legacy spans
+// without a source stay on the timeline but cannot split a bucket, so
+// those rows conservatively show the whole browser total.
 function expandedAppList(day) {
+  var apps = day && day.apps && typeof day.apps === "object" ? day.apps : {}
   var total = day && day.total ? day.total : 0
   var spans = spanList(day)
-  var byApp = {}
-  var spanMs = 0
+  if (spans.length === 0) return appList(day)
+  var siteMs = {}
+  var siteFrom = {}
   for (var i = 0; i < spans.length; i++) {
     if (!isSpan(spans[i])) continue
     var ms = Number(spans[i].end) - Number(spans[i].start)
-    byApp[spans[i].app] = (byApp[spans[i].app] || 0) + ms
-    spanMs += ms
+    var key = String(spans[i].app)
+    if (!isSiteKey(key) || typeof spans[i].src !== "string" || !spans[i].src)
+      continue
+    siteMs[key] = (siteMs[key] || 0) + ms
+    var from = siteFrom[key] || {}
+    from[spans[i].src] = (from[spans[i].src] || 0) + ms
+    siteFrom[key] = from
   }
-  if (!(spanMs >= total * 0.99)) return appList(day)
   var out = []
-  for (var app in byApp) {
-    if (!Object.prototype.hasOwnProperty.call(byApp, app)) continue
-    if (byApp[app] < 60000) continue
+  for (var site in siteMs) {
+    if (!Object.prototype.hasOwnProperty.call(siteMs, site)) continue
+    if (siteMs[site] < 60000) continue
+    out.push({
+      app: site,
+      ms: siteMs[site],
+      pct: total > 0 ? Math.round((100 * siteMs[site]) / total) : 0,
+    })
+  }
+  for (var app in apps) {
+    if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
+    var appMs = Number(apps[app]) || 0
+    if (appMs <= 0) continue
+    var rest = appMs
+    if (isBrowserApp(app)) {
+      var taken = 0
+      for (var g in siteFrom) {
+        if (!Object.prototype.hasOwnProperty.call(siteFrom, g)) continue
+        taken += Number(siteFrom[g][app]) || 0
+      }
+      rest = Math.max(0, appMs - taken)
+    }
+    if (rest < 60000) continue
     out.push({
       app: app,
-      ms: byApp[app],
-      pct: total > 0 ? Math.round((100 * byApp[app]) / total) : 0,
+      ms: rest,
+      pct: total > 0 ? Math.round((100 * rest) / total) : 0,
     })
   }
   out.sort(function (a, b) {
@@ -1369,11 +1400,18 @@ function sanitizeSpans(value) {
       changed = true
       continue
     }
-    out.push({ app: String(s.app), start: Number(s.start), end: Number(s.end) })
+    var kept = {
+      app: String(s.app),
+      start: Number(s.start),
+      end: Number(s.end),
+    }
+    if (typeof s.src === "string" && s.src) kept.src = s.src
+    out.push(kept)
     if (
       out[out.length - 1].app !== s.app ||
       out[out.length - 1].start !== s.start ||
-      out[out.length - 1].end !== s.end
+      out[out.length - 1].end !== s.end ||
+      (kept.src || undefined) !== (s.src || undefined)
     )
       changed = true
   }
@@ -1383,18 +1421,28 @@ function sanitizeSpans(value) {
 
 // Fresh day object with one span appended; contiguous tail spans coalesce
 // before the cap so an ongoing session can continue without losing data.
-function appendSpan(day, app, start, end) {
+// srcApp names the totals bucket the chunk was billed to, stored only
+// when it differs from the span key: site spans remember their browser
+// so the expanded list can split them back out exactly.
+function appendSpan(day, app, start, end, srcApp) {
   var span = { app: String(app), start: Number(start), end: Number(end) }
   if (!day || !isSpan(span)) return day
+  if (srcApp && String(srcApp) !== span.app) span.src = String(srcApp)
   var cur = spanList(day)
   var last = cur.length ? cur[cur.length - 1] : null
-  if (last && last.app === span.app && last.end === span.start) {
+  if (
+    last &&
+    last.app === span.app &&
+    (last.src || "") === (span.src || "") &&
+    last.end === span.start
+  ) {
     var merged = cur.slice()
     merged[merged.length - 1] = {
       app: last.app,
       start: last.start,
       end: span.end,
     }
+    if (last.src) merged[merged.length - 1].src = last.src
     var continued = Object.assign({}, day)
     continued.spans = merged
     return continued
@@ -1407,9 +1455,12 @@ function appendSpan(day, app, start, end) {
   return next
 }
 
-// Union of two span lists into one sorted, non-overlapping (per app)
-// list. Same-app spans that touch or overlap rejoin; different apps
-// never merge, so every positive gap stays visible. Position-free, so
+// Union of two span lists into one sorted, non-overlapping (per app
+// and source bucket) list. Same-app spans that touch or overlap
+// rejoin, but only within one source bucket: a youtube span from zen
+// must never merge into one from firefox, or the expanded list could
+// not split them back out. Different apps never merge, so every
+// positive gap stays visible. Position-free, so a midnight flush is
 // a midnight flush is idempotent and write-time tail coalescing can
 // never strand post-save session growth span-less while its totals
 // flush. Returns a fresh array; inputs pass through untouched.
@@ -1419,12 +1470,16 @@ function mergeSpans(a, b) {
   for (var i = 0; i < lists.length; i++) {
     var list = asSpanArray(lists[i])
     for (var j = 0; j < list.length; j++) {
-      if (isSpan(list[j]))
-        all.push({
+      if (isSpan(list[j])) {
+        var span = {
           app: String(list[j].app),
           start: Number(list[j].start),
           end: Number(list[j].end),
-        })
+        }
+        if (typeof list[j].src === "string" && list[j].src)
+          span.src = list[j].src
+        all.push(span)
+      }
     }
   }
   all.sort(function (x, y) {
@@ -1434,10 +1489,16 @@ function mergeSpans(a, b) {
   for (var k = 0; k < all.length; k++) {
     var s = all[k]
     var last = out.length ? out[out.length - 1] : null
-    if (last && last.app === s.app && s.start <= last.end) {
-      if (s.end > last.end) last.end = s.end
+    if (
+      last &&
+      last.app === s.app &&
+      (last.src || "") === (s.src || "") &&
+      s.start <= last.end
+    ) {
+      if (Number(s.end) > last.end) last.end = Number(s.end)
     } else {
       out.push({ app: s.app, start: s.start, end: s.end })
+      if (s.src) out[out.length - 1].src = s.src
     }
   }
   return out

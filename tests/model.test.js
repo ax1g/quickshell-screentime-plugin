@@ -2183,6 +2183,37 @@ test("appendSpan keeps non-contiguous and different-app spans separate", () => {
   assert.equal(differentApp.spans.length, 2)
 })
 
+test("appendSpan records the source bucket only when it differs", () => {
+  const day = { total: 0, apps: {} }
+  const site = Model.appendSpan(day, "site:youtube.com", 1000, 2000, "zen")
+  assert.deepEqual(site.spans, [
+    { app: "site:youtube.com", start: 1000, end: 2000, src: "zen" },
+  ])
+  const plain = Model.appendSpan(day, "zen", 1000, 2000, "zen")
+  assert.deepEqual(plain.spans, [{ app: "zen", start: 1000, end: 2000 }])
+})
+
+test("mergeSpans keeps sources apart across buckets", () => {
+  // Contiguous youtube spans from different browsers must not merge,
+  // or the expanded list could not split them back out.
+  const split = Model.mergeSpans(
+    [{ app: "site:youtube.com", start: 1000, end: 2000, src: "zen" }],
+    [{ app: "site:youtube.com", start: 2000, end: 3000, src: "firefox" }],
+  )
+  assert.deepEqual(split, [
+    { app: "site:youtube.com", start: 1000, end: 2000, src: "zen" },
+    { app: "site:youtube.com", start: 2000, end: 3000, src: "firefox" },
+  ])
+  // Same source still coalesces, carrying the source along.
+  const joined = Model.mergeSpans(
+    [{ app: "site:youtube.com", start: 1000, end: 2000, src: "zen" }],
+    [{ app: "site:youtube.com", start: 2000, end: 3000, src: "zen" }],
+  )
+  assert.deepEqual(joined, [
+    { app: "site:youtube.com", start: 1000, end: 3000, src: "zen" },
+  ])
+})
+
 test("appendSpan returns the input when there is nothing to record", () => {
   const day = { total: 0, apps: {} }
   assert.equal(Model.appendSpan(day, "zen", 2, 2), day)
@@ -2433,10 +2464,15 @@ test("expandedAppList merges site rows across browsers", () => {
     total: 600000,
     apps: { zen: 300000, firefox: 180000, opencode: 120000 },
     spans: [
-      // zen and firefox both played youtube: one merged row.
-      { app: "site:youtube.com", start: t0, end: t0 + 120000 },
-      { app: "site:youtube.com", start: t0 + 120000, end: t0 + 300000 },
-      // Unmatched browser titles stay on the browser bucket.
+      // zen and firefox both played youtube: one merged row, and each
+      // browser keeps its total minus the site time recorded from it.
+      { app: "site:youtube.com", start: t0, end: t0 + 120000, src: "zen" },
+      {
+        app: "site:youtube.com",
+        start: t0 + 120000,
+        end: t0 + 300000,
+        src: "firefox",
+      },
       { app: "zen", start: t0 + 300000, end: t0 + 420000 },
       { app: "firefox", start: t0 + 420000, end: t0 + 480000 },
       { app: "opencode", start: t0 + 480000, end: t0 + 600000 },
@@ -2447,9 +2483,8 @@ test("expandedAppList merges site rows across browsers", () => {
     out.map((e) => [e.app, e.ms]),
     [
       ["site:youtube.com", 300000],
-      ["zen", 120000],
+      ["zen", 180000],
       ["opencode", 120000],
-      ["firefox", 60000],
     ],
   )
   assert.equal(
@@ -2458,24 +2493,28 @@ test("expandedAppList merges site rows across browsers", () => {
   )
 })
 
-test("expandedAppList falls back when spans cannot cover the day", () => {
+test("expandedAppList keeps every millisecond on the books", () => {
   // Span-less days render the grouped view they always had.
   const plain = { total: 60000, apps: { zen: 60000 } }
   assert.deepEqual(Model.expandedAppList(plain), Model.appList(plain))
-  // Mixed-era days (old totals, new spans) understate, so they fall
-  // back too instead of showing a partial list.
-  const partial = {
+  // Legacy site spans without a source stay on the timeline but cannot
+  // split a bucket, so the browser keeps the whole total instead of a
+  // partial list understating the day.
+  const legacy = {
     total: 600000,
     apps: { zen: 600000 },
     spans: [{ app: "site:youtube.com", start: 1000, end: 61000 }],
   }
-  assert.deepEqual(Model.expandedAppList(partial), Model.appList(partial))
+  assert.deepEqual(
+    Model.expandedAppList(legacy).map((e) => [e.app, e.ms]),
+    [["zen", 600000]],
+  )
   // Sub-minute blips stay in the totals but off the list, like appList.
   const blip = {
     total: 63000,
     apps: { zen: 63000 },
     spans: [
-      { app: "site:youtube.com", start: 1000, end: 61000 },
+      { app: "site:youtube.com", start: 1000, end: 61000, src: "zen" },
       { app: "zen", start: 61000, end: 64000 },
     ],
   }

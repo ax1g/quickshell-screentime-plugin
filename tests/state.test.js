@@ -45,6 +45,35 @@ test("accumulateBucket rejects junk bucket inputs", () => {
 
 // ---- closeActiveBucket ---------------------------------------------------
 
+test("closeActiveBucket records the source bucket on site spans", () => {
+  const aug15 = localMidnight(2026, 7, 15)
+  const start = aug15 + 10 * 3600000
+  const end = start + 5000
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    start,
+    end,
+    "2026-08-15",
+    30000,
+    start,
+    "site:youtube.com",
+  )
+  assert.deepEqual(result.today.spans, [
+    {
+      app: "site:youtube.com",
+      start: start,
+      end: end,
+      src: "zen",
+    },
+  ])
+})
+
 test("close and commit treat an empty bucket as a no-op", () => {
   const state = {
     today: { total: 100, apps: {} },
@@ -1102,7 +1131,7 @@ test("browser aggregate keeps its site on the recorded span", () => {
   )
   assert.deepEqual(result.today.apps, { zen: 600000 })
   assert.deepEqual(result.today.spans, [
-    { app: "site:example.com", start: t0, end: t1 },
+    { app: "site:example.com", start: t0, end: t1, src: "zen" },
   ])
 })
 
@@ -1251,11 +1280,11 @@ test("advanceRollover preserves a site label across midnight", () => {
   )
   assert.deepEqual(result.days["2026-09-21"].apps, { zen: 2000 })
   assert.deepEqual(result.days["2026-09-21"].spans, [
-    { app: "site:example.com", start: m0, end: midnight },
+    { app: "site:example.com", start: m0, end: midnight, src: "zen" },
   ])
   assert.deepEqual(result.today.apps, { zen: 2000 })
   assert.deepEqual(result.today.spans, [
-    { app: "site:example.com", start: midnight, end: m1 },
+    { app: "site:example.com", start: midnight, end: m1, src: "zen" },
   ])
   assert.equal(result.activeSpanApp, "site:example.com")
 })

@@ -94,6 +94,7 @@ function splitAcrossDays(
       spanApp || app,
       cursor,
       cursor + chunk,
+      app,
     )
     cursor += chunk
     guard++
@@ -149,6 +150,7 @@ function closeActiveBucket(
         recordedApp,
         activeStart,
         now,
+        activeApp,
       ),
       days: state.days,
       todayKey: state.todayKey,
@@ -175,6 +177,7 @@ function closeActiveBucket(
             recordedApp,
             split.resumeAt,
             now,
+            activeApp,
           )
         : state.today,
     days: split.days,
@@ -232,6 +235,7 @@ function commitElapsed(
       recordedApp,
       activeStart,
       now,
+      activeApp,
     )
     return {
       today: newToday,
@@ -273,11 +277,13 @@ function carrySpans(out, src) {
   var valid = []
   for (var i = 0; i < raw.length; i++) {
     if (typeof Model.isSpan === "function" && !Model.isSpan(raw[i])) continue
-    valid.push({
+    var carried = {
       app: String(raw[i].app),
       start: Number(raw[i].start),
       end: Number(raw[i].end),
-    })
+    }
+    if (typeof raw[i].src === "string" && raw[i].src) carried.src = raw[i].src
+    valid.push(carried)
   }
   if (valid.length > 0) out.spans = valid
   return out
@@ -387,6 +393,7 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick, spanApp) {
       spanApp || app,
       now - grown,
       now,
+      app,
     )
   // closeActiveBucket decides lastTick (wake time on a gap, untouched
   // otherwise); the rollover carry must not lose that decision.
