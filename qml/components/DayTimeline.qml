@@ -58,7 +58,9 @@ Column {
         id: strip
         width: parent.width
         height: Style.space(36)
-        radius: Style.space(18)
+        // Square track by design: the strip spans the full session width,
+        // so rounded ends would fake padding where time is recorded.
+        radius: 0
         clip: true
         color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.10)
 
