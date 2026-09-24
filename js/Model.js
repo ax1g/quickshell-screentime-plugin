@@ -1095,22 +1095,42 @@ function isSpan(s) {
   return isFinite(a) && isFinite(b) && b > a
 }
 
-// Validated span list, or undefined when the day carries none. Callers
-// must use this (never day.spans directly) so span-less days just work.
-function spanList(day) {
-  if (!day || !Array.isArray(day.spans)) return []
-  return day.spans
+// Foreign sequences read fine by index but fail Array.isArray: the
+// shell's C++ JsonAdapter hands back QVariant lists, not engine
+// Arrays. Every span gate below went through Array.isArray, so each
+// restart silently rebuilt recorded spans to [] and persisted the
+// erasure. asSpanArray normalizes any list-like value into a fresh
+// engine Array; anything without list shape yields [].
+function asSpanArray(value) {
+  if (Array.isArray(value)) return value
+  if (!value || typeof value.length !== "number") return []
+  var n = Math.floor(value.length)
+  if (!(n >= 0) || !isFinite(n)) return []
+  var out = []
+  for (var i = 0; i < n; i++) out.push(value[i])
+  return out
 }
 
-// Returns { spans, changed }; clean lists keep array identity, absent
-// stays absent, anything else rebuilds normalized and capped.
+// Validated span list, or empty when the day carries none. Callers
+// must use this (never day.spans directly) so span-less days just work
+// and adapter sequences read like engine arrays.
+function spanList(day) {
+  if (!day) return []
+  return asSpanArray(day.spans)
+}
+
+// Returns { spans, changed }; clean engine lists keep array identity,
+// absent stays absent, foreign sequences normalize into engine arrays,
+// anything else rebuilds normalized and capped.
 function sanitizeSpans(value) {
   if (value === undefined) return { spans: undefined, changed: false }
-  if (!Array.isArray(value)) return { spans: [], changed: true }
+  // Normalizing a foreign type always counts as a change, even when
+  // every element validates: the caller must persist the engine array.
+  var changed = !Array.isArray(value)
+  var list = changed ? asSpanArray(value) : value
   var out = []
-  var changed = false
-  for (var i = 0; i < value.length; i++) {
-    var s = value[i]
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i]
     if (!isSpan(s)) {
       changed = true
       continue
@@ -1167,8 +1187,7 @@ function mergeSpans(a, b) {
   var all = []
   var lists = [a, b]
   for (var i = 0; i < lists.length; i++) {
-    var list = lists[i]
-    if (!Array.isArray(list)) continue
+    var list = asSpanArray(lists[i])
     for (var j = 0; j < list.length; j++) {
       if (isSpan(list[j]))
         all.push({
@@ -2710,6 +2729,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     MAX_DAY_SPANS: MAX_DAY_SPANS,
     axisFracs: axisFracs,
     isSpan: isSpan,
+    asSpanArray: asSpanArray,
     spanList: spanList,
     sanitizeSpans: sanitizeSpans,
     appendSpan: appendSpan,

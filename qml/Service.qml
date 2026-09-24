@@ -451,10 +451,14 @@ Item {
                 total: prev.total || 0,
                 apps: Object.assign({}, prev.apps || {})
             } : Model.newDay();
-            // Recorded spans carry into the live day; span-less days keep
-            // their shape with no empty key.
-            if (prev && typeof prev === "object" && Array.isArray(prev.spans) && prev.spans.length > 0)
-                live.spans = prev.spans.slice();
+            // Recorded spans carry into the live day through sanitize,
+            // which normalizes adapter sequences into engine arrays;
+            // span-less days keep their shape with no empty key.
+            if (prev && typeof prev === "object") {
+                var carried = Model.sanitizeSpans(prev.spans);
+                if (carried.spans && carried.spans.length > 0)
+                    live.spans = carried.spans;
+            }
             root.today = live;
             root.ready = true;
             root.startupPhase = false;

@@ -185,9 +185,12 @@ test("corrupt history is set aside without depending on python", () => {
 })
 
 test("recorded spans carry from disk into the live day", () => {
-  // The load handler copies the stored span array (never the reference)
-  // and leaves span-less days without the key.
-  assert.match(service, /live\.spans = prev\.spans\.slice\(\)/)
+  // The load handler normalizes through sanitize (adapter sequences
+  // fail Array.isArray, so a slice gate would drop them) and leaves
+  // span-less days without the key.
+  assert.match(service, /Model\.sanitizeSpans\(prev\.spans\)/)
+  assert.match(service, /carried\.spans && carried\.spans\.length > 0/)
+  assert.match(service, /live\.spans = carried\.spans/)
 })
 
 test("browser totals keep site labels for daily timeline spans", () => {

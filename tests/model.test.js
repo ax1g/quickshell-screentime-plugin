@@ -2108,6 +2108,57 @@ test("sanitizeSpans keeps clean lists by identity and rebuilds the rest", () => 
   assert.equal(capped.changed, true)
 })
 
+// Adapter sequences read by index but fail Array.isArray, which used to
+// rebuild every recorded span list to [] on load. A list-like foreign
+// object with length and indexed entries must normalize, never erase.
+function foreignSpans(arr) {
+  const o = { length: arr.length }
+  for (let i = 0; i < arr.length; i++) o[i] = arr[i]
+  return o
+}
+
+test("asSpanArray passes engine arrays through, copies foreign lists", () => {
+  const real = [{ app: "zen", start: 1, end: 2 }]
+  assert.equal(Model.asSpanArray(real), real)
+  const foreign = foreignSpans(real)
+  assert.equal(Array.isArray(foreign), false)
+  const copied = Model.asSpanArray(foreign)
+  assert.equal(Array.isArray(copied), true)
+  assert.deepEqual(copied, real)
+  assert.deepEqual(Model.asSpanArray(42), [])
+  assert.deepEqual(Model.asSpanArray(undefined), [])
+})
+
+test("sanitizeSpans normalizes adapter sequences instead of erasing them", () => {
+  const valid = [
+    { app: "zen", start: 1000, end: 2000 },
+    { app: "foot", start: 2000, end: 2600 },
+  ]
+  const fixed = Model.sanitizeSpans(foreignSpans(valid))
+  assert.equal(Array.isArray(fixed.spans), true)
+  assert.deepEqual(fixed.spans, valid)
+  assert.equal(fixed.changed, true)
+  // Genuine junk still drops: no list shape, no spans.
+  assert.deepEqual(Model.sanitizeSpans(42), { spans: [], changed: true })
+})
+
+test("spanList and appendSpan read adapter sequences", () => {
+  const day = {
+    total: 3000,
+    apps: { zen: 3000 },
+    spans: foreignSpans([{ app: "zen", start: 1000, end: 2000 }]),
+  }
+  assert.deepEqual(Model.spanList(day), [
+    { app: "zen", start: 1000, end: 2000 },
+  ])
+  const grown = Model.appendSpan(day, "zen", 3000, 4000)
+  assert.equal(Array.isArray(grown.spans), true)
+  assert.deepEqual(grown.spans, [
+    { app: "zen", start: 1000, end: 2000 },
+    { app: "zen", start: 3000, end: 4000 },
+  ])
+})
+
 test("appendSpan coalesces exactly contiguous spans for the same app", () => {
   const day = {
     total: 0,
@@ -2182,6 +2233,14 @@ test("mergeSpans unions same-app overlaps without touching gaps", () => {
       { app: "foot", start: 2000, end: 3000 },
     ],
   )
+})
+
+test("mergeSpans unions adapter sequences with engine arrays", () => {
+  const united = Model.mergeSpans(
+    foreignSpans([{ app: "zen", start: 1000, end: 2000 }]),
+    [{ app: "zen", start: 1500, end: 3000 }],
+  )
+  assert.deepEqual(united, [{ app: "zen", start: 1000, end: 3000 }])
 })
 
 test("mergeSpans sorts, validates and tolerates junk", () => {

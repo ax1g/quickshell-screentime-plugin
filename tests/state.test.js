@@ -251,6 +251,30 @@ test("rolloverIfNeeded carries previous day data into today", () => {
   assert.equal(result.activeStart, 0) // caller sets to Date.now()
 })
 
+test("rolloverIfNeeded carries adapter spans as engine arrays", () => {
+  // Adapter sequences fail Array.isArray; the carry must normalize
+  // instead of dropping them like the old slice gate did.
+  const foreign = { 0: { app: "zen", start: 1000, end: 2000 }, length: 1 }
+  assert.equal(Array.isArray(foreign), false)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 0, apps: {} },
+    days: {
+      "2026-08-16": {
+        total: 1000,
+        apps: { zen: 1000 },
+        spans: foreign,
+      },
+    },
+    activeApp: "",
+    activeStart: 0,
+  }
+  const result = State.rolloverIfNeeded(state, "2026-08-16")
+  assert.ok(result)
+  assert.equal(Array.isArray(result.today.spans), true)
+  assert.deepEqual(result.today.spans, [{ app: "zen", start: 1000, end: 2000 }])
+})
+
 // ---- advanceRollover -------------------------------------------------------
 // One transition owns the whole midnight moment: close the open bucket
 // onto the day it started, carry the live day forward, reopen the bucket.

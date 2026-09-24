@@ -253,10 +253,22 @@ function commitElapsed(
 }
 
 // Copy recorded spans onto a rebuilt day object, keeping the key absent
-// when there is nothing to carry.
+// when there is nothing to carry. Spans always land as fresh engine
+// arrays: adapter sequences would fail every downstream Array gate.
 function carrySpans(out, src) {
-  if (src && Array.isArray(src.spans) && src.spans.length > 0)
-    out.spans = src.spans.slice()
+  if (!src || src.spans === undefined) return out
+  if (!Model || typeof Model.asSpanArray !== "function") return out
+  var raw = Model.asSpanArray(src.spans)
+  var valid = []
+  for (var i = 0; i < raw.length; i++) {
+    if (typeof Model.isSpan === "function" && !Model.isSpan(raw[i])) continue
+    valid.push({
+      app: String(raw[i].app),
+      start: Number(raw[i].start),
+      end: Number(raw[i].end),
+    })
+  }
+  if (valid.length > 0) out.spans = valid
   return out
 }
 
