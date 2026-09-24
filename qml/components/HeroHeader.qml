@@ -20,7 +20,8 @@ Item {
     required property color accent
     required property color tipBackground
     // Warning tint for a reached screen limit; "" follows the foreground.
-    required property color urgent    required property double dayTotal
+    required property color urgent
+    required property double dayTotal
     required property string activeDayKey
     required property string activeDayLabel
     // Day view toggle state; the timeline page lives beside the gear.

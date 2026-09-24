@@ -5,6 +5,8 @@ import qs.Commons
 // against the peak hour. Bars account for exactly the recorded time,
 // like the strip above; missing hours simply have no bar. Peak label
 // names the busiest hour. Hidden entirely without recorded spans.
+// Outer-id reads are idiomatic in delegates; muted for the linter.
+// qmllint disable unqualified
 
 Column {
     id: root
@@ -98,10 +100,22 @@ Column {
 
         Repeater {
             model: [
-                { frac: 0.5 / 24, label: "00" },
-                { frac: 6.5 / 24, label: "06" },
-                { frac: 12.5 / 24, label: "12" },
-                { frac: 18.5 / 24, label: "18" }
+                {
+                    frac: 0.5 / 24,
+                    label: "00"
+                },
+                {
+                    frac: 6.5 / 24,
+                    label: "06"
+                },
+                {
+                    frac: 12.5 / 24,
+                    label: "12"
+                },
+                {
+                    frac: 18.5 / 24,
+                    label: "18"
+                }
             ]
 
             Text {
