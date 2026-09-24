@@ -2387,6 +2387,46 @@ test("daySpanView segments and categories sum to the recorded spans", () => {
   assert.equal(catMs, segMs)
 })
 
+test("dayHourlyView buckets every recorded millisecond by local hour", () => {
+  const seven = new Date(2026, 8, 21, 7, 10, 0).getTime()
+  const view = Model.dayHourlyView(
+    {
+      total: 3600000,
+      apps: { zen: 3600000 },
+      spans: [
+        // 50min inside hour 7, then 20min straddling 07:50–08:10.
+        { app: "zen", start: seven, end: seven + 50 * 60000 },
+        { app: "zen", start: seven + 40 * 60000, end: seven + 60 * 60000 },
+      ],
+    },
+    "#e45b93",
+  )
+  assert.equal(view.hours.length, 24)
+  // 07:10–08:00 (50min) plus 07:50–08:00 (10min) land in hour 7.
+  assert.equal(view.hours[7].ms, 60 * 60000)
+  // 08:00–08:10 (10min) lands in hour 8.
+  assert.equal(view.hours[8].ms, 10 * 60000)
+  assert.equal(view.totalMs, 70 * 60000)
+  assert.equal(view.maxMs, 60 * 60000)
+  assert.equal(view.peakHour, 7)
+  assert.equal(view.hours[7].color, "#e45b93")
+  const sum = view.hours.reduce((a, h) => a + h.ms, 0)
+  assert.equal(sum, view.totalMs)
+})
+
+test("dayHourlyView stays empty without spans", () => {
+  assert.deepEqual(Model.dayHourlyView(null, "#e45b93"), {
+    hours: [],
+    maxMs: 0,
+    totalMs: 0,
+    peakHour: -1,
+  })
+  assert.deepEqual(
+    Model.dayHourlyView({ total: 5, apps: {} }, "#e45b93").hours,
+    [],
+  )
+})
+
 test("fmtClock renders day times", () => {
   assert.equal(
     Model.fmtClock(new Date(2026, 8, 21, 7, 5, 0).getTime()),

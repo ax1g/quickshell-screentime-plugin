@@ -1343,6 +1343,51 @@ function daySpanView(day, key, accentHex) {
   }
 }
 
+// Experimental hourly rhythm over a day's spans: { hours, maxMs,
+// totalMs, peakHour }. Every recorded millisecond lands in its local
+// hour; spans crossing hour boundaries split proportionally, so the 24
+// bars account for exactly the recorded time like the strip does.
+function dayHourlyView(day, accentHex) {
+  var empty = { hours: [], maxMs: 0, totalMs: 0, peakHour: -1 }
+  var raw = spanList(day)
+  var slots = []
+  for (var h = 0; h < 24; h++) slots.push(0)
+  var totalMs = 0
+  for (var i = 0; i < raw.length; i++) {
+    if (!isSpan(raw[i])) continue
+    var cursor = Number(raw[i].start)
+    var end = Number(raw[i].end)
+    var guard = 0
+    while (cursor < end && guard < 48) {
+      var d = new Date(cursor)
+      var nextHour = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+        d.getHours() + 1,
+      ).getTime()
+      var stop = Math.min(end, nextHour)
+      if (stop <= cursor) break
+      slots[d.getHours()] += stop - cursor
+      totalMs += stop - cursor
+      cursor = stop
+      guard++
+    }
+  }
+  if (!(totalMs > 0)) return empty
+  var hours = []
+  var maxMs = 0
+  var peakHour = -1
+  for (var k = 0; k < 24; k++) {
+    if (slots[k] > maxMs) {
+      maxMs = slots[k]
+      peakHour = k
+    }
+    hours.push({ hour: k, ms: slots[k], color: accentHex })
+  }
+  return { hours: hours, maxMs: maxMs, totalMs: totalMs, peakHour: peakHour }
+}
+
 // Local "HH:MM" for an epoch timestamp; "" when unparseable.
 function fmtClock(ms) {
   var d = new Date(Number(ms))
@@ -2737,6 +2782,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     splitSpan: splitSpan,
     dayBounds: dayBounds,
     daySpanView: daySpanView,
+    dayHourlyView: dayHourlyView,
     fmtClock: fmtClock,
     parseDayView: parseDayView,
     hexToHsl: hexToHsl,
