@@ -215,7 +215,7 @@ Panel {
     // log records every change, so each day keeps the limit it had: days
     // before activation never show it. Stored under the historical
     // dailyGoal keys so existing installs keep their setting.
-    readonly property var dailyGoalOptions: [0, 4, 6, 8]
+    readonly property var dailyGoalOptions: [0, 4, 6, 8, 10, 12]
     readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.prefs.dailyGoalHours)
     readonly property var goalLog: Model.parseGoalLog(root.prefs.dailyGoalLog)
     readonly property var goalProgress: Model.goalProgress(root.dayTotal, Model.goalForDay(root.goalLog, root.activeDayKey))

@@ -478,7 +478,7 @@ function aliasesWithout(value, from) {
 // Daily screen-time limit in whole hours; 0 (or unparseable) means off.
 // Stored under the historical dailyGoal keys so existing installs keep
 // their setting without migration.
-var DAILY_GOAL_PRESETS = [0, 4, 6, 8]
+var DAILY_GOAL_PRESETS = [0, 4, 6, 8, 10, 12]
 function parseDailyGoalHours(value) {
   var h = Math.floor(Number(value))
   if (!isFinite(h) || h < 1 || h > 24) return 0
