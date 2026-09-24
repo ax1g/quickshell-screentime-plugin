@@ -210,10 +210,11 @@ Panel {
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-    // Daily goal in whole hours (0 = off) with live progress off the
-    // filtered active day, so ignored apps never push the goal. The
-    // goal log records every change, so each day keeps the goal it
-    // had: days before activation never show it.
+    // Daily screen limit in whole hours (0 = off) with live progress off
+    // the filtered active day, so ignored apps never push the limit. The
+    // log records every change, so each day keeps the limit it had: days
+    // before activation never show it. Stored under the historical
+    // dailyGoal keys so existing installs keep their setting.
     readonly property var dailyGoalOptions: [0, 4, 6, 8]
     readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.prefs.dailyGoalHours)
     readonly property var goalLog: Model.parseGoalLog(root.prefs.dailyGoalLog)
@@ -814,6 +815,7 @@ Panel {
                         hintMode: root.hintMode
                         accent: Color.accent
                         tipBackground: root.bar ? root.bar.background : Color.background
+                        urgent: Color.urgent
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)

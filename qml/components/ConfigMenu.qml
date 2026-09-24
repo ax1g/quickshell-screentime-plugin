@@ -822,7 +822,7 @@ Column {
         }
     }
 
-    // ---- Daily goal ---------------------------------------------------
+    // ---- Screen limit -------------------------------------------------
 
     Rectangle {
         width: root.width
@@ -839,7 +839,7 @@ Column {
             spacing: Style.space(10)
 
             Text {
-                text: "DAILY GOAL"
+                text: "SCREEN LIMIT"
                 color: root.foreground
                 opacity: 0.45
                 font.family: root.fontFamily
@@ -848,8 +848,8 @@ Column {
                 font.letterSpacing: 1.5
             }
 
-            // Daily goal presets in hours; 0 is Off. The bar badges a check
-            // and the hero shows remaining once the day reaches the goal.
+            // Screen limit presets in hours; 0 is Off. The bar warns
+            // once the day reaches the limit and the hero counts down.
             Column {
                 width: parent.width
                 spacing: Style.space(6)
@@ -859,7 +859,7 @@ Column {
                     spacing: Style.space(2)
 
                     Text {
-                        text: "Daily screen time goal"
+                        text: "Daily screen time limit"
                         color: root.foreground
                         opacity: 0.75
                         font.family: root.fontFamily
@@ -869,7 +869,7 @@ Column {
                     }
 
                     Text {
-                        text: "A check badge appears in the bar when the day reaches it"
+                        text: "A warning badge appears in the bar when the day reaches it"
                         color: root.foreground
                         opacity: 0.45
                         font.family: root.fontFamily

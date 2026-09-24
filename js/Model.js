@@ -475,7 +475,9 @@ function aliasesWithout(value, from) {
   return serializeAliases(obj)
 }
 
-// Daily screen-time goal in whole hours; 0 (or unparseable) means off.
+// Daily screen-time limit in whole hours; 0 (or unparseable) means off.
+// Stored under the historical dailyGoal keys so existing installs keep
+// their setting without migration.
 var DAILY_GOAL_PRESETS = [0, 4, 6, 8]
 function parseDailyGoalHours(value) {
   var h = Math.floor(Number(value))
@@ -483,8 +485,8 @@ function parseDailyGoalHours(value) {
   return h
 }
 
-// Progress toward the daily goal: { goalMs, pct, remainingMs, reached }.
-// Null when the goal is off so callers can hide goal UI entirely.
+// Progress against the daily limit: { goalMs, pct, remainingMs, reached }.
+// Null when the limit is off so callers can hide limit UI entirely.
 function goalProgress(totalMs, goalHours) {
   var goal = parseDailyGoalHours(goalHours)
   if (goal <= 0) return null

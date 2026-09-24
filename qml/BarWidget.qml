@@ -38,8 +38,8 @@ BarWidget {
 
     readonly property bool iconOnly: root.settingBool("iconOnly", false)
 
-    // Daily goal badge: progress counts the same filtered day the panel
-    // shows, so ignored apps never push the goal. The goal in force is
+    // Screen limit badge: progress counts the same filtered day the panel
+    // shows, so ignored apps never push the limit. The limit in force is
     // the log entry for today: days before activation show nothing.
     readonly property int dailyGoalHours: Model.goalForDay(Model.parseGoalLog(root.setting("dailyGoalLog", [])), root.service ? root.service.todayKey : "")
     readonly property double goalTotal: {
@@ -54,8 +54,8 @@ BarWidget {
             return "";
         var goal = Model.fmt(root.dailyGoalHours * 3600000);
         if (root.goalReached)
-            return " · goal reached (" + goal + ")";
-        return " · " + Model.fmt(root.dailyGoalHours * 3600000 - root.goalTotal) + " left of " + goal;
+            return " · over " + goal + " screen limit";
+        return " · " + Model.fmt(root.dailyGoalHours * 3600000 - root.goalTotal) + " left of " + goal + " limit";
     }
 
     // Session cache of keys written before the shell delivers settings
@@ -212,8 +212,8 @@ BarWidget {
         anchors.fill: parent
         bar: root.bar
         // Single label at bar size: glyph + duration render uniformly.
-        // A reached daily goal appends a check badge.
-        text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label + (root.goalReached ? " ✓" : "")
+        // A reached screen limit appends a warning badge.
+        text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label + (root.goalReached ? " !" : "")
         labelVisible: !root.vertical && !root.iconOnly
         hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
         fixedHeight: root.vertical ? root.verticalLines.length * Style.bar.iconSlot : -1
