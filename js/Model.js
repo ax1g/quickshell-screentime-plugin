@@ -263,7 +263,10 @@ function defaultSiteRules() {
     { match: "\\bPyPI\\b", site: "pypi.org" },
     { match: "\\bcrates\\.io\\b", site: "crates.io" },
     { match: "\\bCloudflare\\b", site: "cloudflare.com" },
-    { match: "\\bAWS Management Console\\b|\\bAmazon Web Services\\b", site: "aws.amazon.com" },
+    {
+      match: "\\bAWS Management Console\\b|\\bAmazon Web Services\\b",
+      site: "aws.amazon.com",
+    },
     { match: "\\bGoogle Cloud\\b", site: "cloud.google.com" },
     { match: "\\bAzure\\b", site: "azure.microsoft.com" },
     { match: "\\bDigitalOcean\\b", site: "digitalocean.com" },
@@ -300,7 +303,10 @@ function defaultSiteRules() {
     { match: "\\bHugging Face\\b", site: "huggingface.co" },
     { match: "\\bMDN\\b", site: "developer.mozilla.org" },
     { match: "\\bHashnode\\b", site: "hashnode.com" },
-    { match: "\\bHacker News\\b|\\bHackerNews\\b", site: "news.ycombinator.com" },
+    {
+      match: "\\bHacker News\\b|\\bHackerNews\\b",
+      site: "news.ycombinator.com",
+    },
     { match: "\\bLobsters\\b", site: "lobste.rs" },
     { match: "\\bProduct Hunt\\b", site: "producthunt.com" },
     { match: "\\bIndie Hackers\\b", site: "indiehackers.com" },

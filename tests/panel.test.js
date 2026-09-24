@@ -262,10 +262,7 @@ test("right-click cycles full, limit-left, icon-only with a limit on", () => {
   assert.match(bar, /root\.setSetting\("limitLeft", false\)/)
   assert.match(bar, /" left"/)
   assert.match(bar, /root\.displayLabel/)
-  assert.match(
-    bar,
-    /root\.goalReached && !root\.limitLeft\) \? " !" : ""/,
-  )
+  assert.match(bar, /root\.goalReached && !root\.limitLeft\) \? " !" : ""/)
 })
 
 test("wipe-all stages through the menu into the service", () => {
