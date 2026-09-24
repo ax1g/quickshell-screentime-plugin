@@ -72,6 +72,7 @@ test("yearly insights hide via setting, month bars stay", () => {
 test("config menu threads prefs with explicit signals", () => {
   for (const sig of [
     "yearlyToggled",
+    "timelineToggled",
     "dailyInsightsToggled",
     "yearInsightsToggled",
     "weekWindowSelected",
@@ -762,6 +763,16 @@ test("year pager, back buttons and gear carry tooltips", () => {
     /tipBackground: root\.bar \? root\.bar\.background : Color\.background/,
   )
 })
+test("timeline hides completely via setting, with its icon", () => {
+  assert.match(panel, /hideTimeline: root\.prefs\.hideTimeline === true/)
+  assert.match(panel, /root\.hideTimeline \? "apps" : Model\.parseDayView/)
+  assert.match(menu, /signal timelineToggled/)
+  assert.match(panel, /writeSetting\("hideTimeline", !root\.hideTimeline\)/)
+  assert.match(menu, /shown: !root\.hideTimeline/)
+  assert.match(hero, /required property bool hideTimeline/)
+  assert.match(hero, /visible: !heroHeader\.hideTimeline/)
+})
+
 test("day view swaps the donut page and the timeline page", () => {
   // Donut by default; the retired demo toggle still opts in.
   assert.match(

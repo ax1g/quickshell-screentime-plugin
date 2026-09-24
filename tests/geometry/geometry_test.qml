@@ -23,6 +23,7 @@ TestCase {
         accent: "#e45b93"
         urgent: "#ff5555"
         hideYearly: false
+        hideTimeline: false
         hideDailyInsights: false
         hideYearInsights: false
         weekCount: 12

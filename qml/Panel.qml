@@ -31,10 +31,12 @@ Panel {
     readonly property var prefs: ("settings" in root) && root.settings ? root.settings : ({})
     readonly property bool hideYearly: root.prefs.hideYearly === true
     readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
-    // Day view: the apps donut or the 24h timeline, switched in place.
-    // Unset prefs render the donut; the retired demo toggle still opts
-    // in, so its live setting keeps working.
-    readonly property string dayView: Model.parseDayView(root.prefs.dayView, root.prefs.hideDayTimeline)
+    readonly property bool hideTimeline: root.prefs.hideTimeline === true
+    // Day view: the apps donut or the 24h timeline. A hidden timeline
+    // forces the donut and hides the hero icon; unset prefs render the
+    // donut; the retired demo toggle still opts in, so its live setting
+    // keeps working.
+    readonly property string dayView: root.hideTimeline ? "apps" : Model.parseDayView(root.prefs.dayView, root.prefs.hideDayTimeline)
     readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
@@ -701,6 +703,7 @@ Panel {
                             urgent: Color.urgent
                             onBackRequested: root.openConfig(false)
                             hideYearly: root.hideYearly
+                            hideTimeline: root.hideTimeline
                             hideDailyInsights: root.hideDailyInsights
                             hideYearInsights: root.hideYearInsights
                             weekCount: root.weekCount
@@ -722,6 +725,7 @@ Panel {
                             pluginVersion: root.pluginVersion
                             hintMode: root.hintMode
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
+                            onTimelineToggled: root.writeSetting("hideTimeline", !root.hideTimeline)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
                             onWeekWindowSelected: function (count) {
@@ -808,6 +812,7 @@ Panel {
                         easterEggs: !root.hideEasterEggs
                         configOpen: root.configOpen
                         dayView: root.dayView
+                        hideTimeline: root.hideTimeline
                         dayTotal: root.dayTotal
                         activeDayKey: root.activeDayKey
                         activeDayLabel: root.activeDayLabel

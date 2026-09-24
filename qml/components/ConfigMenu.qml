@@ -20,6 +20,7 @@ Column {
     required property bool hideYearly
     required property bool hideDailyInsights
     required property bool hideYearInsights
+    required property bool hideTimeline
     required property int weekCount
     required property var weekOptions
     required property bool weekTotalAsPct
@@ -42,6 +43,7 @@ Column {
     signal yearlyToggled
     signal dailyInsightsToggled
     signal yearInsightsToggled
+    signal timelineToggled
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
     signal trophyToggled
@@ -67,6 +69,8 @@ Column {
     function activate(kind) {
         if (kind === "yearly")
             root.yearlyToggled();
+        else if (kind === "timeline")
+            root.timelineToggled();
         else if (kind === "daily")
             root.dailyInsightsToggled();
         else if (kind === "retro")
@@ -103,7 +107,7 @@ Column {
             });
         }
         add("back", 0);
-        var toggleKinds = ["yearly", "daily", "retro", "weektotal", "trophy", "easter"];
+        var toggleKinds = ["yearly", "timeline", "daily", "retro", "weektotal", "trophy", "easter"];
         for (var t = 0; t < toggleKinds.length; t++)
             add("toggle", toggleKinds[t]);
         for (var s = 0; s < root.recordColorOptions.length; s++)
@@ -262,6 +266,12 @@ Column {
                         label: "Yearly overview",
                         sub: "Monthly bars and a year-in-review",
                         shown: !root.hideYearly
+                    },
+                    {
+                        kind: "timeline",
+                        label: "Day timeline",
+                        sub: "Session strip and hourly rhythm beside the gear",
+                        shown: !root.hideTimeline
                     },
                     {
                         kind: "daily",

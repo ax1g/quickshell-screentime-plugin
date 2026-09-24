@@ -25,6 +25,8 @@ Item {
     required property string activeDayLabel
     // Day view toggle state; the timeline page lives beside the gear.
     required property string dayView
+    // Hidden timeline hides the toggle with the view it would open.
+    required property bool hideTimeline
     // Daily goal progress from Model.goalProgress; null when the goal is off.
     required property var goalProgress
 
@@ -149,17 +151,19 @@ Item {
     // Day view toggle; sits with the settings gear at the top.
     Text {
         id: dayToggle
+        visible: !heroHeader.hideTimeline
         text: heroHeader.dayView === "timeline" ? "\uf200" : "\uf080"
         color: dayToggleMouse.containsMouse ? heroHeader.foreground : Qt.darker(heroHeader.foreground, 1.4)
         font.family: heroHeader.fontFamily
         font.pixelSize: Style.font.caption
         anchors.right: configGear.left
-        anchors.rightMargin: Style.space(8)
+        anchors.rightMargin: visible ? Style.space(8) : 0
         anchors.verticalCenter: configGear.verticalCenter
     }
 
     MouseArea {
         id: dayToggleMouse
+        visible: dayToggle.visible
         anchors.fill: dayToggle
         anchors.margins: -Style.space(4)
         hoverEnabled: true
@@ -182,7 +186,7 @@ Item {
         label: "d"
         fontFamily: heroHeader.fontFamily
         accent: heroHeader.accent
-        show: heroHeader.hintMode
+        show: heroHeader.hintMode && !heroHeader.hideTimeline
         anchors.top: dayToggle.top
         anchors.right: dayToggle.right
     }
@@ -290,7 +294,7 @@ Item {
         anchors.left: heroIcon.right
         anchors.leftMargin: Style.space(14)
         anchors.right: parent.right
-        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + dayToggle.implicitWidth + Style.space(32)
+        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + (dayToggle.visible ? dayToggle.implicitWidth + Style.space(8) : 0) + Style.space(24)
         anchors.top: parent.top
         spacing: 0
 
