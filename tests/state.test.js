@@ -440,6 +440,77 @@ test("advanceRollover unions coalesced spans instead of slicing by length", () =
   assert.equal(covered, 190000)
 })
 
+test("restart cycle preserves spans across adapter round-trips", () => {
+  // Quickshell's JsonAdapter hands QML foreign sequences (length plus
+  // indices, failing Array.isArray) instead of engine arrays. This
+  // replays record → persist → reboot → load twice through that layer:
+  // every restart used to rebuild spans to [] and persist the erasure.
+  const toForeign = (v) => {
+    if (Array.isArray(v)) {
+      const o = { length: v.length }
+      for (let i = 0; i < v.length; i++) o[i] = toForeign(v[i])
+      return o
+    }
+    if (v && typeof v === "object") {
+      const o = {}
+      for (const k of Object.keys(v)) o[k] = toForeign(v[k])
+      return o
+    }
+    return v
+  }
+  const todayKey = "2026-08-15"
+  const t0 = localTime(2026, 7, 15, 9, 0, 0)
+  let disk = { days: {} }
+  let today = Model.newDay()
+  let days = {}
+  const persist = () => {
+    const merged = Object.assign({}, days)
+    merged[todayKey] = today
+    disk = JSON.parse(JSON.stringify({ days: merged }))
+  }
+  const reboot = () => {
+    // Mirror the service load path: sanitize the adapter-typed days,
+    // then rebuild the live day carrying sanitized spans.
+    const clean = Model.sanitizeHistory(toForeign(disk.days), {}, {})
+    days = clean.days
+    const prev = clean.days[todayKey]
+    const live = {
+      total: (prev && prev.total) || 0,
+      apps: Object.assign({}, (prev && prev.apps) || {}),
+    }
+    const carried = Model.sanitizeSpans(prev && prev.spans)
+    if (carried.spans && carried.spans.length > 0) live.spans = carried.spans
+    today = live
+  }
+  const record = (app, start, end) => {
+    today = Model.appendSpan(
+      State.accumulateBucket(today, app, end - start),
+      app,
+      start,
+      end,
+    )
+  }
+  const covered = () =>
+    (today.spans || []).reduce((a, s) => a + (s.end - s.start), 0)
+  record("zen", t0, t0 + 60000)
+  record("foot", t0 + 60000, t0 + 120000)
+  persist()
+  reboot()
+  assert.equal(today.total, 120000)
+  assert.equal(covered(), 120000)
+  record("zen", t0 + 120000, t0 + 180000)
+  persist()
+  reboot()
+  assert.equal(today.total, 180000)
+  assert.equal(covered(), 180000)
+  assert.equal(Array.isArray(today.spans), true)
+  const view = Model.daySpanView(today, todayKey, "#e45b93")
+  assert.equal(
+    view.segments.reduce((a, s) => a + s.ms, 0),
+    180000,
+  )
+})
+
 test("advanceRollover with no open bucket just carries the day", () => {
   const after = localTime(2026, 7, 16, 0, 0, 5)
   const state = {

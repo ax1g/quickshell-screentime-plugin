@@ -22,12 +22,23 @@ function accumulateBucket(today, app, dur) {
   // NaN <= 0 is false, so a plain dur <= 0 check lets NaN through and
   // poisons the day total. Only a positive finite duration accrues.
   // Recorded spans ride along untouched; appends happen at the credit
-  // sites below, never here.
+  // sites below, never here. The ride-along normalizes through the
+  // model so a foreign adapter list can never survive in memory.
   if (!app || !isFinite(dur) || dur <= 0) return today
   var apps = Object.assign({}, today.apps)
   apps[app] = (apps[app] || 0) + dur
   var out = { total: today.total + dur, apps: apps }
-  if (today && Array.isArray(today.spans)) out.spans = today.spans
+  if (
+    today &&
+    today.spans !== undefined &&
+    Model &&
+    typeof Model.asSpanArray === "function"
+  ) {
+    var carried = Model.asSpanArray(today.spans)
+    if (carried.length > 0) out.spans = carried
+  } else if (today && Array.isArray(today.spans)) {
+    out.spans = today.spans
+  }
   return out
 }
 
