@@ -79,7 +79,7 @@ Column {
                     color: hour === root.peakHour ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.9)
                     opacity: 1.0
                     anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: hourLabel.bottom
+                    anchors.bottom: hourLabel.top
                     anchors.bottomMargin: Style.space(2)
                     height: barPx
 
