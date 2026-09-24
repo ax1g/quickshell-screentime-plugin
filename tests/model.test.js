@@ -2536,6 +2536,23 @@ test("fmtClock renders day times", () => {
   assert.equal(Model.fmtClock("junk"), "")
 })
 
+test("gapLine scrubs app names into parseable journal lines", () => {
+  const line = Model.gapLine(1000, "lock", "zen-bin", "", true, false, false)
+  assert.deepEqual(JSON.parse(line), {
+    at: 1000,
+    kind: "lock",
+    lastApp: "zen-bin",
+    nextApp: "",
+    locked: true,
+    screensaver: false,
+    resolving: false,
+  })
+  // Shell-unsafe characters never reach the redirection.
+  const nasty = JSON.parse(Model.gapLine(0, "x", "a'b\"c$d`e;f|g", null))
+  assert.equal(nasty.lastApp, "abcdefg")
+  assert.match(line, /^\{.*\}$/)
+})
+
 test("parseDayView prefers the explicit pick, then the retired toggle", () => {
   assert.equal(Model.parseDayView("timeline"), "timeline")
   assert.equal(Model.parseDayView("apps"), "apps")

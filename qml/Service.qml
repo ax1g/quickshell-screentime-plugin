@@ -291,6 +291,7 @@ Item {
             return;
         }
         if (app && !root.shouldTrack(app)) {
+            root.journalGap("untracked-focus", app);
             root.activeApp = "";
             root.activeSpanApp = "";
             root.activeStart = 0;
@@ -651,6 +652,8 @@ Item {
             if (root.debugLogging)
                 console.warn("agx.screen-time: lock started");
             var now = Date.now();
+            if (root.activeApp)
+                root.journalGap("lock", root.activeApp);
             root.rolloverIfNeeded(now);
             applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
             root.activeSpanApp = "";
@@ -679,6 +682,8 @@ Item {
             if (root.debugLogging)
                 console.warn("agx.screen-time: screensaver started");
             var now = Date.now();
+            if (root.activeApp)
+                root.journalGap("screensaver", root.activeApp);
             root.rolloverIfNeeded(now);
             applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
             root.activeSpanApp = "";
@@ -823,6 +828,8 @@ Item {
         onTriggered: {
             var now = Date.now();
             if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs)) {
+                if (root.activeApp)
+                    root.journalGap("suspend-drop", root.activeApp);
                 applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
                 root.activeSpanApp = "";
                 // Full rollover, never the bare carry: unmirrored time
@@ -837,6 +844,10 @@ Item {
                 root.rolloverIfNeeded();
                 root.commitElapsed(now);
                 root.persist();
+                // Open-loop silence with no pause flags: the bucket never
+                // opened (or died without a close event). Throttled inside.
+                if (!root.activeApp && !root.sessionLocked && !root.screensaverActive)
+                    root.journalGap("no-bucket", "");
             }
             root.lastTick = now;
         }
@@ -868,6 +879,38 @@ Item {
         id: saveRetryTimer
         repeat: false
         onTriggered: historyFile.writeAdapter()
+    }
+
+    // Temporary untracked-gap journal (diagnostic): every bucket close
+    // into silence appends one JSONL line next to history.json,
+    // ring-buffered at 200 lines. Recording, retention and schemas are
+    // untouched; removed before release.
+    property double lastGapLogAt: 0
+    property string pendingGapLine: ""
+    function journalGap(kind, lastApp) {
+        var now = Date.now();
+        // The open-loop no-bucket poll fires every heartbeat while the
+        // silence lasts; one line a minute is enough to bound it.
+        if (kind === "no-bucket") {
+            if (now - root.lastGapLogAt < 60000)
+                return;
+            root.lastGapLogAt = now;
+        }
+        root.pendingGapLine = stateModel.gapLine(now, kind, lastApp || "", root.rawApp || "", root.sessionLocked, root.screensaverActive, root.resolveInFlight);
+        root.flushGapLine();
+    }
+    function flushGapLine() {
+        if (!root.pendingGapLine || gapProc.running)
+            return;
+        var line = root.pendingGapLine;
+        root.pendingGapLine = "";
+        gapProc.command = ["bash", "-c", "f=\"$HOME/.config/omarchy/screen-time/gaps.jsonl\"; printf '%s\\n' \"$1\" >> \"$f\"; tail -n 200 \"$f\" > \"$f.tmp\" && mv -f \"$f.tmp\" \"$f\"", "bash", line];
+        gapProc.running = true;
+    }
+    Process {
+        id: gapProc
+        environment: root.procEnv
+        onExited: root.flushGapLine()
     }
 
     Connections {

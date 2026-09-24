@@ -1686,6 +1686,25 @@ function fmtClock(ms) {
   return pad2(d.getHours()) + ":" + pad2(d.getMinutes())
 }
 
+// One untracked-gap journal line, temporary diagnostic for classifying
+// blank timeline stretches. App names scrub to a shell-safe alphabet
+// so the writer can append with plain redirection; the line stays
+// JSON-parseable for zero-tooling review.
+function gapLine(at, kind, lastApp, nextApp, locked, screensaver, resolving) {
+  var scrub = function (name) {
+    return String(name || "").replace(/[^A-Za-z0-9._\-:]/g, "")
+  }
+  return JSON.stringify({
+    at: Number(at) || 0,
+    kind: String(kind || ""),
+    lastApp: scrub(lastApp),
+    nextApp: scrub(nextApp),
+    locked: locked === true,
+    screensaver: screensaver === true,
+    resolving: resolving === true,
+  })
+}
+
 // Day view: the apps donut or the 24h timeline. An explicit pick wins;
 // otherwise the retired demo toggle still opts in, so the live setting
 // enabled for it keeps working; everything else renders the donut.
@@ -3076,6 +3095,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     daySpanView: daySpanView,
     dayHourlyView: dayHourlyView,
     fmtClock: fmtClock,
+    gapLine: gapLine,
     parseDayView: parseDayView,
     hexToHsl: hexToHsl,
     hslToHex: hslToHex,

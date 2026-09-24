@@ -264,3 +264,22 @@ test("heartbeat wake across midnight flushes instead of bare-carrying", () => {
   assert(fn[0].includes("root.rolloverIfNeeded(now)"))
   assert(!fn[0].includes("State.rolloverIfNeeded"))
 })
+
+test("untracked gaps journal themselves for later review", () => {
+  // Temporary diagnostic: every bucket close into silence appends one
+  // JSONL line next to history.json (ring-buffered, removed before
+  // release). Recording, retention and schemas are untouched.
+  assert.match(service, /function journalGap\(kind, lastApp\)/)
+  assert.match(service, /stateModel\.gapLine\(now, kind, lastApp/)
+  assert.match(service, /id: gapProc/)
+  assert.match(service, /gaps\.jsonl/)
+  assert.match(service, /tail -n 200/)
+  // Suspend drops, pauses and untracked focus journal with the app;
+  // the open-loop silence poll is throttled to one line a minute.
+  const hb = service.match(/id: heartbeatTimer[\s\S]*?\n    \}/)
+  assert(hb && hb[0].includes('journalGap("suspend-drop"'))
+  assert(hb && hb[0].includes('journalGap("no-bucket"'))
+  assert.match(service, /journalGap\("lock"/)
+  assert.match(service, /journalGap\("screensaver"/)
+  assert.match(service, /journalGap\("untracked-focus"/)
+})
