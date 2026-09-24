@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   grouped in the main view, while the timeline identifies sites from a
   clean rule set with no adult entries. Your pick persists across
   restarts.
+- Screen limits replace screen goals: Off/4/6/8/10/12h presets framed
+  as time left, with a warning badge in the bar and a countdown in the
+  hero. Right-click the bar to cycle the total, the time left and the
+  icon. Existing settings carry over untouched.
+- The day timeline hides completely from Settings, toggle icon and all,
+  for a donut-only panel.
+- The timeline names 180+ work, social and entertainment sites, from
+  Linear and Figma to Chess.com and Crunchyroll — everything else still
+  groups under its browser.
 
 ### Changed
 
