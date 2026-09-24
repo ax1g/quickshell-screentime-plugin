@@ -2632,8 +2632,11 @@ test("siteForTitle matches clean rules first-win, else empty", () => {
 
 test("default site rules ship no adult entries", () => {
   const rules = JSON.stringify(Model.defaultSiteRules())
-  assert.doesNotMatch(rules, /\b(xvideos|xnxx|pornhub|xhamster|onlyfans)\b/i)
-  assert.ok(Model.defaultSiteRules().length > 20)
+  assert.doesNotMatch(
+    rules,
+    /\b(xvideos|xnxx|pornhub|xhamster|onlyfans|redtube|youporn|chaturbate|bongacams)\b/i,
+  )
+  assert.ok(Model.defaultSiteRules().length >= 100)
 })
 
 test("site buckets categorize by domain, unknown sites stay browsing", () => {
@@ -2651,6 +2654,31 @@ test("site buckets categorize by domain, unknown sites stay browsing", () => {
     ["site:chatgpt.com", "Productivity"],
     ["site:wikipedia.org", "Education & Research"],
     ["site:figma.com", "Creative"],
+    ["site:canva.com", "Creative"],
+    ["site:midjourney.com", "Creative"],
+    ["site:linear.app", "Development"],
+    ["site:vercel.com", "Development"],
+    ["site:stackoverflow.com", "Development"],
+    ["site:kaggle.com", "Education & Research"],
+    ["site:ted.com", "Education & Research"],
+    ["site:duolingo.com", "Education & Research"],
+    ["site:gmail.com", "Communication"],
+    ["site:slack.com", "Communication"],
+    ["site:zoom.us", "Communication"],
+    ["site:skype.com", "Communication"],
+    ["site:snapchat.com", "Social"],
+    ["site:bsky.app", "Social"],
+    ["site:linkedin.com", "Social"],
+    ["site:hulu.com", "Entertainment"],
+    ["site:disneyplus.com", "Entertainment"],
+    ["site:max.com", "Entertainment"],
+    ["site:tv.apple.com", "Entertainment"],
+    ["site:imdb.com", "Entertainment"],
+    ["site:store.steampowered.com", "Gaming"],
+    ["site:chess.com", "Gaming"],
+    ["site:todoist.com", "Productivity"],
+    ["site:ai.meta.com", "Productivity"],
+    ["site:dropbox.com", "Productivity"],
     ["site:random-blog-xyz.com", "Web Browsing"],
   ]
   for (const [app, want] of cases)
