@@ -827,8 +827,8 @@ test("day view swaps the donut page and the timeline page", () => {
     /writeSetting\("dayView", root\.dayView === "timeline" \? "apps" : "timeline"\)/,
   )
   // The timeline page shows only the strip, its legend and the
-  // experimental chart; onboarding and the week patterns stay
-  // exclusive to the main panel.
+  // hourly chart; onboarding and the week patterns stay exclusive
+  // to the main panel.
   assert.match(
     panel,
     /visible: root\.showOnboarding && root\.dayView === "apps"/,
@@ -837,7 +837,8 @@ test("day view swaps the donut page and the timeline page", () => {
   assert.match(panel, /Model\.dayHourlyView\(root\.activeDay, Color\.accent\)/)
   assert.match(panel, /HourlyChart \{/)
   assert.match(panel, /hours: root\.dayHours \? root\.dayHours\.hours : \[\]/)
-  // The in-place toggle answers to d like the yearly g.
+  assert.match(panel, /peakHour: root\.dayHours \? root\.dayHours\.peakHour : -1/)
+  // The hero toggle answers to d like the yearly g.
   assert.match(panel, /tag === "d"/)
 })
 

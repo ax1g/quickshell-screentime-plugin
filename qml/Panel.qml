@@ -974,6 +974,7 @@ Panel {
                                         accent: Color.accent
                                         foreground: root.contentForeground
                                         fontFamily: root.contentFontFamily
+                                        tipBackground: root.bar ? root.bar.background : Color.background
                                     }
                                 }
                             }

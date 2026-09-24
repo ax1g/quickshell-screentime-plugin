@@ -131,7 +131,8 @@ TestCase {
             peakHour: 9,
             accent: "#e45b93",
             foreground: "#ffffff",
-            fontFamily: "monospace"
+            fontFamily: "monospace",
+            tipBackground: "#101315"
         });
         verify(chart !== null, "hourly chart instantiates");
         var all = [];
@@ -200,6 +201,7 @@ TestCase {
             accent: "#e45b93"
             foreground: "#ffffff"
             fontFamily: "monospace"
+            tipBackground: "#101315"
             maxMs: 0
             peakHour: -1
             hours: []
