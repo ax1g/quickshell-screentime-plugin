@@ -251,6 +251,23 @@ test("icon-only glyph matches shell status icon geometry", () => {
   assert.match(bar, /fontSize: Style\.bar\.iconFont/)
 })
 
+test("right-click cycles full, limit-left, icon-only with a limit on", () => {
+  // Without a limit the click keeps flipping full and icon-only.
+  assert.match(bar, /function cycleBarMode\(\)/)
+  assert.match(bar, /root\.dailyGoalHours <= 0/)
+  assert.match(bar, /root\.setSetting\("iconOnly", !root\.iconOnly\)/)
+  // With a limit the middle stop shows the remaining time instead of
+  // the accrued total, and the reached badge yields to it.
+  assert.match(bar, /root\.setSetting\("limitLeft", true\)/)
+  assert.match(bar, /root\.setSetting\("limitLeft", false\)/)
+  assert.match(bar, /" left"/)
+  assert.match(bar, /root\.displayLabel/)
+  assert.match(
+    bar,
+    /root\.goalReached && !root\.limitLeft\) \? " !" : ""/,
+  )
+})
+
 test("wipe-all stages through the menu into the service", () => {
   assert.match(service, /function resetAll\(\)/)
   assert.match(menu, /signal wipeRequested/)
