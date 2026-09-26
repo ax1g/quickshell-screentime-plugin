@@ -185,8 +185,21 @@ function isSiteKey(app) {
 // Seed rules owned by the tracker: high-traffic work, social and media
 // sites whose titles reliably name them. Deliberately free of adult-site
 // entries — untracked tastes stay untracked tastes.
+//
+// The title is the only per-tab signal, and it carries TOPIC words, not
+// site names: a Google search for "fastapi" is titled "fastapi", a chat
+// thread about Tailwind is titled "Tailwind". Bare-topic rules launder
+// those pages into sites never visited (days of fastapi.tiangolo.com
+// spans with zero fastapi visits in browser history). So topic-like
+// names anchor to the site's own title suffix ("- FastAPI", "| Bun
+// Docs"), and aggregator pages match first so a query can never mint a
+// fake site. Brand names distinctive enough to never be ordinary words
+// keep plain matches.
 function defaultSiteRules() {
   return [
+    // Aggregator pages launder their query into any topic rule below,
+    // so they match first: a search for "fastapi" is Google, not FastAPI.
+    { match: "\\bGoogle Search\\b", site: "google.com" },
     { match: "\\bWhatsApp\\b", site: "whatsapp.com" },
     { match: "\\bMessenger\\b", site: "messenger.com" },
     { match: "\\bTelegram\\b", site: "telegram.org" },
@@ -203,13 +216,13 @@ function defaultSiteRules() {
     { match: " X$|\\bTwitter\\b|\\bx\\.com\\b", site: "x.com" },
     { match: "\\bLinkedIn\\b", site: "linkedin.com" },
     { match: "\\bReddit\\b|^r/", site: "reddit.com" },
-    { match: "\\bYouTube\\b", site: "youtube.com" },
+    { match: "-\\s*YouTube\\s*$", site: "youtube.com" },
     { match: "\\bTwitch\\b", site: "twitch.tv" },
     { match: "\\bNetflix\\b", site: "netflix.com" },
     { match: "\\bSpotify\\b", site: "spotify.com" },
-    { match: "\\bGitHub\\b", site: "github.com" },
+    { match: "GitHub\\s*$", site: "github.com" },
     { match: "\\bGitLab\\b", site: "gitlab.com" },
-    { match: "\\bStack Overflow\\b", site: "stackoverflow.com" },
+    { match: "-\\s*Stack Overflow\\s*$", site: "stackoverflow.com" },
     {
       match: "\\bGoogle (?:Docs|Sheets|Slides|Drive)\\b",
       site: "docs.google.com",
@@ -219,7 +232,7 @@ function defaultSiteRules() {
     { match: "\\bFigma\\b", site: "figma.com" },
     { match: "\\bChatGPT\\b", site: "chatgpt.com" },
     { match: "\\bClaude\\b", site: "claude.ai" },
-    { match: "\\bWikipedia\\b", site: "wikipedia.org" },
+    { match: "-\\s*Wikipedia\\s*$", site: "wikipedia.org" },
     // Work: issue tracking, docs, design and team planning.
     { match: "\\bLinear\\b", site: "linear.app" },
     { match: "\\bJira\\b", site: "atlassian.com" },
@@ -246,20 +259,19 @@ function defaultSiteRules() {
     { match: "\\bPexels\\b", site: "pexels.com" },
     { match: "\\bWebflow\\b", site: "webflow.com" },
     // Development: hosts, registries, clouds, docs and Q&A.
-    { match: "\\bGitHub\\b", site: "github.com" },
+    // (GitHub and Stack Overflow match once, in the seed rules above.)
     { match: "\\bGitLab\\b", site: "gitlab.com" },
     { match: "\\bBitbucket\\b", site: "bitbucket.org" },
-    { match: "\\bStack Overflow\\b", site: "stackoverflow.com" },
-    { match: "\\bStack Exchange\\b", site: "stackexchange.com" },
-    { match: "\\bSuper User\\b", site: "superuser.com" },
-    { match: "\\bServer Fault\\b", site: "serverfault.com" },
-    { match: "\\bAsk Ubuntu\\b", site: "askubuntu.com" },
+    { match: "-\\s*Stack Exchange\\s*$", site: "stackexchange.com" },
+    { match: "-\\s*Super User\\s*$", site: "superuser.com" },
+    { match: "-\\s*Server Fault\\s*$", site: "serverfault.com" },
+    { match: "-\\s*Ask Ubuntu\\s*$", site: "askubuntu.com" },
     { match: "\\bPostman\\b", site: "postman.com" },
     { match: "\\bInsomnia\\b", site: "insomnia.rest" },
     { match: "\\bDBeaver\\b", site: "dbeaver.io" },
     { match: "\\bVercel\\b", site: "vercel.com" },
     { match: "\\bNetlify\\b", site: "netlify.com" },
-    { match: "\\bnpm\\b", site: "npmjs.com" },
+    { match: "-\\s*npm\\s*$", site: "npmjs.com" },
     { match: "\\bPyPI\\b", site: "pypi.org" },
     { match: "\\bcrates\\.io\\b", site: "crates.io" },
     { match: "\\bCloudflare\\b", site: "cloudflare.com" },
@@ -282,21 +294,23 @@ function defaultSiteRules() {
     { match: "\\bStackBlitz\\b", site: "stackblitz.com" },
     { match: "\\bReplit\\b|\\bRepl\\.it\\b", site: "replit.com" },
     { match: "\\bRead the Docs\\b|\\bReadTheDocs\\b", site: "readthedocs.org" },
-    { match: "\\bTailwind\\b", site: "tailwindcss.com" },
+    { match: "-\\s*Tailwind CSS\\s*$", site: "tailwindcss.com" },
     { match: "\\bBootstrap\\b", site: "getbootstrap.com" },
-    { match: "\\bReact\\b", site: "react.dev" },
-    { match: "Vue\\.js|\\bVuejs\\b", site: "vuejs.org" },
-    { match: "\\bAngular\\b", site: "angular.dev" },
+    { match: "[-\u2013\u2014]\\s*React\\s*$", site: "react.dev" },
+    { match: "\\|\\s*Vue\\.js\\s*$", site: "vuejs.org" },
+    { match: "\\|\\s*Angular\\s*$", site: "angular.dev" },
     { match: "\\bSvelte\\b", site: "svelte.dev" },
     { match: "\\bNext\\.js\\b", site: "nextjs.org" },
     { match: "\\bNuxt\\b", site: "nuxt.com" },
-    { match: "\\bDjango\\b", site: "djangoproject.com" },
+    { match: "\\|\\s*Django\\s*$", site: "djangoproject.com" },
     { match: "\\bFlask\\b", site: "flask.palletsprojects.com" },
-    { match: "\\bFastAPI\\b", site: "fastapi.tiangolo.com" },
-    { match: "\\bPython\\b", site: "python.org" },
+    { match: "-\\s*FastAPI\\s*$", site: "fastapi.tiangolo.com" },
+    { match: "Python [\\d.]+ documentation\\s*$", site: "python.org" },
+    { match: "\\|\\s*Bun (?:Docs|Blog)\\s*$|^Bun \u2014 ", site: "bun.com" },
+    { match: "-\\s*Rust\\s*$", site: "doc.rust-lang.org" },
     { match: "\\bGitBook\\b", site: "gitbook.com" },
     { match: "\\bSourcegraph\\b", site: "sourcegraph.com" },
-    { match: "\\bStripe\\b", site: "stripe.com" },
+    { match: "\\|\\s*Stripe\\s*$", site: "stripe.com" },
     { match: "\\bTwilio\\b", site: "twilio.com" },
     { match: "\\bOpenAI\\b", site: "openai.com" },
     { match: "\\bAnthropic\\b", site: "anthropic.com" },

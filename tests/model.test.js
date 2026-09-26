@@ -2773,6 +2773,47 @@ test("siteForTitle matches clean rules first-win, else empty", () => {
   assert.equal(Model.isBrowserApp("code"), false)
 })
 
+test("site rules anchor to title suffixes, topics alone stay unclassified", () => {
+  // Real docs pages carry the site's own suffix.
+  assert.equal(
+    Model.siteForTitle("Static Files - FastAPI"),
+    "fastapi.tiangolo.com",
+  )
+  assert.equal(
+    Model.siteForTitle("Installing Tailwind CSS with Vite - Tailwind CSS"),
+    "tailwindcss.com",
+  )
+  assert.equal(Model.siteForTitle("Welcome to Bun | Bun Docs"), "bun.com")
+  assert.equal(
+    Model.siteForTitle("Vec in std::vec - Rust"),
+    "doc.rust-lang.org",
+  )
+  assert.equal(
+    Model.siteForTitle(
+      "venv — Creation of virtual environments — Python 3.14.7 documentation",
+    ),
+    "python.org",
+  )
+  assert.equal(
+    Model.siteForTitle("lofi beats to relax to - YouTube"),
+    "youtube.com",
+  )
+  assert.equal(Model.siteForTitle("owner/repo: stuff · GitHub"), "github.com")
+  assert.equal(
+    Model.siteForTitle("history of time - Wikipedia"),
+    "wikipedia.org",
+  )
+  assert.equal(Model.siteForTitle("ChatGPT"), "chatgpt.com")
+  // Topic words on other pages (searches, chats) never mint a site.
+  assert.equal(
+    Model.siteForTitle("fastapi static files - Google Search"),
+    "google.com",
+  )
+  assert.equal(Model.siteForTitle("FastAPI static files help"), "")
+  assert.equal(Model.siteForTitle("help with my Tailwind layout"), "")
+  assert.equal(Model.siteForTitle("summarize this YouTube video"), "")
+})
+
 test("default site rules ship no adult entries", () => {
   const rules = JSON.stringify(Model.defaultSiteRules())
   assert.doesNotMatch(
