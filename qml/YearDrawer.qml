@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "components"
+import "../js/Model.js" as Model
 
 // Yearly overview: per-month bars plus Wrapped-style retro cards.
 // Drawer slide chrome lives in Panel; this is the scrolling content.
@@ -26,12 +27,18 @@ Item {
     // mutes with it.
     required property bool easterEggs
     required property var yearMonths
+    required property var yearDays
+    required property string yearGraph
+    required property int heatmapSavedWeek
+    required property string todayKey
     required property var monthNamesShort
     required property var monthNamesLong
 
     signal closeRequested
     signal prevYearRequested
     signal nextYearRequested
+    signal yearGraphSelected(string mode)
+    signal heatmapPositionSaved(int week)
 
     // Entry celebration, called by the panel as the drawer slides in.
     function swingCalendar() {
@@ -132,7 +139,7 @@ Item {
             anchors.left: yearHeroIcon.right
             anchors.leftMargin: Style.space(14)
             anchors.right: parent.right
-            anchors.rightMargin: backCorner.implicitWidth + Style.space(12)
+            anchors.rightMargin: backCorner.implicitWidth + graphToggle.implicitWidth + Style.space(20)
             anchors.top: parent.top
             spacing: 0
 
@@ -205,6 +212,47 @@ Item {
             }
         }
 
+        // Graph switcher by the Back button, mirroring the main
+        // panel's day toggle by the settings gear: one icon flips
+        // bars ↔ heatmap in place; the pick persists in settings.
+        Text {
+            id: graphToggle
+            text: root.yearGraph === "heatmap" ? "\uf0c9" : "\uf00a"
+            color: graphToggleMouse.containsMouse ? root.foreground : Qt.darker(root.foreground, 1.4)
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            anchors.right: backCorner.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: backCorner.verticalCenter
+        }
+
+        MouseArea {
+            id: graphToggleMouse
+            anchors.fill: graphToggle
+            anchors.margins: -Style.space(4)
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.yearGraphSelected(root.yearGraph === "heatmap" ? "bars" : "heatmap")
+
+            ScreenTip {
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                tipBackground: root.panelBackground
+
+                hovered: graphToggleMouse.containsMouse
+                tipText: root.yearGraph === "heatmap" ? "Show month bars" : "Show heatmap"
+            }
+        }
+
+        HintBadge {
+            label: "g"
+            fontFamily: root.fontFamily
+            accent: root.accent
+            show: root.hintMode
+            anchors.top: graphToggle.top
+            anchors.right: graphToggle.right
+        }
+
         BackButton {
             id: backCorner
             anchors.right: parent.right
@@ -249,7 +297,6 @@ Item {
                 id: heatGrid
                 width: parent.width
                 spacing: Style.space(6)
-                topPadding: Style.space(10)
                 bottomPadding: Style.space(2)
 
                 readonly property var months: root.yearMonths
@@ -276,27 +323,63 @@ Item {
                     font.pixelSize: Style.font.caption
                 }
 
-                // Outer-id reads are idiomatic in delegates; muted for the linter.
-                // qmllint disable unqualified
-                Repeater {
-                    model: 12
+                // One graph shows at a time; layout snaps to the visible one.
+                Item {
+                    width: parent.width
+                    visible: root.yearGraph === "bars"
+                    height: visible ? barsColumn.implicitHeight : 0
+                    implicitHeight: height
 
-                    MonthRow {
-                        months: heatGrid.months
-                        maxMs: heatGrid.maxMs
-                        monthShort: root.monthNamesShort
-                        monthLong: root.monthNamesLong
-                        isThisYear: heatGrid.isThisYear
-                        nowMonth: heatGrid.nowMonth
-                        gridWidth: heatGrid.width
-                        hoursW: heatGrid.hoursW
-                        foreground: root.foreground
-                        fontFamily: root.fontFamily
-                        panelBackground: root.panelBackground
-                        accent: root.accent
+                    Column {
+                        id: barsColumn
+                        width: parent.width
+                        spacing: Style.space(6)
+
+                        // Outer-id reads are idiomatic in delegates; muted for the linter.
+                        // qmllint disable unqualified
+                        Repeater {
+                            model: 12
+
+                            MonthRow {
+                                months: heatGrid.months
+                                maxMs: heatGrid.maxMs
+                                monthShort: root.monthNamesShort
+                                monthLong: root.monthNamesLong
+                                isThisYear: heatGrid.isThisYear
+                                nowMonth: heatGrid.nowMonth
+                                gridWidth: barsColumn.width
+                                hoursW: heatGrid.hoursW
+                                foreground: root.foreground
+                                fontFamily: root.fontFamily
+                                panelBackground: root.panelBackground
+                                accent: root.accent
+                            }
+                        }
+                        // qmllint enable unqualified
                     }
                 }
-                // qmllint enable unqualified
+
+                Item {
+                    width: parent.width
+                    visible: root.yearGraph === "heatmap"
+                    height: visible ? yearHeatmap.implicitHeight : 0
+                    implicitHeight: height
+
+                    YearHeatmap {
+                        id: yearHeatmap
+                        width: parent.width
+                        weeks: Model.yearHeatmap(root.yearDays, root.currentYear, root.todayKey).weeks
+                        currentMonth: heatGrid.isThisYear ? root.monthNamesShort[heatGrid.nowMonth] : ""
+                        savedWeek: root.heatmapSavedWeek
+                        foreground: root.foreground
+                        fontFamily: root.fontFamily
+                        accent: root.accent
+                        panelBackground: root.panelBackground
+                        onPositionSaved: function (week) {
+                            root.heatmapPositionSaved(week);
+                        }
+                    }
+                }
 
                 Item {
                     width: parent.width
@@ -331,29 +414,49 @@ Item {
                     property var leftCards: []
                     property var rightCards: []
 
-                    // Columns drift independently; cards keep own height.
+                    // Masonry split: each card lands in the currently shorter
+                    // column, measured in real pixels once delegates exist,
+                    // estimated before. Runs on facts/width changes only —
+                    // never on heights — so a re-split cannot loop against
+                    // its own layout; the deferred pass swaps estimates for
+                    // measurements after delegates polish.
                     function splitCards() {
                         var cards = root.yearFacts;
+                        var measured = measuredHeights();
                         var left = [];
                         var right = [];
-                        var leftScore = 0;
-                        var rightScore = 0;
+                        var leftH = 0;
+                        var rightH = 0;
                         for (var i = 0; i < cards.length; i++) {
-                            var score = cardScore(cards[i]);
-                            if (leftScore <= rightScore) {
+                            var h = measured[String(cards[i].label)] || estimateHeight(cards[i]);
+                            if (leftH <= rightH) {
                                 left.push(cards[i]);
-                                leftScore += score;
+                                leftH += h + Style.space(8);
                             } else {
                                 right.push(cards[i]);
-                                rightScore += score;
+                                rightH += h + Style.space(8);
                             }
                         }
                         yearlyInsightsGrid.leftCards = left;
                         yearlyInsightsGrid.rightCards = right;
                     }
 
-                    function cardScore(card) {
-                        return estimateLines(String(card.value || "")) + estimateLines(String(card.sub || ""));
+                    function measuredHeights() {
+                        var out = {};
+                        var cols = [leftColumn, rightColumn];
+                        for (var c = 0; c < cols.length; c++) {
+                            var kids = cols[c].children;
+                            for (var k = 0; k < kids.length; k++) {
+                                if (kids[k].label !== undefined && kids[k].implicitHeight > 0)
+                                    out[String(kids[k].label)] = kids[k].implicitHeight;
+                            }
+                        }
+                        return out;
+                    }
+
+                    function estimateHeight(card) {
+                        var lines = estimateLines(String(card.value || "")) + estimateLines(String(card.sub || ""));
+                        return (lines + 2) * (Style.font.bodySmall + 4) + Style.space(20);
                     }
 
                     function estimateLines(text) {
@@ -363,20 +466,35 @@ Item {
                         return Math.max(1, Math.ceil(text.length / charsPerLine));
                     }
 
-                    onWidthChanged: splitCards()
+                    onWidthChanged: {
+                        splitCards();
+                        measureTimer.restart();
+                    }
 
                     Connections {
                         target: root
                         function onYearFactsChanged() {
                             yearlyInsightsGrid.splitCards();
+                            measureTimer.restart();
                         }
                     }
 
-                    Component.onCompleted: splitCards()
+                    Component.onCompleted: {
+                        splitCards();
+                        measureTimer.restart();
+                    }
+
+                    Timer {
+                        id: measureTimer
+                        interval: 100
+                        repeat: false
+                        onTriggered: yearlyInsightsGrid.splitCards()
+                    }
 
                     // Outer-id reads are idiomatic in delegates; muted for the linter.
                     // qmllint disable unqualified
                     CardColumn {
+                        id: leftColumn
                         width: (parent.width - Style.space(8)) / 2
                         cards: yearlyInsightsGrid.leftCards
                         foreground: root.foreground
@@ -384,6 +502,7 @@ Item {
                     }
 
                     CardColumn {
+                        id: rightColumn
                         width: (parent.width - Style.space(8)) / 2
                         cards: yearlyInsightsGrid.rightCards
                         foreground: root.foreground

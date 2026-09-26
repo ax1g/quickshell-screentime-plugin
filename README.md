@@ -12,12 +12,15 @@ local.
 ## Features
 
 - Live bar widget: today's total in your bar font, updated as you work.
-  Right-click collapses it to a single glyph; remembered.
+  Right-click cycles the total, the screen-limit remaining and a single
+  glyph; remembered.
 - Per-app tracking: idle, locked, suspend and desktop time never counted. A
   focused terminal shows what runs inside it (`opencode`, not `foot`),
   re-resolved live; `steam_app_123456` becomes the game title from local
   Steam metadata. Reverse-DNS IDs shortened; Chromium web apps fold by
-  hostname across profiles.
+  hostname across profiles. Browser tabs split into 180+ named sites —
+  flip on per-site rows in Settings and each site merges across browsers
+  into one row (`youtube.com` totals Zen and Firefox together).
 - Games count too: whatever you play — Steam, Battle.net, browser, emulator —
   gets timed like any other app. It's focused time, so an evening of being
   AFK in a lobby won't inflate your hours the way Steam's counter does.
@@ -34,15 +37,15 @@ local.
 - Usage patterns: top app, vs yesterday, and busiest day of the week you're
   looking at. Insight and retro colours follow your theme.
 - Configurable: the gear next to SHOW MORE opens sectioned prefs that
-  persist — hide the yearly overview or insights, set the weekly graph to
-  12/24/36/52 weeks, rename apps and ignore the noisy ones, see the
-  storage footprint and the totals that never expire, recolor the trophy
+  persist — hide the yearly overview, day timeline or insights, set the
+  weekly graph to 12/24/36/52 weeks, rename apps and ignore the noisy
+  ones, see the storage footprint and the totals that never expire, recolor the trophy
   and hero icons from theme swatches, mute the playful extras,
   triple-confirmed reset today (archives untouched), or four-click wipe
   everything (no undo).
-- Daily goal: set Off/4/6/8h; a ✓ badge lands in the bar when the day
-  reaches it, with remaining time in the tooltip and a progress bar
-  under the hero total.
+- Screen limit: set Off/4/6/8/10/12h; a warning badge lands in the bar
+  when the day reaches it, with the time left in the tooltip and a
+  countdown under the hero total.
 - Keyboard-first: the panel opens, closes, scrolls and triggers every
   control from the keyboard — see [Keybinds & hints](#keybinds--hints)
   below. Summon and control the panel via the `agx.screen-time` IPC
@@ -55,12 +58,12 @@ local.
 ## Keybinds & hints
 
 The panel is keyboard-first, and `f` is the only key you need to
-remember: press it and every pressable gets a key badge. Type the
-badge to trigger that control — single letters on the home panel (`y`
-yearly, `c` settings, `m` more, `b`/`n` week pages, `t` week total,
-`1`–`7` days), `b`/`n` to move between years in the yearly view, and
-two-letter tags on the settings menu. The badges disappear on any other
-press.
+  remember: press it and every pressable gets a key badge. Type the
+  badge to trigger that control — single letters on the home panel (`y`
+  yearly, `c` settings, `d` day timeline, `m` more, `b`/`n` week pages,
+  `t` week total, `1`–`7` days), `g` flips bars/heatmap plus `b`/`n` to
+  move between years in the yearly view, and two-letter tags on the
+  settings menu. The badges disappear on any other press.
 
 Everything else is standard: `j`/`↓` and `k`/`↑` scroll, `Esc` exits
 first hint mode then the panel, `Tab`/`Shift+Tab` move between bar
@@ -111,6 +114,10 @@ Everything lives in one local file, `~/.config/omarchy/screen-time/history.json`
 ```
 
 - Per-app focus time in milliseconds, keyed by day (`YYYY-MM-DD`).
+- Each credited focus chunk also records a span (`app`, `start`, `end`,
+  plus the source bucket when a browser tab resolves to a site), so the
+  timeline and per-site rows rebuild exactly; spans ride the same
+  retention as the totals and never reach the archive.
 - A session spanning midnight splits there, so each day keeps its own
   seconds.
 - Per-app detail is kept for a full year, always covering the chosen

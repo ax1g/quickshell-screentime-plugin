@@ -20,6 +20,8 @@ Column {
     required property bool hideYearly
     required property bool hideDailyInsights
     required property bool hideYearInsights
+    required property bool hideTimeline
+    required property bool expandBrowser
     required property int weekCount
     required property var weekOptions
     required property bool weekTotalAsPct
@@ -42,6 +44,8 @@ Column {
     signal yearlyToggled
     signal dailyInsightsToggled
     signal yearInsightsToggled
+    signal timelineToggled
+    signal expandBrowserToggled
     signal weekWindowSelected(int count)
     signal weekTotalModeToggled
     signal trophyToggled
@@ -67,6 +71,10 @@ Column {
     function activate(kind) {
         if (kind === "yearly")
             root.yearlyToggled();
+        else if (kind === "timeline")
+            root.timelineToggled();
+        else if (kind === "expand")
+            root.expandBrowserToggled();
         else if (kind === "daily")
             root.dailyInsightsToggled();
         else if (kind === "retro")
@@ -103,7 +111,7 @@ Column {
             });
         }
         add("back", 0);
-        var toggleKinds = ["yearly", "daily", "retro", "weektotal", "trophy", "easter"];
+        var toggleKinds = ["yearly", "timeline", "expand", "daily", "retro", "weektotal", "trophy", "easter"];
         for (var t = 0; t < toggleKinds.length; t++)
             add("toggle", toggleKinds[t]);
         for (var s = 0; s < root.recordColorOptions.length; s++)
@@ -262,6 +270,18 @@ Column {
                         label: "Yearly overview",
                         sub: "Monthly bars and a year-in-review",
                         shown: !root.hideYearly
+                    },
+                    {
+                        kind: "timeline",
+                        label: "Day timeline",
+                        sub: "Session strip and hourly rhythm beside the gear",
+                        shown: !root.hideTimeline
+                    },
+                    {
+                        kind: "expand",
+                        label: "Expand browsers by site",
+                        sub: "One row per site across browsers, zen keeps the rest",
+                        shown: root.expandBrowser
                     },
                     {
                         kind: "daily",
@@ -822,7 +842,7 @@ Column {
         }
     }
 
-    // ---- Daily goal ---------------------------------------------------
+    // ---- Screen limit -------------------------------------------------
 
     Rectangle {
         width: root.width
@@ -839,7 +859,7 @@ Column {
             spacing: Style.space(10)
 
             Text {
-                text: "DAILY GOAL"
+                text: "SCREEN LIMIT"
                 color: root.foreground
                 opacity: 0.45
                 font.family: root.fontFamily
@@ -848,8 +868,8 @@ Column {
                 font.letterSpacing: 1.5
             }
 
-            // Daily goal presets in hours; 0 is Off. The bar badges a check
-            // and the hero shows remaining once the day reaches the goal.
+            // Screen limit presets in hours; 0 is Off. The bar warns
+            // once the day reaches the limit and the hero counts down.
             Column {
                 width: parent.width
                 spacing: Style.space(6)
@@ -859,7 +879,7 @@ Column {
                     spacing: Style.space(2)
 
                     Text {
-                        text: "Daily screen time goal"
+                        text: "Daily screen time limit"
                         color: root.foreground
                         opacity: 0.75
                         font.family: root.fontFamily
@@ -869,7 +889,7 @@ Column {
                     }
 
                     Text {
-                        text: "A check badge appears in the bar when the day reaches it"
+                        text: "A warning badge appears in the bar when the day reaches it"
                         color: root.foreground
                         opacity: 0.45
                         font.family: root.fontFamily
@@ -1588,6 +1608,7 @@ Column {
                 height: Math.max(resetLabels.implicitHeight, resetBtnRow.height)
 
                 property int stage: 0
+                property real buttonGap: Style.space(16)
 
                 Timer {
                     id: resetRevertTimer
@@ -1600,7 +1621,7 @@ Column {
                     id: resetLabels
                     anchors.left: parent.left
                     anchors.top: parent.top
-                    width: parent.width - resetBtnRow.width - Style.space(12)
+                    width: parent.width - resetBtnRow.width - resetRow.buttonGap
                     spacing: Style.space(2)
 
                     Text {
@@ -1629,9 +1650,19 @@ Column {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
 
+                    // Reserve the widest confirmation state so labels never
+                    // reflow when the button text changes mid-confirmation.
+                    TextMetrics {
+                        id: resetButtonMetrics
+                        text: "REALLY?"
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: true
+                    }
+
                     Rectangle {
                         id: resetBox
-                        width: resetState.implicitWidth + Style.space(20)
+                        width: resetButtonMetrics.advanceWidth + Style.space(20)
                         height: resetState.implicitHeight + Style.space(10)
                         radius: Style.space(4)
                         readonly property bool warning: resetRow.stage > 0 || resetAction.containsMouse
@@ -1695,6 +1726,7 @@ Column {
                 height: Math.max(wipeLabels.implicitHeight, wipeBtnRow.height)
 
                 property int stage: 0
+                property real buttonGap: Style.space(16)
 
                 Timer {
                     id: wipeRevertTimer
@@ -1707,7 +1739,7 @@ Column {
                     id: wipeLabels
                     anchors.left: parent.left
                     anchors.top: parent.top
-                    width: parent.width - wipeBtnRow.width - Style.space(12)
+                    width: parent.width - wipeBtnRow.width - wipeRow.buttonGap
                     spacing: Style.space(2)
 
                     Text {
@@ -1737,9 +1769,19 @@ Column {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
 
+                    // The warning state is widest; keep the label column
+                    // stable through the staged wipe confirmation.
+                    TextMetrics {
+                        id: wipeButtonMetrics
+                        text: "CAN'T UNDO!"
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.bodySmall
+                        font.bold: true
+                    }
+
                     Rectangle {
                         id: wipeBox
-                        width: wipeState.implicitWidth + Style.space(20)
+                        width: wipeButtonMetrics.advanceWidth + Style.space(20)
                         height: wipeState.implicitHeight + Style.space(10)
                         radius: Style.space(4)
                         readonly property bool warning: wipeRow.stage > 0 || wipeAction.containsMouse

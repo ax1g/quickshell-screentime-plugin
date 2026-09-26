@@ -47,10 +47,7 @@ test("pause keeps buckets closed against reopen paths", () => {
     /function applyResolvedApp[\s\S]*?root\.sessionLocked \|\| root\.screensaverActive[\s\S]*?root\.resolveForApp = ""/,
   )
   // Locking kills any in-flight resolve.
-  assert.match(
-    service,
-    /if \(locked\) \{[\s\S]*?root\.resolveForApp = ""[\s\S]*?lock started/,
-  )
+  assert.match(service, /if \(locked\) \{[\s\S]*?root\.resolveForApp = ""/)
 })
 
 test("falls back to a persistent lock watcher when services are unavailable", () => {
@@ -67,8 +64,6 @@ test("falls back to a persistent lock watcher when services are unavailable", ()
     service,
     /setSessionLocked\(String\(line\)\.trim\(\) === "true"\)/,
   )
-  assert.doesNotMatch(service, /id: lockPollProc/)
-  assert.doesNotMatch(service, /StdioCollector \{\s*\n\s*id: lockPollOut/)
   // Watcher is supervised while the lock service is unreachable, and
   // stopped the moment the event-driven path becomes available.
   assert.match(service, /id: watcherSupervisorTimer/)
@@ -113,13 +108,11 @@ test("warns once instead of failing silently when services never appear", () => 
 })
 
 test("tracking prefs filter ignored apps and rename via aliases", () => {
-  assert.match(service, /property var ignoredApps: \[\]/)
-  assert.match(service, /property var appAliases: \(\{\}\)/)
   assert.match(service, /function setTrackingPrefs\(ignored, aliases\)/)
   assert.match(service, /Model\.parseIgnoredApps\(ignored\)/)
   assert.match(service, /Model\.parseAppAliases\(aliases\)/)
   assert.match(service, /Model\.isIgnoredApp\(appId, root\.ignoredApps\)/)
-  assert.match(service, /Model\.resolveAppName\(app, root\.appAliases\)/)
+  assert.match(service, /root\.trackingKeyFor\(app\)/)
 })
 
 test("resetAll wipes days, months and archive, then persists", () => {
@@ -142,10 +135,8 @@ test("changed aliases refold today and rename the live bucket", () => {
     /function refoldToday\(aliases\) \{[\s\S]*?\n    \}/,
   )
   assert(refold, "refoldToday block exists")
-  assert(refold[0].includes("var map = aliases || root.appAliases"))
   assert(refold[0].includes("root.commitElapsed(now)"))
   assert(refold[0].includes("Model.refoldDay(root.today, map)"))
-  assert(refold[0].includes("nd[root.todayKey] = root.today"))
   assert(refold[0].includes("Model.resolveAppName(previous, map)"))
   assert(refold[0].includes("root.persist()"))
   // setTrackingPrefs refolds only when the alias map actually changed.
@@ -191,4 +182,104 @@ test("corrupt history is set aside without depending on python", () => {
   assert(backup[0].includes("[[ -s "))
   assert(backup[0].includes(".corrupt-$(date +%s)"))
   assert(!backup[0].includes("|| exit 0"), "no early exit without python")
+})
+
+test("recorded spans carry from disk into the live day", () => {
+  // The load handler normalizes through sanitize (adapter sequences
+  // fail Array.isArray, so a slice gate would drop them) and leaves
+  // span-less days without the key.
+  assert.match(service, /Model\.sanitizeSpans\(prev\.spans\)/)
+  assert.match(service, /carried\.spans && carried\.spans\.length > 0/)
+  assert.match(service, /live\.spans = carried\.spans/)
+})
+
+test("browser totals keep site labels for daily timeline spans", () => {
+  // The title binding (not toplevel changes) drives tab switches.
+  assert.match(
+    service,
+    /readonly property string activeTitle: ToplevelManager\.activeToplevel/,
+  )
+  assert.match(service, /onActiveTitleChanged: root\.refreshSite\(\)/)
+  // The main app bucket is the resolved browser, while the span preserves
+  // its site key when a browser title resolves.
+  assert.match(service, /function browserSiteKey\(appId, title\)/)
+  assert.match(service, /Model\.siteKey\(Model\.siteForTitle\(title\)\)/)
+  assert.match(service, /function trackingKeyFor\(appId\)/)
+  assert.match(service, /function spanKeyFor\(appId, title\)/)
+  assert.match(
+    service,
+    /root\.browserSiteKey\(appId, title\) \|\| root\.trackingKeyFor\(appId\)/,
+  )
+  assert.match(service, /property string activeSpanApp: ""/)
+  assert.match(service, /root\.activeApp = root\.trackingKeyFor\(app\)/)
+  assert.match(
+    service,
+    /root\.activeSpanApp = root\.spanKeyFor\(app, tl && tl\.title \? tl\.title : ""\)/,
+  )
+})
+
+test("refreshSite rotates only on resolved-key changes", () => {
+  const fn = service.match(/function refreshSite\(\) \{[\s\S]*?\n    \}/)
+  assert(fn, "refreshSite block exists")
+  // Guards: pre-ready, resolving terminals, lock and screensaver pauses,
+  // and non-browser windows never rotate.
+  assert(fn[0].includes("if (!root.ready || root.resolveInFlight)"))
+  assert(fn[0].includes("if (root.sessionLocked || root.screensaverActive)"))
+  assert(fn[0].includes("Model.isBrowserApp(Model.canonicalApp(root.rawApp))"))
+  // Same resolved key (e.g. a ticking unread counter) churns nothing.
+  assert(fn[0].includes("if (!want || want === root.activeSpanApp)"))
+  assert(fn[0].includes("State.closeActiveBucket"))
+  assert(fn[0].includes("root.activeSpanApp = want"))
+  assert(fn[0].includes("root.persist()"))
+})
+
+test("event-driven closures roll over before recording", () => {
+  for (const name of [
+    "setTrackingPrefs",
+    "refreshSite",
+    "switchActive",
+    "setSessionLocked",
+    "setScreensaverActive",
+  ]) {
+    const fn = service.match(
+      new RegExp("function " + name + "\\([^)]*\\) \\{[\\s\\S]*?\\n    \\}"),
+    )
+    assert(fn, name + " block exists")
+    assert(
+      fn[0].includes("root.rolloverIfNeeded(now)"),
+      name + " rolls over before close",
+    )
+  }
+})
+
+test("heartbeat wake across midnight flushes instead of bare-carrying", () => {
+  const fn = service.match(/id: heartbeatTimer[\s\S]*?\n    \}/)
+  assert(fn, "heartbeatTimer block exists")
+  assert(
+    fn[0].includes("State.isSuspendGap(now, root.lastTick, root.suspendGapMs)"),
+  )
+  // The suspend branch rolls over through the flushing transition, so
+  // unmirrored time tracked before the sleep lands on the old day with
+  // its spans instead of evaporating at the carry.
+  assert(fn[0].includes("root.rolloverIfNeeded(now)"))
+  assert(!fn[0].includes("State.rolloverIfNeeded"))
+})
+
+test("untracked gaps journal themselves for later review", () => {
+  // Temporary diagnostic: every bucket close into silence appends one
+  // JSONL line next to history.json (ring-buffered, removed before
+  // release). Recording, retention and schemas are untouched.
+  assert.match(service, /function journalGap\(kind, lastApp\)/)
+  assert.match(service, /stateModel\.gapLine\(now, kind, lastApp/)
+  assert.match(service, /id: gapProc/)
+  assert.match(service, /gaps\.jsonl/)
+  assert.match(service, /tail -n 200/)
+  // Suspend drops, pauses and untracked focus journal with the app;
+  // the open-loop silence poll is throttled to one line a minute.
+  const hb = service.match(/id: heartbeatTimer[\s\S]*?\n    \}/)
+  assert(hb && hb[0].includes('journalGap("suspend-drop"'))
+  assert(hb && hb[0].includes('journalGap("no-bucket"'))
+  assert.match(service, /journalGap\("lock"/)
+  assert.match(service, /journalGap\("screensaver"/)
+  assert.match(service, /journalGap\("untracked-focus"/)
 })

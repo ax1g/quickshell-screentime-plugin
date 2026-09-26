@@ -58,11 +58,17 @@ function canonicalApp(name) {
 }
 
 // Display label: Chromium windows fold to hostname, reverse-DNS IDs to the
-// last segment, binaries pass through. Steam classes arrive pre-resolved
-// by python/resolve_app.py. Never touches the filesystem.
+// last segment, per-site buckets to their domain, binaries pass through.
+// Steam classes arrive pre-resolved by python/resolve_app.py. Never
+// touches the filesystem.
 function displayName(app) {
   if (!app) return ""
   var s = String(app)
+
+  // Per-site browser buckets (see siteForTitle) carry their own prefix so
+  // they can never be confused with a real compositor appId.
+  if (s.indexOf(SITE_PREFIX) === 0)
+    return s.slice(SITE_PREFIX.length).toLowerCase()
 
   var webApp = s.match(CHROMIUM_WEB_APP_RE)
   if (webApp) return webApp[2].toLowerCase()
@@ -71,6 +77,357 @@ function displayName(app) {
   var last = s.split(".").pop()
   if (!last) return s.toLowerCase()
   return last.charAt(0).toLowerCase() + last.slice(1).toLowerCase()
+}
+
+// ---- Per-site tracking inside browsers -----------------------------------
+// The compositor exposes a browser as a single appId, so every tab lands
+// in one bucket and the timeline cannot tell work docs from social feeds.
+// The window title is the only per-tab signal available without driving
+// the browser itself, rendered as "<page title> - Browser Name".
+//
+// A title matching a rule tracks as "site:<label>"; anything unmatched
+// stays on the browser's own key, which keeps working as unclassified
+// Web Browsing instead of fragmenting into one row per page title. The
+// prefix cannot collide with a compositor appId, which keeps
+// canonicalApp and CHROMIUM_WEB_APP_RE untouched.
+var SITE_PREFIX = "site:"
+
+// Trailing browser name to strip before matching. Chromium builds use
+// " - ", Firefox-family builds use an em dash; both are covered.
+var BROWSER_TITLE_SUFFIX_RE = new RegExp(
+  "\\s*[-\u2013\u2014|]\\s*(?:" +
+    [
+      "Google Chrome",
+      "Chromium",
+      "Brave",
+      "Vivaldi",
+      "Microsoft.?\\s?Edge",
+      "Mozilla Firefox",
+      "Firefox(?: Developer Edition)?",
+      "Zen Browser",
+      "Zen",
+      "LibreWolf",
+      "Waterfox",
+      "Tor Browser",
+      "Mullvad Browser",
+    ].join("|") +
+    ")\\s*$",
+  "i",
+)
+
+// Unread counters ("(56) WhatsApp") and media glyphs change constantly
+// while the site does not. Stripping them keeps a rule matching the same
+// key instead of churning buckets every time a notification lands.
+var TITLE_NOISE_RE = /^\s*(?:\(\d+\+?\)|\[\d+\+?\]|\u25b6|\u23f8|\u25cf)\s*/
+
+// Compiled rule cache: rules re-test on every title change, and title
+// changes are frequent enough to make recompiling wasteful.
+var SITE_RULE_CACHE = {}
+
+function siteRuleRegExp(pattern, flags) {
+  var f = flags || "i"
+  var key = f + "\u0000" + pattern
+  if (Object.prototype.hasOwnProperty.call(SITE_RULE_CACHE, key))
+    return SITE_RULE_CACHE[key]
+  var re = null
+  try {
+    re = new RegExp(pattern, f)
+  } catch (e) {
+    re = null
+  }
+  SITE_RULE_CACHE[key] = re
+  return re
+}
+
+// True for any app whose canonical key is a browser, i.e. the apps whose
+// single bucket is worth splitting per site.
+function isBrowserApp(app) {
+  if (!app) return false
+  var key = String(canonicalApp(app)).toLowerCase()
+  return Object.prototype.hasOwnProperty.call(BROWSER_CATEGORY_KEYS, key)
+}
+
+// Title as the rules see it: browser suffix and notification noise removed.
+function normalizeTitle(title) {
+  if (!title) return ""
+  var t = String(title).replace(BROWSER_TITLE_SUFFIX_RE, "")
+  var prev
+  do {
+    prev = t
+    t = t.replace(TITLE_NOISE_RE, "")
+  } while (t !== prev)
+  return t.trim()
+}
+
+// First matching rule wins, so rules read specific-to-generic. Returns ""
+// when nothing matches, which keeps the time on the browser key.
+function siteForTitle(title, rules) {
+  var t = normalizeTitle(title)
+  if (!t) return ""
+  var list = rules && rules.length ? rules : defaultSiteRules()
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i]
+    if (!r || !r.match || !r.site) continue
+    var re = siteRuleRegExp(String(r.match), r.flags)
+    if (re && re.test(t)) return String(r.site)
+  }
+  return ""
+}
+
+function siteKey(label) {
+  return label ? SITE_PREFIX + String(label) : ""
+}
+
+function isSiteKey(app) {
+  return !!app && String(app).indexOf(SITE_PREFIX) === 0
+}
+
+// Seed rules owned by the tracker: high-traffic work, social and media
+// sites whose titles reliably name them. Deliberately free of adult-site
+// entries — untracked tastes stay untracked tastes.
+//
+// The title is the only per-tab signal, and it carries TOPIC words, not
+// site names: a Google search for "fastapi" is titled "fastapi", a chat
+// thread about Tailwind is titled "Tailwind". Bare-topic rules launder
+// those pages into sites never visited (days of fastapi.tiangolo.com
+// spans with zero fastapi visits in browser history). So topic-like
+// names anchor to the site's own title suffix ("- FastAPI", "| Bun
+// Docs"), and aggregator pages match first so a query can never mint a
+// fake site. Brand names distinctive enough to never be ordinary words
+// keep plain matches.
+function defaultSiteRules() {
+  return [
+    // Aggregator pages launder their query into any topic rule below,
+    // so they match first: a search for "fastapi" is Google, not FastAPI.
+    { match: "\\bGoogle Search\\b", site: "google.com" },
+    { match: "\\bWhatsApp\\b", site: "whatsapp.com" },
+    { match: "\\bMessenger\\b", site: "messenger.com" },
+    { match: "\\bTelegram\\b", site: "telegram.org" },
+    { match: "\\bDiscord\\b", site: "discord.com" },
+    { match: "\\bSlack\\b", site: "slack.com" },
+    { match: "\\bMicrosoft Teams\\b", site: "teams.microsoft.com" },
+    { match: "\\bZoom\\b", site: "zoom.us" },
+    { match: "\\bGmail\\b", site: "gmail.com" },
+    { match: "\\bOutlook\\b|\\bHotmail\\b", site: "outlook.com" },
+    { match: "\\bGoogle Meet\\b", site: "meet.google.com" },
+    { match: "\\bFacebook\\b", site: "facebook.com" },
+    { match: "\\bInstagram\\b", site: "instagram.com" },
+    { match: "\\bTikTok\\b", site: "tiktok.com" },
+    { match: " X$|\\bTwitter\\b|\\bx\\.com\\b", site: "x.com" },
+    { match: "\\bLinkedIn\\b", site: "linkedin.com" },
+    { match: "\\bReddit\\b|^r/", site: "reddit.com" },
+    { match: "-\\s*YouTube\\s*$", site: "youtube.com" },
+    { match: "\\bTwitch\\b", site: "twitch.tv" },
+    { match: "\\bNetflix\\b", site: "netflix.com" },
+    { match: "\\bSpotify\\b", site: "spotify.com" },
+    { match: "GitHub\\s*$", site: "github.com" },
+    { match: "\\bGitLab\\b", site: "gitlab.com" },
+    { match: "-\\s*Stack Overflow\\s*$", site: "stackoverflow.com" },
+    {
+      match: "\\bGoogle (?:Docs|Sheets|Slides|Drive)\\b",
+      site: "docs.google.com",
+    },
+    { match: "\\bGoogle (?:Calendar|Agenda)\\b", site: "calendar.google.com" },
+    { match: "\\bNotion\\b", site: "notion.so" },
+    { match: "\\bFigma\\b", site: "figma.com" },
+    { match: "\\bChatGPT\\b", site: "chatgpt.com" },
+    { match: "\\bClaude\\b", site: "claude.ai" },
+    { match: "-\\s*Wikipedia\\s*$", site: "wikipedia.org" },
+    // Work: issue tracking, docs, design and team planning.
+    { match: "\\bLinear\\b", site: "linear.app" },
+    { match: "\\bJira\\b", site: "atlassian.com" },
+    { match: "\\bConfluence\\b", site: "atlassian.com" },
+    { match: "\\bTrello\\b", site: "trello.com" },
+    { match: "\\bAsana\\b", site: "asana.com" },
+    { match: "\\bmonday\\.com\\b", site: "monday.com" },
+    { match: "\\bClickUp\\b", site: "clickup.com" },
+    { match: "\\bMiro\\b", site: "miro.com" },
+    { match: "\\bAirtable\\b", site: "airtable.com" },
+    { match: "\\bNotion\\b", site: "notion.so" },
+    { match: "\\bTodoist\\b", site: "todoist.com" },
+    { match: "\\bEvernote\\b", site: "evernote.com" },
+    { match: "\\bOneNote\\b", site: "onenote.com" },
+    { match: "\\bDropbox\\b", site: "dropbox.com" },
+    { match: "\\bGoogle Keep\\b", site: "keep.google.com" },
+    { match: "\\bFigma\\b", site: "figma.com" },
+    { match: "\\bFramer\\b", site: "framer.com" },
+    { match: "\\bCanva\\b", site: "canva.com" },
+    { match: "\\bDribbble\\b", site: "dribbble.com" },
+    { match: "\\bBehance\\b", site: "behance.net" },
+    { match: "\\bArtStation\\b", site: "artstation.com" },
+    { match: "\\bUnsplash\\b", site: "unsplash.com" },
+    { match: "\\bPexels\\b", site: "pexels.com" },
+    { match: "\\bWebflow\\b", site: "webflow.com" },
+    // Development: hosts, registries, clouds, docs and Q&A.
+    // (GitHub and Stack Overflow match once, in the seed rules above.)
+    { match: "\\bGitLab\\b", site: "gitlab.com" },
+    { match: "\\bBitbucket\\b", site: "bitbucket.org" },
+    { match: "-\\s*Stack Exchange\\s*$", site: "stackexchange.com" },
+    { match: "-\\s*Super User\\s*$", site: "superuser.com" },
+    { match: "-\\s*Server Fault\\s*$", site: "serverfault.com" },
+    { match: "-\\s*Ask Ubuntu\\s*$", site: "askubuntu.com" },
+    { match: "\\bPostman\\b", site: "postman.com" },
+    { match: "\\bInsomnia\\b", site: "insomnia.rest" },
+    { match: "\\bDBeaver\\b", site: "dbeaver.io" },
+    { match: "\\bVercel\\b", site: "vercel.com" },
+    { match: "\\bNetlify\\b", site: "netlify.com" },
+    { match: "-\\s*npm\\s*$", site: "npmjs.com" },
+    { match: "\\bPyPI\\b", site: "pypi.org" },
+    { match: "\\bcrates\\.io\\b", site: "crates.io" },
+    { match: "\\bCloudflare\\b", site: "cloudflare.com" },
+    {
+      match: "\\bAWS Management Console\\b|\\bAmazon Web Services\\b",
+      site: "aws.amazon.com",
+    },
+    { match: "\\bGoogle Cloud\\b", site: "cloud.google.com" },
+    { match: "\\bAzure\\b", site: "azure.microsoft.com" },
+    { match: "\\bDigitalOcean\\b", site: "digitalocean.com" },
+    { match: "\\bHeroku\\b", site: "heroku.com" },
+    { match: "\\bDocker Hub\\b", site: "hub.docker.com" },
+    { match: "\\bKubernetes\\b", site: "kubernetes.io" },
+    { match: "\\bTerraform\\b", site: "terraform.io" },
+    { match: "\\bGrafana\\b", site: "grafana.com" },
+    { match: "\\bDatadog\\b", site: "datadog.com" },
+    { match: "\\bSentry\\b", site: "sentry.io" },
+    { match: "\\bCodePen\\b", site: "codepen.io" },
+    { match: "\\bCodeSandbox\\b", site: "codesandbox.io" },
+    { match: "\\bStackBlitz\\b", site: "stackblitz.com" },
+    { match: "\\bReplit\\b|\\bRepl\\.it\\b", site: "replit.com" },
+    { match: "\\bRead the Docs\\b|\\bReadTheDocs\\b", site: "readthedocs.org" },
+    { match: "-\\s*Tailwind CSS\\s*$", site: "tailwindcss.com" },
+    { match: "\\bBootstrap\\b", site: "getbootstrap.com" },
+    { match: "[-\u2013\u2014]\\s*React\\s*$", site: "react.dev" },
+    { match: "\\|\\s*Vue\\.js\\s*$", site: "vuejs.org" },
+    { match: "\\|\\s*Angular\\s*$", site: "angular.dev" },
+    { match: "\\bSvelte\\b", site: "svelte.dev" },
+    { match: "\\bNext\\.js\\b", site: "nextjs.org" },
+    { match: "\\bNuxt\\b", site: "nuxt.com" },
+    { match: "\\|\\s*Django\\s*$", site: "djangoproject.com" },
+    { match: "\\bFlask\\b", site: "flask.palletsprojects.com" },
+    { match: "-\\s*FastAPI\\s*$", site: "fastapi.tiangolo.com" },
+    { match: "Python [\\d.]+ documentation\\s*$", site: "python.org" },
+    { match: "\\|\\s*Bun (?:Docs|Blog)\\s*$|^Bun \u2014 ", site: "bun.com" },
+    { match: "-\\s*Rust\\s*$", site: "doc.rust-lang.org" },
+    { match: "\\bGitBook\\b", site: "gitbook.com" },
+    { match: "\\bSourcegraph\\b", site: "sourcegraph.com" },
+    { match: "\\|\\s*Stripe\\s*$", site: "stripe.com" },
+    { match: "\\bTwilio\\b", site: "twilio.com" },
+    { match: "\\bOpenAI\\b", site: "openai.com" },
+    { match: "\\bAnthropic\\b", site: "anthropic.com" },
+    { match: "\\bHugging Face\\b", site: "huggingface.co" },
+    { match: "\\bMDN\\b", site: "developer.mozilla.org" },
+    { match: "\\bHashnode\\b", site: "hashnode.com" },
+    {
+      match: "\\bHacker News\\b|\\bHackerNews\\b",
+      site: "news.ycombinator.com",
+    },
+    { match: "\\bLobsters\\b", site: "lobste.rs" },
+    { match: "\\bProduct Hunt\\b", site: "producthunt.com" },
+    { match: "\\bIndie Hackers\\b", site: "indiehackers.com" },
+    { match: "\\bY Combinator\\b", site: "ycombinator.com" },
+    { match: "\\bCrunchbase\\b", site: "crunchbase.com" },
+    // Communication: mail, chat, meetings.
+    { match: "\\bGmail\\b", site: "gmail.com" },
+    { match: "\\bOutlook\\b|\\bHotmail\\b", site: "outlook.com" },
+    { match: "\\bProton ?Mail\\b", site: "protonmail.com" },
+    { match: "\\bTutanota\\b|\\bTuta\\b", site: "tutanota.com" },
+    { match: "\\bFastmail\\b", site: "fastmail.com" },
+    { match: "\\bSlack\\b", site: "slack.com" },
+    { match: "\\bDiscord\\b", site: "discord.com" },
+    { match: "\\bTelegram\\b", site: "telegram.org" },
+    { match: "\\bWhatsApp\\b", site: "whatsapp.com" },
+    { match: "\\bMessenger\\b", site: "messenger.com" },
+    { match: "\\bMicrosoft Teams\\b", site: "teams.microsoft.com" },
+    { match: "\\bZoom\\b", site: "zoom.us" },
+    { match: "\\bGoogle Meet\\b", site: "meet.google.com" },
+    { match: "\\bWebex\\b", site: "webex.com" },
+    { match: "\\bSkype\\b", site: "skype.com" },
+    // Social: feeds, profiles, messages.
+    { match: "\\bFacebook\\b", site: "facebook.com" },
+    { match: "\\bInstagram\\b", site: "instagram.com" },
+    { match: "\\bTikTok\\b", site: "tiktok.com" },
+    { match: "\\bReddit\\b", site: "reddit.com" },
+    { match: "\\bSnapchat\\b", site: "snapchat.com" },
+    { match: "\\bBluesky\\b", site: "bsky.app" },
+    { match: "\\bPinterest\\b", site: "pinterest.com" },
+    { match: "\\bTumblr\\b", site: "tumblr.com" },
+    { match: "\\bMastodon\\b", site: "mastodon.social" },
+    { match: "\\bLinkedIn\\b", site: "linkedin.com" },
+    // Entertainment: video, music, games, books on screen.
+    { match: "\\bHulu\\b", site: "hulu.com" },
+    { match: "\\bDisney\\+|\\bDisney Plus\\b", site: "disneyplus.com" },
+    { match: "\\bHBO\\b", site: "max.com" },
+    { match: "\\bPrime Video\\b", site: "primevideo.com" },
+    { match: "\\bApple TV\\b", site: "tv.apple.com" },
+    { match: "\\bCrunchyroll\\b", site: "crunchyroll.com" },
+    { match: "\\bPeacock( TV)?\\b", site: "peacocktv.com" },
+    { match: "\\bParamount\\+", site: "paramountplus.com" },
+    { match: "\\bVimeo\\b", site: "vimeo.com" },
+    { match: "\\bDailymotion\\b", site: "dailymotion.com" },
+    { match: "\\bSpotify\\b", site: "spotify.com" },
+    { match: "\\bSoundCloud\\b", site: "soundcloud.com" },
+    { match: "\\bBandcamp\\b", site: "bandcamp.com" },
+    { match: "\\bDeezer\\b", site: "deezer.com" },
+    { match: "\\bTidal\\b", site: "tidal.com" },
+    { match: "\\bPandora\\b", site: "pandora.com" },
+    { match: "\\bAudible\\b", site: "audible.com" },
+    { match: "\\bIMDb\\b", site: "imdb.com" },
+    { match: "\\bRotten Tomatoes\\b", site: "rottentomatoes.com" },
+    { match: "\\bLetterboxd\\b", site: "letterboxd.com" },
+    { match: "\\bMyAnimeList\\b", site: "myanimelist.net" },
+    { match: "\\bSteam\\b", site: "store.steampowered.com" },
+    { match: "\\bEpic Games\\b", site: "epicgames.com" },
+    { match: "\\bGOG\\b", site: "gog.com" },
+    { match: "\\bItch\\.io\\b", site: "itch.io" },
+    { match: "\\bRoblox\\b", site: "roblox.com" },
+    { match: "\\bMinecraft\\b", site: "minecraft.net" },
+    { match: "\\bchess\\.com\\b", site: "chess.com" },
+    { match: "\\bLichess\\b", site: "lichess.org" },
+    // Productivity: docs, tasks, assistants, hiring.
+    { match: "\\bGoogle Docs\\b", site: "docs.google.com" },
+    { match: "\\bGoogle Sheets\\b", site: "docs.google.com" },
+    { match: "\\bGoogle Slides\\b", site: "docs.google.com" },
+    { match: "\\bGoogle Drive\\b", site: "drive.google.com" },
+    { match: "\\bGoogle Calendar\\b", site: "calendar.google.com" },
+    { match: "\\bGemini\\b", site: "gemini.google.com" },
+    { match: "\\bCopilot\\b", site: "copilot.microsoft.com" },
+    { match: "\\bPerplexity\\b", site: "perplexity.ai" },
+    { match: "\\bGrok\\b", site: "grok.com" },
+    { match: "\\bDeepSeek\\b", site: "deepseek.com" },
+    { match: "\\bMeta AI\\b", site: "ai.meta.com" },
+    { match: "\\bMidjourney\\b", site: "midjourney.com" },
+    { match: "\\bIndeed\\b", site: "indeed.com" },
+    { match: "\\bGlassdoor\\b", site: "glassdoor.com" },
+    { match: "\\bWellfound\\b|\\bAngelList\\b", site: "wellfound.com" },
+    // Learning: courses, references, papers, books.
+    { match: "\\bCoursera\\b", site: "coursera.org" },
+    { match: "\\bedX\\b", site: "edx.org" },
+    { match: "\\bKhan Academy\\b", site: "khanacademy.org" },
+    { match: "\\bFreeCodeCamp\\b", site: "freecodecamp.org" },
+    { match: "\\bUdemy\\b", site: "udemy.com" },
+    { match: "\\bDEV Community\\b", site: "dev.to" },
+    { match: "\\bSubstack\\b", site: "substack.com" },
+    { match: "\\bKaggle\\b", site: "kaggle.com" },
+    { match: "\\bExercism\\b", site: "exercism.org" },
+    { match: "\\bLeetCode\\b", site: "leetcode.com" },
+    { match: "\\bHackerRank\\b", site: "hackerrank.com" },
+    { match: "\\bCodeforces\\b", site: "codeforces.com" },
+    { match: "\\bOverleaf\\b", site: "overleaf.com" },
+    { match: "\\bGoogle Scholar\\b", site: "scholar.google.com" },
+    { match: "\\bResearchGate\\b", site: "researchgate.net" },
+    { match: "\\bJSTOR\\b", site: "jstor.org" },
+    { match: "\\bPubMed\\b", site: "pubmed.ncbi.nlm.nih.gov" },
+    { match: "\\bGoodreads\\b", site: "goodreads.com" },
+    { match: "\\bDuolingo\\b", site: "duolingo.com" },
+    { match: "\\bQuizlet\\b", site: "quizlet.com" },
+    { match: "\\bWolfram", site: "wolframalpha.com" },
+    { match: "\\| TED$|\\u2014 TED$|\\bTED Talks?\\b", site: "ted.com" },
+    { match: "\\bKindle\\b", site: "read.amazon.com" },
+    // Press: tech journalism reads as entertainment.
+    { match: "\\bThe Verge\\b", site: "theverge.com" },
+    { match: "\\bArs Technica\\b", site: "arstechnica.com" },
+    { match: "\\bTechCrunch\\b", site: "techcrunch.com" },
+  ]
 }
 
 // User tracking prefs: ignored apps and custom aliases. Both accept the
@@ -92,13 +449,22 @@ function parseIgnoredApps(value) {
 
 // True when name matches the ignore list as raw, canonical or display
 // name, so "zen-bin" is caught by an entry for "zen" and vice versa.
+// Site buckets match their bare domain and its first segment, so
+// "facebook" ignores site:facebook.com without "com" nuking every site.
 function isIgnoredApp(name, ignoredList) {
   if (!name || !ignoredList || ignoredList.length === 0) return false
+  var raw = String(name).trim().toLowerCase()
   var candidates = [
-    String(name).trim().toLowerCase(),
+    raw,
     String(canonicalApp(name)).toLowerCase(),
     String(displayName(name)).toLowerCase(),
   ]
+  if (raw.indexOf(SITE_PREFIX) === 0) {
+    var bare = raw.slice(SITE_PREFIX.length)
+    candidates.push(bare)
+    var dot = bare.indexOf(".")
+    if (dot > 0) candidates.push(bare.slice(0, dot))
+  }
   for (var i = 0; i < candidates.length; i++) {
     if (candidates[i] && ignoredList.indexOf(candidates[i]) !== -1) return true
   }
@@ -200,7 +566,17 @@ function filterIgnoredDay(day, ignoredList) {
     }
   }
   if (!dropped) return day
-  return { total: total, apps: clean }
+  var out = { total: total, apps: clean }
+  var kept = spanList(day)
+  if (kept.length > 0) {
+    var spans = []
+    for (var s = 0; s < kept.length; s++) {
+      if (isSpan(kept[s]) && !isIgnoredApp(kept[s].app, ignoredList))
+        spans.push(kept[s])
+    }
+    if (spans.length > 0) out.spans = spans
+  }
+  return out
 }
 
 // Remap one stored day through the alias map, merging totals of keys
@@ -224,7 +600,24 @@ function refoldDay(day, aliases) {
     total += ms
   }
   if (!changed) return day
-  return { total: total, apps: out }
+  var folded = { total: total, apps: out }
+  var spans = spanList(day)
+  if (spans.length > 0) {
+    var remapped = []
+    for (var s = 0; s < spans.length; s++) {
+      if (!isSpan(spans[s])) continue
+      var entry = {
+        app: resolveAppName(spans[s].app, aliases),
+        start: Number(spans[s].start),
+        end: Number(spans[s].end),
+      }
+      if (typeof spans[s].src === "string" && spans[s].src)
+        entry.src = resolveAppName(spans[s].src, aliases)
+      remapped.push(entry)
+    }
+    if (remapped.length > 0) folded.spans = remapped
+  }
+  return folded
 }
 
 // List editing for the settings menu: the prefs store comma strings while
@@ -292,16 +685,18 @@ function aliasesWithout(value, from) {
   return serializeAliases(obj)
 }
 
-// Daily screen-time goal in whole hours; 0 (or unparseable) means off.
-var DAILY_GOAL_PRESETS = [0, 4, 6, 8]
+// Daily screen-time limit in whole hours; 0 (or unparseable) means off.
+// Stored under the historical dailyGoal keys so existing installs keep
+// their setting without migration.
+var DAILY_GOAL_PRESETS = [0, 4, 6, 8, 10, 12]
 function parseDailyGoalHours(value) {
   var h = Math.floor(Number(value))
   if (!isFinite(h) || h < 1 || h > 24) return 0
   return h
 }
 
-// Progress toward the daily goal: { goalMs, pct, remainingMs, reached }.
-// Null when the goal is off so callers can hide goal UI entirely.
+// Progress against the daily limit: { goalMs, pct, remainingMs, reached }.
+// Null when the limit is off so callers can hide limit UI entirely.
 function goalProgress(totalMs, goalHours) {
   var goal = parseDailyGoalHours(goalHours)
   if (goal <= 0) return null
@@ -573,6 +968,7 @@ function sanitizeHistory(days, months, years) {
 }
 
 // Returns { day, changed }; unchanged days keep object identity.
+// Span-less days never gain the key, so old history passes through.
 function sanitizeDay(d) {
   if (!isPlainObject(d)) return { day: newDay(), changed: true }
   var total = Number(d.total) || 0
@@ -590,8 +986,12 @@ function sanitizeDay(d) {
     if (isFinite(ms) && ms >= 0) cleanApps[app] = ms
     else appsChanged = true
   }
-  if (total === d.total && !appsChanged) return { day: d, changed: false }
-  return { day: { total: total, apps: cleanApps }, changed: true }
+  var fixedSpans = sanitizeSpans(d.spans)
+  if (total === d.total && !appsChanged && !fixedSpans.changed)
+    return { day: d, changed: false }
+  var out = { total: total, apps: cleanApps }
+  if (fixedSpans.spans !== undefined) out.spans = fixedSpans.spans
+  return { day: out, changed: true }
 }
 
 // The year archive maps "YYYY" to { "YYYY-MM-DD": ms }. Returns the input
@@ -715,6 +1115,69 @@ function appList(today) {
   return out
 }
 
+// Expanded app list for the browser-expansion setting: per-site rows
+// merged across browsers (all youtube.com time lands in one row no
+// matter which browser played it) plus per-app rows for everything
+// else, in the same shape as appList so the donut and legend agree.
+// Site attribution rides on each span's source bucket: a browser keeps
+// its total minus the site time recorded from it, so rows always sum
+// to the day. Span-less days render exactly like appList; legacy spans
+// without a source stay on the timeline but cannot split a bucket, so
+// those rows conservatively show the whole browser total.
+function expandedAppList(day) {
+  var apps = day && day.apps && typeof day.apps === "object" ? day.apps : {}
+  var total = day && day.total ? day.total : 0
+  var spans = spanList(day)
+  if (spans.length === 0) return appList(day)
+  var siteMs = {}
+  var siteFrom = {}
+  for (var i = 0; i < spans.length; i++) {
+    if (!isSpan(spans[i])) continue
+    var ms = Number(spans[i].end) - Number(spans[i].start)
+    var key = String(spans[i].app)
+    if (!isSiteKey(key) || typeof spans[i].src !== "string" || !spans[i].src)
+      continue
+    siteMs[key] = (siteMs[key] || 0) + ms
+    var from = siteFrom[key] || {}
+    from[spans[i].src] = (from[spans[i].src] || 0) + ms
+    siteFrom[key] = from
+  }
+  var out = []
+  for (var site in siteMs) {
+    if (!Object.prototype.hasOwnProperty.call(siteMs, site)) continue
+    if (siteMs[site] < 60000) continue
+    out.push({
+      app: site,
+      ms: siteMs[site],
+      pct: total > 0 ? Math.round((100 * siteMs[site]) / total) : 0,
+    })
+  }
+  for (var app in apps) {
+    if (!Object.prototype.hasOwnProperty.call(apps, app)) continue
+    var appMs = Number(apps[app]) || 0
+    if (appMs <= 0) continue
+    var rest = appMs
+    if (isBrowserApp(app)) {
+      var taken = 0
+      for (var g in siteFrom) {
+        if (!Object.prototype.hasOwnProperty.call(siteFrom, g)) continue
+        taken += Number(siteFrom[g][app]) || 0
+      }
+      rest = Math.max(0, appMs - taken)
+    }
+    if (rest < 60000) continue
+    out.push({
+      app: app,
+      ms: rest,
+      pct: total > 0 ? Math.round((100 * rest) / total) : 0,
+    })
+  }
+  out.sort(function (a, b) {
+    return b.ms - a.ms
+  })
+  return out
+}
+
 // Tail folds into "Other" past maxSlices or below minPct. Both params are
 // required: QML's JS engine has no default parameters.
 var DONUT_MAX_SLICES = 6
@@ -755,6 +1218,535 @@ function groupedApps(apps, maxSlices, minPct) {
     head.push(other)
   }
   return head
+}
+
+// ---- App categories ------------------------------------------------------
+// Ten broad buckets describing what an app is used for, plus Other for
+// anything unclassified. Categories never judge: productivity stays a
+// separate, optional concern. Browsers keep one bucket (Web Browsing);
+// per-site splits wait for website tracking with proper permissions.
+var APP_CATEGORIES = [
+  "Development",
+  "Productivity",
+  "Communication",
+  "Education & Research",
+  "Creative",
+  "Web Browsing",
+  "Social",
+  "Entertainment",
+  "Gaming",
+  "System & Utilities",
+  "Other",
+]
+
+// Canonical browser keys keep one bucket via exact match; no per-site
+// split, so no window-title rules (and no adult-site defaults) exist.
+var BROWSER_CATEGORY_KEYS = {
+  zen: true,
+  firefox: true,
+  "firefox-developer-edition": true,
+  librewolf: true,
+  waterfox: true,
+  "tor-browser": true,
+  "mullvad-browser": true,
+  "google-chrome": true,
+  "google-chrome-stable": true,
+  "google-chrome-beta": true,
+  chrome: true,
+  chromium: true,
+  "chromium-browser": true,
+  brave: true,
+  "brave-beta": true,
+  "brave-nightly": true,
+  vivaldi: true,
+  "microsoft-edge": true,
+  "edge-beta": true,
+}
+
+// First match wins, so specific buckets come before generic ones. Each
+// pattern tests the raw, canonical and display names.
+var CATEGORY_MATCHERS = [
+  {
+    category: "Gaming",
+    re: /steam|lutris|heroic|minetest|minecraft|prismlauncher|multimc|pollymc|bottles|retroarch|dolphin[-_]emu|pcsx2|rpcs3|yuzu|ryujinx|suyu|\bitch\b|playonlinux|gzdoom|openmw|\bosu\b|epic|\bgog\b|roblox|chess|lichess/,
+  },
+  {
+    category: "Entertainment",
+    re: /spotify|feishin|tauon|nuclear|lollypop|rhythmbox|elisa|celluloid|totem|\bvlc\b|\bmpv\b|kodi|jellyfin|plex|stremio|freetube|netflix|hulu|disney|popcorntime|ncmpcpp|\bcmus\b|\bmoc\b|mocp|ytkew|parabolic|\bclapper\b|\bshowtime\b|\beog\b|loupe|eom|ristretto|youtube|youtu\.be|twitch|vimeo|dailymotion|hbo|\bmax\b|primevideo|tv\.apple|crunchyroll|peacock|paramount|soundcloud|bandcamp|deezer|tidal|pandora|audible|imdb|rottentomatoes|letterboxd|myanimelist|theverge|arstechnica|techcrunch/,
+  },
+  {
+    category: "Social",
+    re: /reddit|instagram|facebook|tiktok|tumblr|pinterest|mastodon|misskey|lemmy|cawbird|whalebird|tootle|tokodon|twitter|pinafore|hyperspace|mammoth|icecubes|\belk\b|photon|linkedin|(?:^|[:/])x\.com|snapchat|bluesky|bsky/,
+  },
+  {
+    category: "Communication",
+    re: /discord|vesktop|slack|telegram|whatsapp|messenger|\bsignal\b|teams|thunderbird|evolution|geary|mailspring|outlook|protonmail|tutanota|\bemail\b|gmail|\bzoom\b|jitsi|\bmeet\b|element|nheko|cinny|hexchat|pidgin|weechat|irssi|senpai|webex|skype|fastmail/,
+  },
+  {
+    category: "Creative",
+    re: /blender|\bgimp\b|figma|krita|inkscape|kdenlive|shotcut|olive|pitivi|obs-studio|audacity|ardour|lmms|musescore|darktable|rawtherapee|mypaint|pinta|flowblade|openshot|shotwell|gthumb|digikam|framer|canva|dribbble|behance|artstation|unsplash|pexels|webflow|midjourney/,
+  },
+  {
+    category: "Education & Research",
+    re: /\banki\b|zotero|calibre|evince|okular|atril|xournalpp|texstudio|texmaker|goldendict|stellarium|kstars|marble|kdeedu|wikipedia|developer\.mozilla|arxiv|\bedx\b|coursera|khanacademy|freecodecamp|udemy|dev\.to|substack|kaggle|exercism|leetcode|hackerrank|codeforces|overleaf|scholar|researchgate|jstor|pubmed|goodreads|duolingo|quizlet|wolfram|ted\.com|read\.amazon|kindle/,
+  },
+  {
+    category: "Development",
+    re: /vscode|vscodium|codium|cursor|windsurf|code-oss|code-insiders|neovim|\bnvim\b|\bvim\b|emacs|helix|\bcode\b|jetbrains|\bidea\b|pycharm|webstorm|clion|phpstorm|rustrover|goland|rider|android-studio|docker|podman|postman|insomnia|gitkraken|lazygit|\bgit\b|\bopencode\b|aider|kubectl|scc|tokei|meld|dbeaver|pgadmin|sqlitebrowser|wireshark|github|gitlab|bitbucket|stackoverflow|stackexchange|linear|atlassian|jira|confluence|vercel|netlify|npmjs|\bnpm\b|cloudflare|cloud\.google|aws|azure|digitalocean|heroku|codepen|codesandbox|stackblitz|replit|readthedocs|pypi|hashnode|superuser|serverfault|askubuntu|gitbook|kubernetes|terraform|grafana|datadog|sentry|tailwind|bootstrap|react|vuejs|angular|svelte|nextjs|nuxt|django|flask|fastapi|python|crates|sourcegraph|stripe|twilio|openai|anthropic|huggingface|hackernews|ycombinator|lobsters|lobste\.rs|producthunt|indiehackers|crunchbase/,
+  },
+  {
+    category: "Productivity",
+    re: /libreoffice|soffice|\bwriter\b|\bcalc\b|calculator|\bimpress\b|notion|obsidian|todoist|logseq|anytype|typora|joplin|standardnotes|evernote|onenote|\bexcel\b|\bword\b|powerpoint|onlyoffice|calligra|endeavour|planner|errands|superproductivity|gedit|\bkate\b|mousepad|leafpad|gnome-text-editor|docs\.google|drive\.google|calendar\.google|\bchatgpt\b|\bclaude\b|gemini|deepseek|perplexity|\bgrok\b|copilot|trello|asana|monday|clickup|miro|airtable|dropbox|keep\.google|indeed|glassdoor|wellfound|ai\.meta/,
+  },
+  {
+    category: "System & Utilities",
+    re: /nautilus|nemo|\bdolphin\b|thunar|pcmanfm|caja|konqueror|yazi|\blf\b|ranger|vifm|nnn|gnome-control-center|gnome-settings|\bsettings\b|systemsettings|gparted|gnome-disks|baobab|filelight|\bhtop\b|\bbtop\b|gnome-system-monitor|missioncenter|resources|pavucontrol|helvum|blueman|nm-connection-editor|rofi|wofi|ulauncher|albert|bitwarden|\b1password\b|keepassxc|keepass|flameshot|spectacle|fastfetch|neofetch|\bssh\b|mosh|tmux|\bscreen\b|\bbash\b|\bzsh\b|\bfish\b|\bdash\b|foot|alacritty|kitty|ghostty|wezterm|konsole|gnome-terminal|gnome-console|kgx|ptyxis|tilix|xfce4-terminal|termite|\bst\b|blackbox|warp|\bterminal\b|console|\bshell\b/,
+  },
+]
+
+// One stable bucket per app name. Browsers match canonically first so a
+// browser never falls through to a looser pattern; unclassified sites
+// stay Web Browsing (general browser activity), while anything else
+// unmatched lands in Other.
+function appCategory(app) {
+  if (!app) return "Other"
+  var site = isSiteKey(app)
+  var canon = String(canonicalApp(app)).toLowerCase()
+  if (
+    !site &&
+    Object.prototype.hasOwnProperty.call(BROWSER_CATEGORY_KEYS, canon)
+  )
+    return "Web Browsing"
+  var names = [
+    String(app).toLowerCase(),
+    canon,
+    String(displayName(app)).toLowerCase(),
+  ]
+  for (var m = 0; m < CATEGORY_MATCHERS.length; m++) {
+    for (var n = 0; n < names.length; n++) {
+      if (names[n] && CATEGORY_MATCHERS[m].re.test(names[n]))
+        return CATEGORY_MATCHERS[m].category
+    }
+  }
+  // Classified nowhere: sites fall back to general Web Browsing, real
+  // apps to Other.
+  return site ? "Web Browsing" : "Other"
+}
+
+// Deterministic color per category off the theme accent, so a category
+// keeps its color no matter which others share the day.
+function categoryColor(category, accentHex) {
+  var idx = APP_CATEGORIES.indexOf(category)
+  if (idx < 0) return accentHex
+  var colors = sliceColors(APP_CATEGORIES.length, accentHex)
+  return colors[idx] || accentHex
+}
+
+// ---- Day spans (v2.0) ------------------------------------------------------
+// Every credited focus chunk records { app, start, end } (epoch ms) on
+// its day, so the timeline renders real 00:00–23:59 positions. Spans are
+// detail like per-app totals: they age out with retention, never reach
+// the archive, and only the user's own reset/wipe destroys them early.
+// The spans key stays absent until the first span records, so old days
+// and old code pass through untouched.
+var MAX_DAY_SPANS = 3000
+
+// Axis tick fractions for a session range: wide sessions take five
+// ticks, narrow ones fewer, so minute labels never collide.
+function axisFracs(rangeMs) {
+  var r = Number(rangeMs)
+  if (!(r > 0) || !isFinite(r)) return [0, 1]
+  if (r >= 2 * 3600000) return [0, 0.25, 0.5, 0.75, 1]
+  if (r >= 30 * 60000) return [0, 1 / 3, 2 / 3, 1]
+  if (r >= 10 * 60000) return [0, 0.5, 1]
+  return [0, 1]
+}
+
+function isSpan(s) {
+  if (!s || typeof s !== "object") return false
+  if (typeof s.app !== "string" || !s.app) return false
+  var a = Number(s.start)
+  var b = Number(s.end)
+  return isFinite(a) && isFinite(b) && b > a
+}
+
+// Foreign sequences read fine by index but fail Array.isArray: the
+// shell's C++ JsonAdapter hands back QVariant lists, not engine
+// Arrays. Every span gate below went through Array.isArray, so each
+// restart silently rebuilt recorded spans to [] and persisted the
+// erasure. asSpanArray normalizes any list-like value into a fresh
+// engine Array; anything without list shape yields [].
+function asSpanArray(value) {
+  if (Array.isArray(value)) return value
+  if (!value || typeof value.length !== "number") return []
+  var n = Math.floor(value.length)
+  if (!(n >= 0) || !isFinite(n)) return []
+  var out = []
+  for (var i = 0; i < n; i++) out.push(value[i])
+  return out
+}
+
+// Validated span list, or empty when the day carries none. Callers
+// must use this (never day.spans directly) so span-less days just work
+// and adapter sequences read like engine arrays.
+function spanList(day) {
+  if (!day) return []
+  return asSpanArray(day.spans)
+}
+
+// Returns { spans, changed }; clean engine lists keep array identity,
+// absent stays absent, foreign sequences normalize into engine arrays,
+// anything else rebuilds normalized and capped.
+function sanitizeSpans(value) {
+  if (value === undefined) return { spans: undefined, changed: false }
+  // Normalizing a foreign type always counts as a change, even when
+  // every element validates: the caller must persist the engine array.
+  var changed = !Array.isArray(value)
+  var list = changed ? asSpanArray(value) : value
+  var out = []
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i]
+    if (!isSpan(s)) {
+      changed = true
+      continue
+    }
+    if (out.length >= MAX_DAY_SPANS) {
+      changed = true
+      continue
+    }
+    var kept = {
+      app: String(s.app),
+      start: Number(s.start),
+      end: Number(s.end),
+    }
+    if (typeof s.src === "string" && s.src) kept.src = s.src
+    out.push(kept)
+    if (
+      out[out.length - 1].app !== s.app ||
+      out[out.length - 1].start !== s.start ||
+      out[out.length - 1].end !== s.end ||
+      (kept.src || undefined) !== (s.src || undefined)
+    )
+      changed = true
+  }
+  if (!changed) return { spans: value, changed: false }
+  return { spans: out, changed: true }
+}
+
+// Fresh day object with one span appended; contiguous tail spans coalesce
+// before the cap so an ongoing session can continue without losing data.
+// srcApp names the totals bucket the chunk was billed to, stored only
+// when it differs from the span key: site spans remember their browser
+// so the expanded list can split them back out exactly.
+function appendSpan(day, app, start, end, srcApp) {
+  var span = { app: String(app), start: Number(start), end: Number(end) }
+  if (!day || !isSpan(span)) return day
+  if (srcApp && String(srcApp) !== span.app) span.src = String(srcApp)
+  var cur = spanList(day)
+  var last = cur.length ? cur[cur.length - 1] : null
+  if (
+    last &&
+    last.app === span.app &&
+    (last.src || "") === (span.src || "") &&
+    last.end === span.start
+  ) {
+    var merged = cur.slice()
+    merged[merged.length - 1] = {
+      app: last.app,
+      start: last.start,
+      end: span.end,
+    }
+    if (last.src) merged[merged.length - 1].src = last.src
+    var continued = Object.assign({}, day)
+    continued.spans = merged
+    return continued
+  }
+  if (cur.length >= MAX_DAY_SPANS) return day
+  var out = cur.slice()
+  out.push(span)
+  var next = Object.assign({}, day)
+  next.spans = out
+  return next
+}
+
+// Union of two span lists into one sorted, non-overlapping (per app
+// and source bucket) list. Same-app spans that touch or overlap
+// rejoin, but only within one source bucket: a youtube span from zen
+// must never merge into one from firefox, or the expanded list could
+// not split them back out. Different apps never merge, so every
+// positive gap stays visible. Position-free, so a midnight flush is
+// a midnight flush is idempotent and write-time tail coalescing can
+// never strand post-save session growth span-less while its totals
+// flush. Returns a fresh array; inputs pass through untouched.
+function mergeSpans(a, b) {
+  var all = []
+  var lists = [a, b]
+  for (var i = 0; i < lists.length; i++) {
+    var list = asSpanArray(lists[i])
+    for (var j = 0; j < list.length; j++) {
+      if (isSpan(list[j])) {
+        var span = {
+          app: String(list[j].app),
+          start: Number(list[j].start),
+          end: Number(list[j].end),
+        }
+        if (typeof list[j].src === "string" && list[j].src)
+          span.src = list[j].src
+        all.push(span)
+      }
+    }
+  }
+  all.sort(function (x, y) {
+    return x.start - y.start
+  })
+  var out = []
+  for (var k = 0; k < all.length; k++) {
+    var s = all[k]
+    var last = out.length ? out[out.length - 1] : null
+    if (
+      last &&
+      last.app === s.app &&
+      (last.src || "") === (s.src || "") &&
+      s.start <= last.end
+    ) {
+      if (Number(s.end) > last.end) last.end = Number(s.end)
+    } else {
+      out.push({ app: s.app, start: s.start, end: s.end })
+      if (s.src) out[out.length - 1].src = s.src
+    }
+  }
+  return out
+}
+
+// Split [start, end) at local midnights into per-day portions:
+// [{ key, app, start, end }]. DST days split on the true wall-clock
+// boundary like the totals do.
+function splitSpan(app, start, end) {
+  var out = []
+  var name = String(app || "")
+  var s = Number(start)
+  var e = Number(end)
+  if (!name || !isFinite(s) || !isFinite(e) || e <= s) return out
+  var guard = 0
+  while (s < e && guard < 370) {
+    var d = new Date(s)
+    var midnight = new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate() + 1,
+    ).getTime()
+    var stop = Math.min(e, midnight)
+    if (stop <= s) break
+    var key = dayKey(d)
+    if (key) out.push({ key: key, app: name, start: s, end: stop })
+    s = stop
+    guard++
+  }
+  return out
+}
+
+// Local-midnight bounds of a day key: { start, end }, or null when the
+// key is not a real date.
+function dayBounds(key) {
+  var d = keyToDate(key)
+  if (!d) return null
+  return {
+    start: d.getTime(),
+    end: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime(),
+  }
+}
+
+// One timeline derivation over a day's spans: { segments, categories,
+// axis, sessionStart, sessionEnd }. The track spans the user session —
+// first span start to last span end — so bars size relative to the day
+// lived, not to a fixed midnight grid: the first span fills the strip
+// and earlier spans shrink as later usage extends the session. Every
+// recorded span renders, so the strip accounts for exactly the day's
+// tracked time: sub-minute blips show as ticks and only truly
+// contiguous same-app spans rejoin, leaving every positive gap
+// visible. Segments sort by start and carry session fractions for
+// absolute placement; categories total the rendered time with stable
+// per-category colors for the legend, each carrying its per-app rows
+// (most-used first) for the collapsible legend; axis ticks the session
+// range.
+function daySpanView(day, key, accentHex) {
+  var empty = {
+    segments: [],
+    categories: [],
+    axis: [],
+    sessionStart: 0,
+    sessionEnd: 0,
+  }
+  var raw = spanList(day)
+  var ordered = []
+  for (var i = 0; i < raw.length; i++) {
+    if (isSpan(raw[i])) ordered.push(raw[i])
+  }
+  ordered.sort(function (a, b) {
+    return a.start - b.start
+  })
+  var merged = []
+  for (var j = 0; j < ordered.length; j++) {
+    var s = ordered[j]
+    var last = merged.length ? merged[merged.length - 1] : null
+    if (last && last.app === s.app && Number(s.start) <= last.end) {
+      if (Number(s.end) > last.end) last.end = Number(s.end)
+    } else {
+      merged.push({ app: s.app, start: Number(s.start), end: Number(s.end) })
+    }
+  }
+  var kept = merged
+  if (!kept.length) return empty
+  var sessionStart = kept[0].start
+  var sessionEnd = kept[kept.length - 1].end
+  var range = sessionEnd - sessionStart
+  if (!(range > 0)) return empty
+  var segments = []
+  var totals = {}
+  var appTotals = {}
+  for (var k = 0; k < kept.length; k++) {
+    var g = kept[k]
+    var ms = g.end - g.start
+    var category = appCategory(g.app)
+    totals[category] = (totals[category] || 0) + ms
+    var perApp = appTotals[category]
+    if (!perApp) {
+      perApp = {}
+      appTotals[category] = perApp
+    }
+    perApp[g.app] = (perApp[g.app] || 0) + ms
+    segments.push({
+      app: g.app,
+      category: category,
+      start: g.start,
+      end: g.end,
+      ms: ms,
+      startFrac: (g.start - sessionStart) / range,
+      endFrac: (g.end - sessionStart) / range,
+      color: categoryColor(category, accentHex),
+    })
+  }
+  var categories = []
+  for (var c = 0; c < APP_CATEGORIES.length; c++) {
+    var name = APP_CATEGORIES[c]
+    if (totals[name] > 0) {
+      var apps = []
+      var perApp = appTotals[name] || {}
+      for (var app in perApp) {
+        if (!Object.prototype.hasOwnProperty.call(perApp, app)) continue
+        apps.push({ app: app, ms: perApp[app] })
+      }
+      apps.sort(function (a, b) {
+        return b.ms - a.ms
+      })
+      categories.push({
+        category: name,
+        ms: totals[name],
+        color: categoryColor(name, accentHex),
+        apps: apps,
+      })
+    }
+  }
+  categories.sort(function (a, b) {
+    return b.ms - a.ms
+  })
+  var fracs = axisFracs(range)
+  var axis = []
+  for (var f = 0; f < fracs.length; f++) {
+    axis.push({
+      frac: fracs[f],
+      label: fmtClock(sessionStart + fracs[f] * range),
+    })
+  }
+  return {
+    segments: segments,
+    categories: categories,
+    axis: axis,
+    sessionStart: sessionStart,
+    sessionEnd: sessionEnd,
+  }
+}
+
+// Experimental hourly rhythm over a day's spans: { hours, maxMs,
+// totalMs, peakHour }. Every recorded millisecond lands in its local
+// hour; spans crossing hour boundaries split proportionally, so the 24
+// bars account for exactly the recorded time like the strip does.
+function dayHourlyView(day, accentHex) {
+  var empty = { hours: [], maxMs: 0, totalMs: 0, peakHour: -1 }
+  var raw = spanList(day)
+  var slots = []
+  for (var h = 0; h < 24; h++) slots.push(0)
+  var totalMs = 0
+  for (var i = 0; i < raw.length; i++) {
+    if (!isSpan(raw[i])) continue
+    var cursor = Number(raw[i].start)
+    var end = Number(raw[i].end)
+    var guard = 0
+    while (cursor < end && guard < 48) {
+      var d = new Date(cursor)
+      var nextHour = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+        d.getHours() + 1,
+      ).getTime()
+      var stop = Math.min(end, nextHour)
+      if (stop <= cursor) break
+      slots[d.getHours()] += stop - cursor
+      totalMs += stop - cursor
+      cursor = stop
+      guard++
+    }
+  }
+  if (!(totalMs > 0)) return empty
+  var hours = []
+  var maxMs = 0
+  var peakHour = -1
+  for (var k = 0; k < 24; k++) {
+    if (slots[k] > maxMs) {
+      maxMs = slots[k]
+      peakHour = k
+    }
+    hours.push({ hour: k, ms: slots[k], color: accentHex })
+  }
+  return { hours: hours, maxMs: maxMs, totalMs: totalMs, peakHour: peakHour }
+}
+
+// Local "HH:MM" for an epoch timestamp; "" when unparseable.
+function fmtClock(ms) {
+  var d = new Date(Number(ms))
+  if (isNaN(d.getTime())) return ""
+  return pad2(d.getHours()) + ":" + pad2(d.getMinutes())
+}
+
+// One untracked-gap journal line, temporary diagnostic for classifying
+// blank timeline stretches. App names scrub to a shell-safe alphabet
+// so the writer can append with plain redirection; the line stays
+// JSON-parseable for zero-tooling review.
+function gapLine(at, kind, lastApp, nextApp, locked, screensaver, resolving) {
+  var scrub = function (name) {
+    return String(name || "").replace(/[^A-Za-z0-9._\-:]/g, "")
+  }
+  return JSON.stringify({
+    at: Number(at) || 0,
+    kind: String(kind || ""),
+    lastApp: scrub(lastApp),
+    nextApp: scrub(nextApp),
+    locked: locked === true,
+    screensaver: screensaver === true,
+    resolving: resolving === true,
+  })
+}
+
+// Day view: the apps donut or the 24h timeline. An explicit pick wins;
+// otherwise the retired demo toggle still opts in, so the live setting
+// enabled for it keeps working; everything else renders the donut.
+function parseDayView(value, legacyHide) {
+  var v = String(value || "")
+  if (v === "timeline" || v === "apps") return v
+  if (legacyHide === false || String(legacyHide || "") === "false")
+    return "timeline"
+  return "apps"
 }
 
 function totalFor(days, key) {
@@ -1482,8 +2474,6 @@ function yearTotal(days, months, year, years, todayKey) {
 var YEAR_HOURS = 8760
 var YEAR_HOURS_LEAP = 8784
 var MIN_ACTIVE_DAY_MS = 60 * 1000
-// Tracked days a current month needs before it can be RECHARGE MONTH.
-var MIN_RECHARGE_DAYS = 14
 
 // Days with data in one year-month of a yearDayTotals list.
 function monthCoverage(dayTotals, year, month) {
@@ -1751,8 +2741,8 @@ function applyRetention(days, years, todayKey, keepDays) {
 // Yearly retro cards [{ glyph, label, value, sub, color }]; day-scale
 // cards need per-day coverage, months-only years get the trio.
 function yearFacts(days, months, years, year, todayKey, accentHex) {
-  // Normalize once: downstream strict compares (recharge guard, coverage)
-  // must not treat "2026" as a different year from 2026.
+  // Normalize once: downstream strict compares (coverage) must not
+  // treat "2026" as a different year from 2026.
   year = Number(year)
   return yearFactsFromSummary(
     yearSummary(days, months, years, year, todayKey),
@@ -1784,23 +2774,11 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     return b.ms - a.ms
   })
 
-  // The current month needs two tracked weeks to qualify as recharge.
-  var tk = String(todayKey || "").split("-")
-  var tkYear = Number(tk[0])
-  var tkMonth = Number(tk[1]) - 1
-  var pool = []
-  for (var q = 0; q < top.length; q++) {
-    if (
-      year !== tkYear ||
-      top[q].month !== tkMonth ||
-      monthCoverage(dayTotals, year, top[q].month) >= MIN_RECHARGE_DAYS
-    )
-      pool.push(top[q])
-  }
-  if (pool.length === 0) pool = top
+  // The quietest tracked month is the recharge, no coverage gate: even
+  // a brand-new month takes the crown when it is all there is.
   var quietest = null
-  for (q = 0; q < pool.length; q++) {
-    if (!quietest || pool[q].ms < quietest.ms) quietest = pool[q]
+  for (var q = 0; q < top.length; q++) {
+    if (!quietest || top[q].ms < quietest.ms) quietest = top[q]
   }
 
   out.push({
@@ -1831,7 +2809,7 @@ function yearFactsFromSummary(summary, year, todayKey, accentHex) {
     })
   }
 
-  if (quietest && quietest !== top[0]) {
+  if (quietest) {
     out.push({
       glyph: "\uF06C",
       label: "RECHARGE MONTH",
@@ -1959,8 +2937,103 @@ function yearView(days, months, years, year, todayKey, accentHex) {
     totalLabel: Math.round(summary.total / 3600000) + "h",
     months: summary.months,
     monthsActive: monthsActive,
+    days: summary.dayTotals,
     facts: facts,
   }
+}
+
+// Year graph mode: month bars or the GitHub-style heatmap. Anything but
+// an explicit "heatmap" renders bars, so old installs keep the graph.
+function parseYearGraph(value) {
+  return String(value || "") === "heatmap" ? "heatmap" : "bars"
+}
+
+// Activity quartile for one heatmap day: 0 for rest days, 1–4 scaled
+// against the year's busiest day.
+function heatLevel(ms, maxMs) {
+  var v = Number(ms)
+  var max = Number(maxMs)
+  if (!(v > 0) || !(max > 0) || !isFinite(v) || !isFinite(max)) return 0
+  return Math.max(1, Math.min(4, Math.ceil((v / max) * 4)))
+}
+
+// GitHub-style year grid: Monday–Sunday week columns covering Jan 1 to
+// Dec 31. Returns { weeks, maxMs }; each week is { days, label,
+// labelFuture, future } where days holds { date, ms, level, future } or
+// null for padding outside the year, label names the month whose 1st the
+// week holds ("" otherwise), and future flags days past todayKey (plus
+// weeks and labels that lie wholly beyond it) for muted rendering.
+// Merge-year days already exclude the future, so flags only matter for
+// the current year's trailing empty cells.
+function yearHeatmap(dayTotals, year, todayKey) {
+  var y = Math.floor(Number(year))
+  var tk = String(todayKey || "")
+  var list = Array.isArray(dayTotals) ? dayTotals : []
+  var byDate = {}
+  var maxMs = 0
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i] || {}
+    var ms = Number(entry.ms)
+    if (!isDayKey(entry.date) || !(ms > 0)) continue
+    byDate[String(entry.date)] = ms
+    if (ms > maxMs) maxMs = ms
+  }
+  var weeks = []
+  if (!isFinite(y) || y < 2000 || y > 2200) return { weeks: weeks, maxMs: 0 }
+  var jan1 = new Date(y, 0, 1)
+  var cursor = new Date(y, 0, 1 - ((jan1.getDay() + 6) % 7))
+  var end = new Date(y, 11, 31)
+  var guard = 0
+  while (cursor <= end && guard < 54) {
+    var days = []
+    var label = ""
+    var labelFuture = false
+    var seenPast = false
+    for (var d = 0; d < 7; d++) {
+      if (cursor.getFullYear() !== y) {
+        days.push(null)
+      } else {
+        var key = dayKey(cursor)
+        if (cursor.getDate() === 1) {
+          label = MONTH_NAMES[cursor.getMonth()]
+          labelFuture = tk !== "" && key > tk
+        }
+        var m = byDate[key] || 0
+        var isFuture = tk !== "" && key > tk
+        if (!isFuture) seenPast = true
+        days.push({
+          date: key,
+          ms: m,
+          level: heatLevel(m, maxMs),
+          future: isFuture,
+        })
+      }
+      cursor = new Date(
+        cursor.getFullYear(),
+        cursor.getMonth(),
+        cursor.getDate() + 1,
+      )
+    }
+    weeks.push({
+      days: days,
+      label: label,
+      labelFuture: labelFuture,
+      future: !seenPast,
+    })
+    guard++
+  }
+  return { weeks: weeks, maxMs: maxMs }
+}
+
+// Sticky heatmap scroll: "YYYY:week" leftmost column, year-scoped so a
+// stored position never misplaces another year. Anything else means no
+// stored position (-1) and the grid opens on the current month.
+function parseHeatmapPos(value, year) {
+  var m = /^(\d{4}):(\d{1,2})$/.exec(String(value || ""))
+  if (!m || Number(m[1]) !== Number(year)) return -1
+  var w = Math.floor(Number(m[2]))
+  if (!isFinite(w) || w < 0 || w > 60) return -1
+  return w
 }
 
 // Node-style exports only so `node --test` can drive these pure functions;
@@ -1970,6 +3043,13 @@ if (typeof module !== "undefined" && module && module.exports) {
     pad2: pad2,
     qmlBrowserAliases: qmlBrowserAliases,
     canonicalApp: canonicalApp,
+    SITE_PREFIX: SITE_PREFIX,
+    isBrowserApp: isBrowserApp,
+    normalizeTitle: normalizeTitle,
+    siteForTitle: siteForTitle,
+    siteKey: siteKey,
+    isSiteKey: isSiteKey,
+    defaultSiteRules: defaultSiteRules,
     displayName: displayName,
     parseIgnoredApps: parseIgnoredApps,
     isIgnoredApp: isIgnoredApp,
@@ -2015,6 +3095,7 @@ if (typeof module !== "undefined" && module && module.exports) {
     fmtWords: fmtWords,
 
     appList: appList,
+    expandedAppList: expandedAppList,
     DONUT_MAX_SLICES: DONUT_MAX_SLICES,
     DONUT_MIN_PCT: DONUT_MIN_PCT,
     totalFor: totalFor,
@@ -2031,6 +3112,24 @@ if (typeof module !== "undefined" && module && module.exports) {
     pruneDays: pruneDays,
     insights: insights,
     groupedApps: groupedApps,
+    APP_CATEGORIES: APP_CATEGORIES,
+    appCategory: appCategory,
+    categoryColor: categoryColor,
+    MAX_DAY_SPANS: MAX_DAY_SPANS,
+    axisFracs: axisFracs,
+    isSpan: isSpan,
+    asSpanArray: asSpanArray,
+    spanList: spanList,
+    sanitizeSpans: sanitizeSpans,
+    appendSpan: appendSpan,
+    mergeSpans: mergeSpans,
+    splitSpan: splitSpan,
+    dayBounds: dayBounds,
+    daySpanView: daySpanView,
+    dayHourlyView: dayHourlyView,
+    fmtClock: fmtClock,
+    gapLine: gapLine,
+    parseDayView: parseDayView,
     hexToHsl: hexToHsl,
     hslToHex: hslToHex,
     sliceColors: sliceColors,
@@ -2069,5 +3168,9 @@ if (typeof module !== "undefined" && module && module.exports) {
     yearFacts: yearFacts,
     yearFactsFromSummary: yearFactsFromSummary,
     yearView: yearView,
+    parseYearGraph: parseYearGraph,
+    heatLevel: heatLevel,
+    yearHeatmap: yearHeatmap,
+    parseHeatmapPos: parseHeatmapPos,
   }
 }

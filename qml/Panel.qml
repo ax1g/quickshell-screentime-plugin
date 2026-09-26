@@ -31,6 +31,13 @@ Panel {
     readonly property var prefs: ("settings" in root) && root.settings ? root.settings : ({})
     readonly property bool hideYearly: root.prefs.hideYearly === true
     readonly property bool hideDailyInsights: root.prefs.hideDailyInsights === true
+    readonly property bool hideTimeline: root.prefs.hideTimeline === true
+    readonly property bool expandBrowser: root.prefs.expandBrowser === true
+    // Day view: the apps donut or the 24h timeline. A hidden timeline
+    // forces the donut and hides the hero icon; unset prefs render the
+    // donut; the retired demo toggle still opts in, so its live setting
+    // keeps working.
+    readonly property string dayView: root.hideTimeline ? "apps" : Model.parseDayView(root.prefs.dayView, root.prefs.hideDayTimeline)
     readonly property bool hideYearInsights: root.prefs.hideYearInsights === true
     readonly property bool hideEasterEggs: root.prefs.hideEasterEggs === true
     readonly property bool hideRecordTrophy: root.prefs.hideRecordTrophy === true
@@ -149,8 +156,12 @@ Panel {
     readonly property double dayTotal: root.activeDay ? (root.activeDay.total || 0) : 0
 
     // Gated on service.ready: unloaded history would label NaN-NaN-NaN.
-    readonly property var groupedApps: serviceReady ? Model.groupedApps(Model.appList(root.activeDay), Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
-    readonly property var fullApps: serviceReady ? Model.appList(root.activeDay) : []
+    // Expanded browsers list per-site rows merged across browsers;
+    // grouped apps keep one bucket per app. Donut and legend derive
+    // from the same source so they always agree.
+    readonly property var listedApps: serviceReady ? (root.expandBrowser ? Model.expandedAppList(root.activeDay) : Model.appList(root.activeDay)) : []
+    readonly property var groupedApps: serviceReady ? Model.groupedApps(root.listedApps, Model.DONUT_MAX_SLICES, Model.DONUT_MIN_PCT) : []
+    readonly property var fullApps: serviceReady ? root.listedApps : []
     // Single derivation for the paginated week trend; offset clamps to pages.
     readonly property var weekView: serviceReady ? Model.weekView(root.days, root.todayKey, root.weekCount, Math.max(0, Math.min(root.weekOffset, root.maxWeekOffset))) : null
     // Its Sunday anchors "Busiest day (7d)" to the visible week.
@@ -198,14 +209,20 @@ Panel {
     readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
     readonly property var yearFacts: root.yearView ? root.yearView.facts : []
     readonly property var yearMonths: root.yearView ? root.yearView.months : []
+    readonly property var yearDays: root.yearView ? root.yearView.days : []
+    // Bars or heatmap; anything unset renders bars like before.
+    readonly property string yearGraph: Model.parseYearGraph(root.prefs.yearGraph)
+    // Sticky heatmap scroll, year-scoped; -1 opens on the current month.
+    readonly property int heatmapSavedWeek: Model.parseHeatmapPos(root.prefs.heatmapPos, root.currentYear)
     readonly property var monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     readonly property var monthNamesLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-    // Daily goal in whole hours (0 = off) with live progress off the
-    // filtered active day, so ignored apps never push the goal. The
-    // goal log records every change, so each day keeps the goal it
-    // had: days before activation never show it.
-    readonly property var dailyGoalOptions: [0, 4, 6, 8]
+    // Daily screen limit in whole hours (0 = off) with live progress off
+    // the filtered active day, so ignored apps never push the limit. The
+    // log records every change, so each day keeps the limit it had: days
+    // before activation never show it. Stored under the historical
+    // dailyGoal keys so existing installs keep their setting.
+    readonly property var dailyGoalOptions: [0, 4, 6, 8, 10, 12]
     readonly property int dailyGoalHours: Model.parseDailyGoalHours(root.prefs.dailyGoalHours)
     readonly property var goalLog: Model.parseGoalLog(root.prefs.dailyGoalLog)
     readonly property var goalProgress: Model.goalProgress(root.dayTotal, Model.goalForDay(root.goalLog, root.activeDayKey))
@@ -218,6 +235,10 @@ Panel {
     // Donut shows the grouped view; the legend expands inline.
     readonly property var segments: Model.arcSegments(root.groupedApps)
     readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
+    // Day-timeline spans: one view call, threaded down to the strip.
+    readonly property var daySpans: serviceReady ? Model.daySpanView(root.activeDay, root.activeDayKey, Color.accent) : null
+    // Experimental hourly rhythm for the timeline page; same day, same spans.
+    readonly property var dayHours: serviceReady ? Model.dayHourlyView(root.activeDay, Color.accent) : null
     readonly property int groupedCount: root.groupedApps.length
     readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
 
@@ -286,15 +307,19 @@ Panel {
     }
 
     // Hint-mode dispatch: fixed single-letter tags for the main panel's
-    // pressables (y yearly, c config, m show more, b/n week pagers,
-    // t week total, 1-7 weekday bars). Only currently actionable items
-    // fire; anything else (or a drawer opening underneath) leaves the
-    // mode untouched, and a handled tag always exits it.
+    // pressables (y yearly, c config, m show more, d day view, b/n week
+    // pagers, t week total, 1-7 weekday bars, g year graph). Only currently
+    // actionable items fire; anything else (or a drawer opening
+    // underneath) leaves the mode untouched, and a handled tag always
+    // exits it.
     function activateHint(tag) {
         var handled = false;
         if (root.calendarOpen) {
             if (tag === "m") {
                 root.openCalendar(false);
+                handled = true;
+            } else if (tag === "g") {
+                root.writeSetting("yearGraph", root.yearGraph === "heatmap" ? "bars" : "heatmap");
                 handled = true;
             } else if (tag === "b" && root.currentYear > root.oldestDataYear) {
                 root.currentYearOffset += 1;
@@ -308,6 +333,9 @@ Panel {
             handled = true;
         } else if (tag === "c") {
             root.openConfig(true);
+            handled = true;
+        } else if (tag === "d") {
+            root.writeSetting("dayView", root.dayView === "timeline" ? "apps" : "timeline");
             handled = true;
         } else if (tag === "m") {
             root.toggleExpanded();
@@ -393,7 +421,10 @@ Panel {
         open: root.opened
         focusTarget: keyCatcher
         contentWidth: panel.fittedContentWidth(Style.space(360))
-        contentHeight: panel.fittedContentHeight(panelColumn.implicitHeight, Style.space(480))
+        // The panel grows with its content instead of scrolling: no cap
+        // here, the framework still clamps to the screen, and j/k keep
+        // scrolling programmatically on short screens.
+        contentHeight: panel.fittedContentHeight(panelColumn.implicitHeight)
 
         PanelKeyCatcher {
             id: keyCatcher
@@ -489,11 +520,24 @@ Panel {
                     yearFacts: root.yearFacts
                     hideYearInsights: root.hideYearInsights
                     yearMonths: root.yearMonths
+                    yearDays: root.yearDays
+                    yearGraph: root.yearGraph
+                    heatmapSavedWeek: root.heatmapSavedWeek
+                    todayKey: root.todayKey
                     monthNamesShort: root.monthNamesShort
                     monthNamesLong: root.monthNamesLong
                     onCloseRequested: root.openCalendar(false)
                     onPrevYearRequested: root.currentYearOffset += 1
                     onNextYearRequested: root.currentYearOffset -= 1
+                    onYearGraphSelected: function (mode) {
+                        if (mode !== root.yearGraph)
+                            root.writeSetting("yearGraph", mode);
+                    }
+                    onHeatmapPositionSaved: function (week) {
+                        var pos = root.currentYear + ":" + week;
+                        if (root.prefs.heatmapPos !== pos)
+                            root.writeSetting("heatmapPos", pos);
+                    }
                 }
             }
 
@@ -664,6 +708,8 @@ Panel {
                             urgent: Color.urgent
                             onBackRequested: root.openConfig(false)
                             hideYearly: root.hideYearly
+                            hideTimeline: root.hideTimeline
+                            expandBrowser: root.expandBrowser
                             hideDailyInsights: root.hideDailyInsights
                             hideYearInsights: root.hideYearInsights
                             weekCount: root.weekCount
@@ -685,6 +731,8 @@ Panel {
                             pluginVersion: root.pluginVersion
                             hintMode: root.hintMode
                             onYearlyToggled: root.writeSetting("hideYearly", !root.hideYearly)
+                            onTimelineToggled: root.writeSetting("hideTimeline", !root.hideTimeline)
+                            onExpandBrowserToggled: root.writeSetting("expandBrowser", !root.expandBrowser)
                             onDailyInsightsToggled: root.writeSetting("hideDailyInsights", !root.hideDailyInsights)
                             onYearInsightsToggled: root.writeSetting("hideYearInsights", !root.hideYearInsights)
                             onWeekWindowSelected: function (count) {
@@ -750,7 +798,9 @@ Panel {
                 contentHeight: panelColumn.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                interactive: contentHeight > height || contentWidth > width
+                // Never user-scrollable: the panel grows to fit, and j/k
+                // move contentY directly when the screen clamps it.
+                interactive: false
 
                 Column {
                     id: panelColumn
@@ -768,6 +818,8 @@ Panel {
                         calendarEnabled: !root.hideYearly
                         easterEggs: !root.hideEasterEggs
                         configOpen: root.configOpen
+                        dayView: root.dayView
+                        hideTimeline: root.hideTimeline
                         dayTotal: root.dayTotal
                         activeDayKey: root.activeDayKey
                         activeDayLabel: root.activeDayLabel
@@ -775,15 +827,18 @@ Panel {
                         hintMode: root.hintMode
                         accent: Color.accent
                         tipBackground: root.bar ? root.bar.background : Color.background
+                        urgent: Color.urgent
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)
+                        onDayViewToggled: root.writeSetting("dayView", root.dayView === "timeline" ? "apps" : "timeline")
                     }
 
                     // First-run coach marks; hidden once anything is tracked.
+                    // Main-panel exclusive: the timeline page explains itself.
                     Item {
                         width: parent.width
-                        visible: root.showOnboarding
+                        visible: root.showOnboarding && root.dayView === "apps"
                         height: visible ? onboardingColumn.implicitHeight : 0
                         implicitHeight: height
 
@@ -825,47 +880,111 @@ Panel {
                         }
                     }
 
-                    // ---- Per-app donut + legend ------------------------------------
+                    // ---- Day view: donut page ↔ timeline page -------------------
+                    // The timeline page shows only the strip, its legend
+                    // and the experimental hourly chart; every other
+                    // section stays exclusive to the main (donut) panel.
                     Item {
                         width: parent.width
-                        height: Math.max(root.ringSize, root.legendMaxHeight)
+                        height: dayViewContent.implicitHeight
+                        implicitHeight: height
 
-                        DonutChart {
-                            id: donutChart
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            segments: root.segments
-                            sliceColors: root.sliceColors
-                            ringSize: root.ringSize
-                            activeDayLabel: root.activeDayLabel
-                            dayTotal: root.dayTotal
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            accent: Color.accent
-                        }
+                        Column {
+                            id: dayViewContent
+                            width: parent.width
+                            spacing: 0
 
-                        AppLegend {
-                            anchors.left: donutChart.right
-                            anchors.leftMargin: Style.space(16)
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            height: root.legendMaxHeight
-                            rows: root.expanded ? root.fullApps : root.groupedApps
-                            expanded: root.expanded
-                            groupedCount: root.groupedCount
-                            sliceColors: root.sliceColors
-                            otherColor: root.otherColor
-                            foreground: root.contentForeground
-                            fontFamily: root.contentFontFamily
-                            accent: Color.accent
-                            maxHeight: root.legendMaxHeight
+                            // ---- Per-app donut + legend --------------------------------
+                            Item {
+                                width: parent.width
+                                visible: root.dayView === "apps"
+                                height: visible ? Math.max(root.ringSize, root.legendMaxHeight) : 0
+                                implicitHeight: height
+
+                                DonutChart {
+                                    id: donutChart
+                                    anchors.left: parent.left
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    segments: root.segments
+                                    sliceColors: root.sliceColors
+                                    ringSize: root.ringSize
+                                    activeDayLabel: root.activeDayLabel
+                                    dayTotal: root.dayTotal
+                                    foreground: root.contentForeground
+                                    fontFamily: root.contentFontFamily
+                                    accent: Color.accent
+                                }
+
+                                AppLegend {
+                                    anchors.left: donutChart.right
+                                    anchors.leftMargin: Style.space(16)
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: root.legendMaxHeight
+                                    rows: root.expanded ? root.fullApps : root.groupedApps
+                                    expanded: root.expanded
+                                    groupedCount: root.groupedCount
+                                    sliceColors: root.sliceColors
+                                    otherColor: root.otherColor
+                                    foreground: root.contentForeground
+                                    fontFamily: root.contentFontFamily
+                                    accent: Color.accent
+                                    maxHeight: root.legendMaxHeight
+                                }
+                            }
+
+                            // ---- Timeline page: strip, legend, hourly rhythm ---------
+                            Item {
+                                width: parent.width
+                                visible: root.dayView === "timeline"
+                                height: visible ? timelinePage.implicitHeight : 0
+                                implicitHeight: height
+
+                                Column {
+                                    id: timelinePage
+                                    width: parent.width
+                                    spacing: hourlyChart.visible ? Style.space(12) : 0
+
+                                    DayTimeline {
+                                        id: dayTimeline
+                                        width: parent.width
+                                        segments: root.daySpans ? root.daySpans.segments : []
+                                        categories: root.daySpans ? root.daySpans.categories : []
+                                        axis: root.daySpans ? root.daySpans.axis : []
+                                        foreground: root.contentForeground
+                                        fontFamily: root.contentFontFamily
+                                        tipBackground: root.bar ? root.bar.background : Color.background
+                                        dayTotal: root.dayTotal
+                                    }
+
+                                    PanelSeparator {
+                                        width: parent.width
+                                        visible: hourlyChart.visible
+                                        height: visible ? 1 : 0
+                                        foreground: root.contentForeground
+                                        strength: 0.12
+                                    }
+
+                                    HourlyChart {
+                                        id: hourlyChart
+                                        width: parent.width
+                                        hours: root.dayHours ? root.dayHours.hours : []
+                                        maxMs: root.dayHours ? root.dayHours.maxMs : 0
+                                        peakHour: root.dayHours ? root.dayHours.peakHour : -1
+                                        accent: Color.accent
+                                        foreground: root.contentForeground
+                                        fontFamily: root.contentFontFamily
+                                        tipBackground: root.bar ? root.bar.background : Color.background
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    // ---- Week trend + insights (only on SHOW MORE) -----------------
+                    // ---- Week trend + insights (main panel SHOW MORE only) --------
                     Item {
                         width: parent.width
-                        visible: root.expanded
+                        visible: root.expanded && root.dayView === "apps"
                         height: visible ? patternsColumn.implicitHeight : 0
                         implicitHeight: height
 

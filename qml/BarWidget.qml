@@ -38,8 +38,16 @@ BarWidget {
 
     readonly property bool iconOnly: root.settingBool("iconOnly", false)
 
-    // Daily goal badge: progress counts the same filtered day the panel
-    // shows, so ignored apps never push the goal. The goal in force is
+    // Third bar mode, only with a limit on: show the remaining time
+    // ("6h left") instead of the accrued total. Right-click cycles
+    // full → remaining → icon-only → full; without a limit it keeps
+    // flipping full and icon-only like before.
+    readonly property bool limitLeft: root.settingBool("limitLeft", false)
+    readonly property string limitLeftLabel: Model.fmt(Math.max(0, root.dailyGoalHours * 3600000 - root.goalTotal)) + " left"
+    readonly property string displayLabel: (root.limitLeft && root.dailyGoalHours > 0) ? root.limitLeftLabel : root.label
+
+    // Screen limit badge: progress counts the same filtered day the panel
+    // shows, so ignored apps never push the limit. The limit in force is
     // the log entry for today: days before activation show nothing.
     readonly property int dailyGoalHours: Model.goalForDay(Model.parseGoalLog(root.setting("dailyGoalLog", [])), root.service ? root.service.todayKey : "")
     readonly property double goalTotal: {
@@ -54,8 +62,8 @@ BarWidget {
             return "";
         var goal = Model.fmt(root.dailyGoalHours * 3600000);
         if (root.goalReached)
-            return " · goal reached (" + goal + ")";
-        return " · " + Model.fmt(root.dailyGoalHours * 3600000 - root.goalTotal) + " left of " + goal;
+            return " · over " + goal + " screen limit";
+        return " · " + Model.fmt(root.dailyGoalHours * 3600000 - root.goalTotal) + " left of " + goal + " limit";
     }
 
     // Session cache of keys written before the shell delivers settings
@@ -99,8 +107,18 @@ BarWidget {
             root.setSetting(k, pending[k]);
     }
 
-    function toggleIconOnly() {
-        root.setSetting("iconOnly", !root.iconOnly);
+    function cycleBarMode() {
+        if (root.dailyGoalHours <= 0) {
+            root.setSetting("iconOnly", !root.iconOnly);
+            return;
+        }
+        if (!root.iconOnly && !root.limitLeft)
+            root.setSetting("limitLeft", true);
+        else if (root.limitLeft) {
+            root.setSetting("limitLeft", false);
+            root.setSetting("iconOnly", true);
+        } else
+            root.setSetting("iconOnly", false);
     }
 
     // Underline tracks painted label width, like omarchy.clock.
@@ -212,8 +230,9 @@ BarWidget {
         anchors.fill: parent
         bar: root.bar
         // Single label at bar size: glyph + duration render uniformly.
-        // A reached daily goal appends a check badge.
-        text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.label + (root.goalReached ? " ✓" : "")
+        // A reached screen limit appends a warning badge, unless the bar
+        // already shows the remaining time (which reads "0m left" then).
+        text: root.vertical ? "" : root.iconOnly ? root.glyph : root.glyph + " " + root.displayLabel + ((root.goalReached && !root.limitLeft) ? " !" : "")
         labelVisible: !root.vertical && !root.iconOnly
         hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
         fixedHeight: root.vertical ? root.verticalLines.length * Style.bar.iconSlot : -1
@@ -221,22 +240,28 @@ BarWidget {
         tooltipText: (root.hasActivity ? "Screen time today \u00b7 " + root.label : "Screen time \u00b7 no activity yet") + root.goalTooltip
         onPressed: function (b) {
             if (b === Qt.RightButton)
-                root.toggleIconOnly();
+                root.cycleBarMode();
             else
                 root.togglePanel();
         }
 
-        // OpticalGlyph centers glyph ink over the hidden label's advance.
-        // Body size, not icon size: the glyph must paint pixel-identical
-        // pixels in both modes, and time mode paints it at body size.
-        OpticalGlyph {
-            id: iconGlyph
+        // Match the shell's BarIconButton geometry so the standalone glyph
+        // aligns with adjacent status icons.
+        Item {
+            id: iconCanvas
             visible: !root.vertical && root.iconOnly
-            anchors.fill: parent
-            text: root.glyph
-            fontFamily: button.fontFamily
-            fontSize: button.fontSize
-            color: button.foreground
+            anchors.centerIn: parent
+            width: Style.bar.iconCanvas
+            height: Style.bar.iconCanvas
+
+            OpticalGlyph {
+                id: iconGlyph
+                anchors.fill: parent
+                text: root.glyph
+                fontFamily: button.fontFamily
+                fontSize: Style.bar.iconFont
+                color: button.foreground
+            }
         }
 
         Column {

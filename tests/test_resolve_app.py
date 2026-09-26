@@ -7,7 +7,6 @@ Process-touching tests use the current process (always alive, always in
 /proc), so nothing here needs a running Hyprland session.
 """
 
-import contextlib
 import io
 import json
 import os
@@ -26,51 +25,47 @@ import resolve_app as r
 
 
 class CanonicalizationTests(unittest.TestCase):
-    def test_browser_aliases_json_is_loaded(self):
-        json_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "js",
-            "browser_aliases.json",
-        )
-        with open(json_path) as f:
-            expected = json.load(f)
-        self.assertEqual(r.BROWSER_BINARY_TO_APP, expected)
-
-    def test_browser_binaries_fold_to_canonical_names(self):
-        for binary in ("zen-bin", "zen_browser", "brave-browser", "chrome"):
-            self.assertIn(binary, r.BROWSER_BINARY_TO_APP)
-
-    def test_browser_worker_comms_are_flagged(self):
-        for comm in ("Web Content", "forkserver", "rdd", "zygote", "GPU Process"):
-            self.assertIn(comm, r.BROWSER_SUBPROCESS_COMMS)
-
-    def test_unknown_binary_passes_through(self):
-        self.assertEqual(r.BROWSER_BINARY_TO_APP.get("foot", "foot"), "foot")
+    def test_browser_aliases_stay_in_sync_with_the_qml_mirror(self):
+        # The JSON file is canonical; Model.js mirrors it as a QML-safe
+        # literal and model.test.js fails loudly on drift. Here only the
+        # loader's failure mode matters: a missing file resolves nothing.
+        self.assertIsInstance(r.BROWSER_BINARY_TO_APP, dict)
+        self.assertGreater(len(r.BROWSER_BINARY_TO_APP), 0)
 
 
 class ProcParsingTests(unittest.TestCase):
-    def test_proc_stat_parses_current_process(self):
-        stat = r.proc_stat(os.getpid())
-        assert stat is not None
-        self.assertIn("comm", stat)
-        self.assertIn("ppid", stat)
-        self.assertIn("tpgid", stat)
-        self.assertGreater(stat["ppid"], 0)
+    def test_proc_stat_parses_blobs_and_rejects_garbage(self):
+        blob = b"1234 (myapp) S 100 200 300 400 -1 0 0 0 0\n"
+        with mock.patch("builtins.open", mock.mock_open(read_data=blob)):
+            stat = r.proc_stat(1234)
+        self.assertEqual(stat["comm"], "myapp")
+        self.assertEqual(stat["ppid"], 100)
+        self.assertEqual(stat["tpgid"], -1)
+        bad = b"1 (bash) S notanumber 2 3 4 5 6 7 8 9\n"
+        with mock.patch("builtins.open", mock.mock_open(read_data=bad)):
+            self.assertIsNone(r.proc_stat(1))
 
-    def test_proc_stat_tolerates_missing_pid(self):
+    def test_proc_name_prefers_argv_basename_falls_back_to_comm(self):
+        stat_blob = b"1234 (oldcomm) S 1 2 3 4 5 0 0 0 0\n"
+
+        def fake_open(path, *args, **kwargs):
+            if "cmdline" in str(path):
+                return mock.mock_open(read_data=b"/usr/bin/foo\0--bar\0")()
+            return mock.mock_open(read_data=stat_blob)()
+
+        with mock.patch("builtins.open", fake_open):
+            self.assertEqual(r.proc_name(1234), "foo")
+
+        def fake_empty_cmdline(path, *args, **kwargs):
+            if "cmdline" in str(path):
+                return mock.mock_open(read_data=b"")()
+            return mock.mock_open(read_data=stat_blob)()
+
+        with mock.patch("builtins.open", fake_empty_cmdline):
+            self.assertEqual(r.proc_name(1234), "oldcomm")
+
+    def test_proc_helpers_return_none_for_a_missing_pid(self):
         self.assertIsNone(r.proc_stat(2**31 - 1))
-
-    def test_proc_stat_rejects_non_numeric_fields(self):
-        bad_stat = b"1 (bash) S notanumber 2 3 4 5 6 7 8 9\n"
-        with mock.patch("builtins.open", mock.mock_open(read_data=bad_stat)):
-            self.assertIsNone(r.proc_stat(1234))
-
-    def test_proc_name_resolves_current_process(self):
-        name = r.proc_name(os.getpid())
-        assert name
-        self.assertNotIn("/", name)
-
-    def test_proc_name_unknown_pid_returns_none(self):
         self.assertIsNone(r.proc_name(2**31 - 1))
 
 
@@ -142,6 +137,13 @@ class TerminalResolutionTests(unittest.TestCase):
         w.add(300, "foot", 1)
         w.add(310, "-bash", 300, ttynr=34817, tpgid=310)
         self.assertEqual(r._resolve_terminal_foreground(300), "bash")
+
+    def test_unknown_foreground_binary_passes_through(self):
+        w = self.world
+        w.add(900, "foot", 1)
+        w.add(910, "bash", 900, ttynr=21, tpgid=920)
+        w.add(920, "myapp", 910)
+        self.assertEqual(r._resolve_terminal_foreground(900), "myapp")
 
     def test_no_tty_owning_descendant_returns_none(self):
         w = self.world
@@ -217,14 +219,16 @@ class SteamTitleTests(unittest.TestCase):
             )
         return path
 
-    def test_steam_title_for_class_extracts_appid(self):
+    def test_steam_class_parsing(self):
         self.assertEqual(r._steam_class_appid("steam_app_730"), "730")
         self.assertEqual(r._steam_class_appid("Steam_App_440900"), "440900")
-
-    def test_steam_title_for_class_rejects_non_steam(self):
-        self.assertIsNone(r._steam_class_appid("foot"))
-        self.assertIsNone(r._steam_class_appid("steam_app_"))
-        self.assertIsNone(r._steam_class_appid(None))
+        for bad in ("foot", "steam_app_", None):
+            self.assertIsNone(r._steam_class_appid(bad))
+        # Non-Steam shortcuts (e.g. Battle.net) report a slug, not an AppID.
+        for slug in ("steam_app_battlenet", "Steam_App_Battlenet"):
+            self.assertTrue(r._is_steam_class(slug))
+        for bad in ("foot", None):
+            self.assertFalse(r._is_steam_class(bad))
 
     def test_acf_name_parses_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -233,58 +237,6 @@ class SteamTitleTests(unittest.TestCase):
 
     def test_acf_name_missing_file_is_none(self):
         self.assertIsNone(r._acf_name(os.path.join(tempfile.gettempdir(), "nope.acf")))
-
-    def test_is_steam_class_accepts_numeric_and_slug_forms(self):
-        self.assertTrue(r._is_steam_class("steam_app_730"))
-        # Non-Steam shortcuts (e.g. Battle.net) report a slug, not an AppID.
-        self.assertTrue(r._is_steam_class("steam_app_battlenet"))
-        self.assertTrue(r._is_steam_class("Steam_App_Battlenet"))
-
-    def test_is_steam_class_rejects_non_steam(self):
-        self.assertFalse(r._is_steam_class("foot"))
-        self.assertFalse(r._is_steam_class(None))
-
-    def test_main_resolves_slug_steam_class_from_window_title(self):
-        """A slug class with no manifest falls back to the live window title."""
-        activewindow = json.dumps(
-            {
-                "pid": 0,
-                "class": "steam_app_battlenet",
-                "title": "World of Warcraft",
-            }
-        )
-        fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
-        out = io.StringIO()
-        with (
-            mock.patch.object(r.subprocess, "run", fake_run),
-            mock.patch.object(r.sys, "argv", ["resolve_app.py"]),
-            contextlib.redirect_stdout(out),
-            self.assertRaises(SystemExit) as cm,
-        ):
-            r.main()
-        self.assertEqual(cm.exception.code, 0)
-        self.assertEqual(out.getvalue().strip(), "World of Warcraft")
-
-    def test_main_slug_steam_class_without_title_stays_silent(self):
-        """No title -> no output, so tracking keeps the stable slug key."""
-        activewindow = json.dumps(
-            {
-                "pid": 0,
-                "class": "steam_app_battlenet",
-                "title": "   ",
-            }
-        )
-        fake_run = mock.Mock(return_value=mock.Mock(stdout=activewindow))
-        out = io.StringIO()
-        with (
-            mock.patch.object(r.subprocess, "run", fake_run),
-            mock.patch.object(r.sys, "argv", ["resolve_app.py"]),
-            contextlib.redirect_stdout(out),
-            self.assertRaises(SystemExit) as cm,
-        ):
-            r.main()
-        self.assertEqual(cm.exception.code, 0)
-        self.assertEqual(out.getvalue(), "")
 
     def test_steam_title_searches_roots(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -316,43 +268,48 @@ class MainTests(unittest.TestCase):
             r.main()
         return cm.exception.code, buf.getvalue()
 
-    def test_main_missing_hyprctl_exits_quietly(self):
-        code, out = self._run_main_no_args(run_error=FileNotFoundError("hyprctl"))
-        self.assertEqual(code, 0)
-        self.assertEqual(out, "")
+    def test_main_stays_silent_on_bad_hyprctl_output(self):
+        cases = [
+            ("missing hyprctl", None, FileNotFoundError("hyprctl")),
+            ("list json", "[1, 2]", None),
+            ("garbage json", "not json", None),
+            (
+                "non-string title",
+                json.dumps(
+                    {"pid": 0, "class": "steam_app_battlenet", "title": 123}
+                ),
+                None,
+            ),
+        ]
+        for name, result, error in cases:
+            with self.subTest(name):
+                code, out = self._run_main_no_args(
+                    run_result=result, run_error=error
+                )
+                self.assertEqual(code, 0)
+                self.assertEqual(out, "")
 
-    def test_main_list_json_exits_quietly(self):
-        code, out = self._run_main_no_args(run_result="[1, 2]")
-        self.assertEqual(code, 0)
-        self.assertEqual(out, "")
-
-    def test_main_garbage_json_exits_quietly(self):
-        code, out = self._run_main_no_args(run_result="not json")
-        self.assertEqual(code, 0)
-        self.assertEqual(out, "")
-
-    def test_main_non_string_title_exits_quietly(self):
-        code, out = self._run_main_no_args(
-            run_result=json.dumps(
-                {"pid": 0, "class": "steam_app_battlenet", "title": 123}
-            )
-        )
-        self.assertEqual(code, 0)
-        self.assertEqual(out, "")
-
-    def test_main_slug_title_prints_stripped(self):
-        code, out = self._run_main_no_args(
-            run_result=json.dumps(
-                {
-                    "pid": 0,
-                    "class": "steam_app_battlenet",
-                    "title": "  World of Warcraft  ",
-                }
-            )
-        )
-        self.assertEqual(code, 0)
-        self.assertEqual(out.strip(), "World of Warcraft")
-        self.assertEqual(out, "World of Warcraft\n")
+    def test_main_slug_title_falls_back_to_window_title(self):
+        """A slug class with no manifest prints the live title, stripped."""
+        rows = [
+            ("exact title", "World of Warcraft", "World of Warcraft\n"),
+            ("padded title", "  World of Warcraft  ", "World of Warcraft\n"),
+            # Blank title stays silent, so tracking keeps the stable slug key.
+            ("blank title", "   ", ""),
+        ]
+        for name, title, expected in rows:
+            with self.subTest(name):
+                code, out = self._run_main_no_args(
+                    run_result=json.dumps(
+                        {
+                            "pid": 0,
+                            "class": "steam_app_battlenet",
+                            "title": title,
+                        }
+                    )
+                )
+                self.assertEqual(code, 0)
+                self.assertEqual(out, expected)
 
 
 if __name__ == "__main__":

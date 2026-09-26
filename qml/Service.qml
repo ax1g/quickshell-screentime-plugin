@@ -70,9 +70,18 @@ Item {
     property var years: ({})
 
     property string activeApp: ""
+    // Aggregate key for apps/donut stays browser-level; spans retain the
+    // site key so the daily timeline can still name each tab destination.
+    property string activeSpanApp: ""
     property double activeStart: 0
     // Raw compositor appId; activeApp is the resolved name.
     property string rawApp: ""
+    // The active toplevel's title is the only per-tab signal the
+    // compositor offers. It changes on tab switches WITHOUT the toplevel
+    // changing, so this binding — not onActiveToplevelChanged — drives
+    // site switches inside a browser window.
+    readonly property string activeTitle: ToplevelManager.activeToplevel && ToplevelManager.activeToplevel.title ? ToplevelManager.activeToplevel.title : ""
+    onActiveTitleChanged: root.refreshSite()
     property string resolveForApp: ""
     property bool resolveInFlight: false
     // Generation tokens stop stale terminal resolves misattributing.
@@ -122,6 +131,8 @@ Item {
             root.todayKey = patch.todayKey;
         if (patch.activeApp !== undefined)
             root.activeApp = patch.activeApp;
+        if (patch.activeSpanApp !== undefined)
+            root.activeSpanApp = patch.activeSpanApp;
         if (patch.activeStart !== undefined)
             root.activeStart = patch.activeStart;
         if (patch.lastTick !== undefined)
@@ -159,8 +170,10 @@ Item {
         // focus switch.
         if (root.ready && root.activeApp && Model.isIgnoredApp(root.activeApp, root.ignoredApps)) {
             var now = Date.now();
-            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            root.rolloverIfNeeded(now);
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             root.persist();
         }
@@ -193,6 +206,8 @@ Item {
             var renamed = Model.resolveAppName(previous, map);
             if (renamed !== previous)
                 root.activeApp = renamed;
+            if (root.activeSpanApp === previous)
+                root.activeSpanApp = root.activeApp;
             root.activeStart = now;
         }
         root.persist();
@@ -212,37 +227,84 @@ Item {
         return true;
     }
 
+    // Tracking key for a browser window: its site bucket when the title
+    // matches a rule, "" otherwise so the caller keeps the browser key.
+    function browserSiteKey(appId, title) {
+        if (!Model.isBrowserApp(Model.canonicalApp(appId)))
+            return "";
+        return Model.siteKey(Model.siteForTitle(title));
+    }
+
+    // Main-panel totals always accrue to the resolved app, not a tab site.
+    function trackingKeyFor(appId) {
+        return Model.resolveAppName(appId, root.appAliases);
+    }
+
+    // Timeline spans retain a browser site's identity when the title names it.
+    function spanKeyFor(appId, title) {
+        return root.browserSiteKey(appId, title) || root.trackingKeyFor(appId);
+    }
+
+    // Tab switches inside a browser never touch activeToplevel, so the
+    // span rotates here. Only a change in the RESOLVED key rotates it:
+    // "(56) WhatsApp" and "(57) WhatsApp" both resolve to whatsapp.com,
+    // so a ticking unread counter cannot churn buckets.
+    function refreshSite() {
+        if (!root.ready || root.resolveInFlight)
+            return;
+        // Paused: leave the bucket closed rather than reopening on a title
+        // change that arrives while locked or with the screensaver up.
+        if (root.sessionLocked || root.screensaverActive)
+            return;
+        if (!Model.isBrowserApp(Model.canonicalApp(root.rawApp)))
+            return;
+        var want = root.spanKeyFor(root.rawApp, root.activeTitle);
+        if (!want || want === root.activeSpanApp)
+            return;
+        var now = Date.now();
+        root.rolloverIfNeeded(now);
+        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+        root.activeSpanApp = want;
+        root.activeStart = now;
+        root.persist();
+    }
+
     function switchActive() {
         // Pre-ready focus events open unguarded buckets (and defeat the
         // lastTick baseline); the load handlers call back once ready.
         if (!root.ready)
             return;
         var now = Date.now();
-        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+        root.rolloverIfNeeded(now);
+        applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
         root.persist();
         var tl = ToplevelManager.activeToplevel;
         var app = tl && tl.appId ? tl.appId : "";
         root.rawApp = app;
-        root.resolveInFlight = false;
-        // Paused (locked or screensaver up): keep the bucket closed.
+        root.resolveInFlight = false;        // Paused (locked or screensaver up): keep the bucket closed.
         // Toplevel events still fire under lock; reopening here would
         // accrue straight through the pause.
         if (root.sessionLocked || root.screensaverActive) {
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             return;
         }
         if (app && !root.shouldTrack(app)) {
+            root.journalGap("untracked-focus", app);
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             return;
         }
         if (app && (root.isTerminal(app) || root.isSteamApp(app))) {
             root.activeApp = "";
+            root.activeSpanApp = "";
             root.activeStart = 0;
             root.beginResolve();
         } else {
-            root.activeApp = Model.resolveAppName(app, root.appAliases);
+            root.activeApp = root.trackingKeyFor(app);
+            root.activeSpanApp = root.spanKeyFor(app, tl && tl.title ? tl.title : "");
             root.activeStart = app ? now : 0;
         }
     }
@@ -267,6 +329,7 @@ Item {
             root.resolveForApp = "";
             return;
         }
+        root.rolloverIfNeeded();
         var patch = State.applyResolvedApp(root, name, root.resolveForApp, root.todayKey, root.suspendGapMs, root.lastTick);
         // Always clear, even on no-op, so refresh isn't watchdog-gated.
         root.resolveInFlight = false;
@@ -279,14 +342,15 @@ Item {
     function commitElapsed(now) {
         if (!root.ready || !root.activeApp || !root.activeStart)
             return;
-        applyState(State.commitElapsed(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+        applyState(State.commitElapsed(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
     }
 
-    function rolloverIfNeeded() {
+    function rolloverIfNeeded(now) {
         var key = Model.dayKey(new Date());
-        var now = Date.now();
+        if (now === undefined)
+            now = Date.now();
         // One transition owns midnight (close+carry+reopen); no ordering slip.
-        var patch = State.advanceRollover(root, now, key, root.suspendGapMs, root.lastTick);
+        var patch = State.advanceRollover(root, now, key, root.suspendGapMs, root.lastTick, root.activeSpanApp);
         if (!patch)
             return;
         applyState(patch);
@@ -384,10 +448,19 @@ Item {
         if (!root.ready) {
             root.todayKey = Model.dayKey(new Date());
             var prev = d[root.todayKey];
-            root.today = prev && typeof prev === "object" ? {
+            var live = prev && typeof prev === "object" ? {
                 total: prev.total || 0,
                 apps: Object.assign({}, prev.apps || {})
             } : Model.newDay();
+            // Recorded spans carry into the live day through sanitize,
+            // which normalizes adapter sequences into engine arrays;
+            // span-less days keep their shape with no empty key.
+            if (prev && typeof prev === "object") {
+                var carried = Model.sanitizeSpans(prev.spans);
+                if (carried.spans && carried.spans.length > 0)
+                    live.spans = carried.spans;
+            }
+            root.today = live;
             root.ready = true;
             root.startupPhase = false;
             root.lastTick = Date.now();
@@ -579,7 +652,11 @@ Item {
             if (root.debugLogging)
                 console.warn("agx.screen-time: lock started");
             var now = Date.now();
-            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            if (root.activeApp)
+                root.journalGap("lock", root.activeApp);
+            root.rolloverIfNeeded(now);
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+            root.activeSpanApp = "";
             root.persist();
         } else {
             var endedAt = Date.now();
@@ -605,7 +682,11 @@ Item {
             if (root.debugLogging)
                 console.warn("agx.screen-time: screensaver started");
             var now = Date.now();
-            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
+            if (root.activeApp)
+                root.journalGap("screensaver", root.activeApp);
+            root.rolloverIfNeeded(now);
+            applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+            root.activeSpanApp = "";
             root.persist();
         } else {
             var endedAt = Date.now();
@@ -747,15 +828,26 @@ Item {
         onTriggered: {
             var now = Date.now();
             if (State.isSuspendGap(now, root.lastTick, root.suspendGapMs)) {
-                applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
-                // Roll past midnight before reopening, or wake seconds land on yesterday.
-                root.rolloverIfNeeded();
+                if (root.activeApp)
+                    root.journalGap("suspend-drop", root.activeApp);
+                applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick, root.activeSpanApp));
+                root.activeSpanApp = "";
+                // Full rollover, never the bare carry: unmirrored time
+                // tracked before the suspend flushes into the old day
+                // instead of evaporating when the wake crosses midnight.
+                // Then roll past midnight before reopening, or wake
+                // seconds land on yesterday.
+                root.rolloverIfNeeded(now);
                 root.persist();
                 root.switchActive();
             } else {
                 root.rolloverIfNeeded();
                 root.commitElapsed(now);
                 root.persist();
+                // Open-loop silence with no pause flags: the bucket never
+                // opened (or died without a close event). Throttled inside.
+                if (!root.activeApp && !root.sessionLocked && !root.screensaverActive)
+                    root.journalGap("no-bucket", "");
             }
             root.lastTick = now;
         }
@@ -787,6 +879,38 @@ Item {
         id: saveRetryTimer
         repeat: false
         onTriggered: historyFile.writeAdapter()
+    }
+
+    // Temporary untracked-gap journal (diagnostic): every bucket close
+    // into silence appends one JSONL line next to history.json,
+    // ring-buffered at 200 lines. Recording, retention and schemas are
+    // untouched; removed before release.
+    property double lastGapLogAt: 0
+    property string pendingGapLine: ""
+    function journalGap(kind, lastApp) {
+        var now = Date.now();
+        // The open-loop no-bucket poll fires every heartbeat while the
+        // silence lasts; one line a minute is enough to bound it.
+        if (kind === "no-bucket") {
+            if (now - root.lastGapLogAt < 60000)
+                return;
+            root.lastGapLogAt = now;
+        }
+        root.pendingGapLine = stateModel.gapLine(now, kind, lastApp || "", root.rawApp || "", root.sessionLocked, root.screensaverActive, root.resolveInFlight);
+        root.flushGapLine();
+    }
+    function flushGapLine() {
+        if (!root.pendingGapLine || gapProc.running)
+            return;
+        var line = root.pendingGapLine;
+        root.pendingGapLine = "";
+        gapProc.command = ["bash", "-c", "f=\"$HOME/.config/omarchy/screen-time/gaps.jsonl\"; printf '%s\\n' \"$1\" >> \"$f\"; tail -n 200 \"$f\" > \"$f.tmp\" && mv -f \"$f.tmp\" \"$f\"", "bash", line];
+        gapProc.running = true;
+    }
+    Process {
+        id: gapProc
+        environment: root.procEnv
+        onExited: root.flushGapLine()
     }
 
     Connections {

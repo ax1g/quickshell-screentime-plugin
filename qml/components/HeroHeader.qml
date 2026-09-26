@@ -19,15 +19,22 @@ Item {
     required property bool hintMode
     required property color accent
     required property color tipBackground
+    // Warning tint for a reached screen limit; "" follows the foreground.
+    required property color urgent
     required property double dayTotal
     required property string activeDayKey
     required property string activeDayLabel
+    // Day view toggle state; the timeline page lives beside the gear.
+    required property string dayView
+    // Hidden timeline hides the toggle with the view it would open.
+    required property bool hideTimeline
     // Daily goal progress from Model.goalProgress; null when the goal is off.
     required property var goalProgress
 
     signal expandToggled
     signal calendarToggled
     signal configToggled
+    signal dayViewToggled
 
     width: parent.width
     height: implicitHeight
@@ -142,6 +149,49 @@ Item {
         // qmllint enable unqualified
     }
 
+    // Day view toggle; sits with the settings gear at the top.
+    Text {
+        id: dayToggle
+        visible: !heroHeader.hideTimeline
+        text: heroHeader.dayView === "timeline" ? "\uf200" : "\uf080"
+        color: dayToggleMouse.containsMouse ? heroHeader.foreground : Qt.darker(heroHeader.foreground, 1.4)
+        font.family: heroHeader.fontFamily
+        font.pixelSize: Style.font.caption
+        anchors.right: configGear.left
+        anchors.rightMargin: visible ? Style.space(8) : 0
+        anchors.verticalCenter: configGear.verticalCenter
+    }
+
+    MouseArea {
+        id: dayToggleMouse
+        visible: dayToggle.visible
+        anchors.fill: dayToggle
+        anchors.margins: -Style.space(4)
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: heroHeader.dayViewToggled()
+
+        // Parented to the toggle's own hit area so the tip centers
+        // above the icon, like the gear's.
+        ScreenTip {
+            foreground: heroHeader.foreground
+            fontFamily: heroHeader.fontFamily
+            tipBackground: heroHeader.tipBackground
+
+            hovered: dayToggleMouse.containsMouse
+            tipText: heroHeader.dayView === "timeline" ? "Show apps donut" : "Show day timeline"
+        }
+    }
+
+    HintBadge {
+        label: "d"
+        fontFamily: heroHeader.fontFamily
+        accent: heroHeader.accent
+        show: heroHeader.hintMode && !heroHeader.hideTimeline
+        anchors.top: dayToggle.top
+        anchors.right: dayToggle.right
+    }
+
     // Config gear; opens the prefs slide-over drawer.
     Text {
         id: configGear
@@ -245,7 +295,7 @@ Item {
         anchors.left: heroIcon.right
         anchors.leftMargin: Style.space(14)
         anchors.right: parent.right
-        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + Style.space(24)
+        anchors.rightMargin: showMoreCorner.implicitWidth + configGear.implicitWidth + (dayToggle.visible ? dayToggle.implicitWidth + Style.space(8) : 0) + Style.space(24)
         anchors.top: parent.top
         spacing: 0
 
@@ -269,9 +319,9 @@ Item {
             width: parent.width
         }
 
-        // Daily goal progress: thin bar plus a remaining/reached caption.
-        // Hidden entirely while the goal is off (goalProgress null). The
-        // spacer keeps the goal block breathing room below the date line.
+        // Screen limit progress: thin bar plus a remaining/reached caption.
+        // Hidden entirely while the limit is off (goalProgress null). The
+        // spacer keeps the limit block breathing room below the date line.
         Item {
             visible: heroHeader.goalProgress !== null
             width: parent.width
@@ -289,14 +339,14 @@ Item {
                 width: parent.width * (heroHeader.goalProgress ? heroHeader.goalProgress.pct / 100 : 0)
                 height: parent.height
                 radius: parent.radius
-                color: heroHeader.goalProgress && heroHeader.goalProgress.reached ? heroHeader.foreground : Qt.rgba(heroHeader.foreground.r, heroHeader.foreground.g, heroHeader.foreground.b, 0.55)
+                color: heroHeader.goalProgress && heroHeader.goalProgress.reached ? heroHeader.urgent : Qt.rgba(heroHeader.foreground.r, heroHeader.foreground.g, heroHeader.foreground.b, 0.55)
             }
         }
 
         Text {
             visible: heroHeader.goalProgress !== null
-            text: heroHeader.goalProgress ? (heroHeader.goalProgress.reached ? "Daily goal reached" : Model.fmt(heroHeader.goalProgress.remainingMs) + " left of " + Model.fmt(heroHeader.goalProgress.goalMs) + " goal") : ""
-            color: Qt.darker(heroHeader.foreground, 1.4)
+            text: heroHeader.goalProgress ? (heroHeader.goalProgress.reached ? "Screen limit reached" : Model.fmt(heroHeader.goalProgress.remainingMs) + " left of " + Model.fmt(heroHeader.goalProgress.goalMs) + " limit") : ""
+            color: heroHeader.goalProgress && heroHeader.goalProgress.reached ? heroHeader.urgent : Qt.darker(heroHeader.foreground, 1.4)
             font.family: heroHeader.fontFamily
             font.pixelSize: Style.font.caption
             elide: Text.ElideRight

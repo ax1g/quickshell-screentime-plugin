@@ -6,6 +6,48 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Know your year at a glance: flip the yearly graph between month bars
+  and a GitHub-style activity heatmap with a toggle icon — your pick,
+  and the scroll position, persist across restarts. The heatmap opens
+  on the current month and mutes future days.
+- Know your day at a glance: flip the panel between the apps donut and
+  a timeline of your session with the toggle by the settings gear —
+  every focus span lands at its time in the session, colored by one of
+  ten categories (Development, Productivity, Communication,
+  Education & Research, Creative, Web Browsing, Social, Entertainment,
+  Gaming, System & Utilities, Other), with session ticks and exact
+  times on hover. An hourly rhythm chart breaks the day into 24 bars
+  with your peak hour called out. Timeline categories collapse to
+  per-site rows, collapsed by default. Browser apps stay grouped in
+  the main view, while the timeline identifies sites from a
+  clean rule set with no adult entries. Your pick persists across
+  restarts.
+- Screen limits replace screen goals: Off/4/6/8/10/12h presets framed
+  as time left, with a warning badge in the bar and a countdown in the
+  hero. Right-click the bar to cycle the total, the time left and the
+  icon. Existing settings carry over untouched.
+- The day timeline hides completely from Settings, toggle icon and all,
+  for a donut-only panel.
+- The timeline names 180+ work, social and entertainment sites, from
+  Linear and Figma to Chess.com and Crunchyroll — everything else still
+  groups under its browser. Flip on per-site rows in Settings to split
+  browsers into one row per site across the donut and the list.
+
+### Changed
+
+- The main panel grows with its content instead of scrolling.
+
+### Fixed
+
+- Daily timeline sessions now keep recording through long focus periods
+  and correctly split at midnight when you switch apps, change tabs, or lock.
+- Yearly retro cards now balance across both columns by measured height
+  instead of piling up on the left.
+- RECHARGE MONTH always crowns the quietest tracked month — no more
+  waiting two weeks for a new month to qualify.
+
 ## [1.6.2] - 2026-09-17
 
 ### Added

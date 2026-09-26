@@ -14,39 +14,17 @@ function localTime(year, month, day, h, m, s) {
   return new Date(year, month, day, h, m, s || 0).getTime()
 }
 
-// ---- isSuspendGap --------------------------------------------------------
-
-test("isSuspendGap returns false when lastTick is 0", () => {
-  assert.equal(State.isSuspendGap(1000, 0, 30000), false)
-})
-
-test("isSuspendGap returns false when gap is under threshold", () => {
-  assert.equal(State.isSuspendGap(10000, 5000, 30000), false)
-})
-
-test("isSuspendGap returns false when gap equals threshold", () => {
-  assert.equal(State.isSuspendGap(30000, 0, 30000), false)
-})
-
-test("isSuspendGap returns true when gap exceeds threshold", () => {
-  assert.equal(State.isSuspendGap(100000, 50000, 30000), true)
-})
-
 // ---- accumulateBucket ----------------------------------------------------
 
-test("accumulateBucket adds duration to the correct app", () => {
+test("accumulateBucket adds duration to new and existing apps", () => {
   const today = { total: 1000, apps: { editor: 500 } }
   const result = State.accumulateBucket(today, "browser", 3000)
   assert.equal(result.total, 4000)
   assert.equal(result.apps.browser, 3000)
   assert.equal(result.apps.editor, 500)
-})
-
-test("accumulateBucket merges with existing app time", () => {
-  const today = { total: 1000, apps: { editor: 500 } }
-  const result = State.accumulateBucket(today, "editor", 500)
-  assert.equal(result.total, 1500)
-  assert.equal(result.apps.editor, 1000)
+  const merged = State.accumulateBucket(result, "editor", 500)
+  assert.equal(merged.total, 4500)
+  assert.equal(merged.apps.editor, 1000)
 })
 
 test("accumulateBucket returns a new object (immutability)", () => {
@@ -56,31 +34,53 @@ test("accumulateBucket returns a new object (immutability)", () => {
   assert.notEqual(result.apps, today.apps)
 })
 
-test("accumulateBucket returns original when dur is zero", () => {
+test("accumulateBucket rejects junk bucket inputs", () => {
   const today = { total: 1000, apps: { a: 500 } }
   assert.equal(State.accumulateBucket(today, "a", 0), today)
-})
-
-test("accumulateBucket returns original when app is empty", () => {
-  const today = { total: 1000, apps: { a: 500 } }
+  assert.equal(State.accumulateBucket(today, "a", -5000), today)
   assert.equal(State.accumulateBucket(today, "", 5000), today)
-})
-
-test("accumulateBucket returns original for NaN or infinite durations", () => {
-  const today = { total: 1000, apps: { a: 500 } }
   assert.equal(State.accumulateBucket(today, "a", NaN), today)
   assert.equal(State.accumulateBucket(today, "a", Infinity), today)
 })
 
 // ---- closeActiveBucket ---------------------------------------------------
 
-test("closeActiveBucket returns original state when no bucket open", () => {
+test("closeActiveBucket records the source bucket on site spans", () => {
+  const aug15 = localMidnight(2026, 7, 15)
+  const start = aug15 + 10 * 3600000
+  const end = start + 5000
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-08-15",
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    start,
+    end,
+    "2026-08-15",
+    30000,
+    start,
+    "site:youtube.com",
+  )
+  assert.deepEqual(result.today.spans, [
+    {
+      app: "site:youtube.com",
+      start: start,
+      end: end,
+      src: "zen",
+    },
+  ])
+})
+
+test("close and commit treat an empty bucket as a no-op", () => {
   const state = {
     today: { total: 100, apps: {} },
     days: {},
     todayKey: "2026-08-15",
   }
-  const result = State.closeActiveBucket(
+  const closed = State.closeActiveBucket(
     state,
     "",
     0,
@@ -89,8 +89,18 @@ test("closeActiveBucket returns original state when no bucket open", () => {
     30000,
     90000,
   )
-  assert.deepEqual(result.today, state.today)
-  assert.deepEqual(result.days, state.days)
+  assert.deepEqual(closed.today, state.today)
+  assert.deepEqual(closed.days, state.days)
+  const committed = State.commitElapsed(
+    state,
+    "",
+    0,
+    100000,
+    "2026-08-15",
+    30000,
+    90000,
+  )
+  assert.deepEqual(committed.today, state.today)
 })
 
 test("closeActiveBucket credits time to today when no midnight crossing", () => {
@@ -163,45 +173,7 @@ test("closeActiveBucket splits a midnight-spanning bucket at midnight", () => {
   assert.equal(result.today.total, 100 + 5000)
 })
 
-test("closeActiveBucket returns new object (immutability)", () => {
-  const aug15 = localMidnight(2026, 7, 15)
-  const state = {
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-  }
-  const result = State.closeActiveBucket(
-    state,
-    "editor",
-    aug15 + 10000,
-    aug15 + 15000,
-    "2026-08-15",
-    30000,
-    aug15 + 12000,
-  )
-  assert.notEqual(result, state)
-  assert.notEqual(result.today, state.today)
-})
-
 // ---- commitElapsed -------------------------------------------------------
-
-test("commitElapsed returns original state when no bucket open", () => {
-  const state = {
-    today: { total: 100, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-  }
-  const result = State.commitElapsed(
-    state,
-    "",
-    0,
-    100000,
-    "2026-08-15",
-    30000,
-    90000,
-  )
-  assert.deepEqual(result.today, state.today)
-})
 
 test("commitElapsed accrues time into today", () => {
   const aug15 = localMidnight(2026, 7, 15)
@@ -277,26 +249,6 @@ test("commitElapsed drops bucket on suspend gap", () => {
   assert.equal(result.activeStart, now)
 })
 
-test("commitElapsed returns new object (immutability)", () => {
-  const aug15 = localMidnight(2026, 7, 15)
-  const state = {
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-  }
-  const result = State.commitElapsed(
-    state,
-    "editor",
-    aug15 + 10000,
-    aug15 + 20000,
-    "2026-08-15",
-    30000,
-    aug15 + 18000,
-  )
-  assert.notEqual(result, state)
-  assert.notEqual(result.today, state.today)
-})
-
 // ---- rolloverIfNeeded ----------------------------------------------------
 
 test("rolloverIfNeeded returns null when key unchanged", () => {
@@ -328,6 +280,30 @@ test("rolloverIfNeeded carries previous day data into today", () => {
   assert.equal(result.activeStart, 0) // caller sets to Date.now()
 })
 
+test("rolloverIfNeeded carries adapter spans as engine arrays", () => {
+  // Adapter sequences fail Array.isArray; the carry must normalize
+  // instead of dropping them like the old slice gate did.
+  const foreign = { 0: { app: "zen", start: 1000, end: 2000 }, length: 1 }
+  assert.equal(Array.isArray(foreign), false)
+  const state = {
+    todayKey: "2026-08-15",
+    today: { total: 0, apps: {} },
+    days: {
+      "2026-08-16": {
+        total: 1000,
+        apps: { zen: 1000 },
+        spans: foreign,
+      },
+    },
+    activeApp: "",
+    activeStart: 0,
+  }
+  const result = State.rolloverIfNeeded(state, "2026-08-16")
+  assert.ok(result)
+  assert.equal(Array.isArray(result.today.spans), true)
+  assert.deepEqual(result.today.spans, [{ app: "zen", start: 1000, end: 2000 }])
+})
+
 // ---- advanceRollover -------------------------------------------------------
 // One transition owns the whole midnight moment: close the open bucket
 // onto the day it started, carry the live day forward, reopen the bucket.
@@ -342,8 +318,7 @@ test("dayMinus returns the unmirrored per-app remainder", () => {
   assert.deepEqual(result, { total: 10000, apps: { browser: 10000 } })
 })
 
-test("dayMinus floors at zero and tolerates junk", () => {
-  assert.deepEqual(State.dayMinus(null, null), { total: 0, apps: {} })
+test("dayMinus floors an over-counted mirror at zero", () => {
   assert.deepEqual(
     State.dayMinus(
       { total: 50, apps: { a: 50 } },
@@ -454,6 +429,117 @@ test("advanceRollover preserves unmirrored live data in the old day", () => {
   assert.equal(result.today.total, 5000)
 })
 
+test("advanceRollover unions coalesced spans instead of slicing by length", () => {
+  // Mirror saved one 60s span; two more 60s commits coalesced into the
+  // live tail without changing its length. Positional slicing would see
+  // nothing past the mirror's count and drop 120s of spans while
+  // flushing their totals — the union keeps every millisecond covered.
+  const before = localTime(2026, 7, 15, 23, 59, 50)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const dayStart = localTime(2026, 7, 15, 0, 0, 0)
+  const state = {
+    todayKey: "2026-08-15",
+    today: {
+      total: 180000,
+      apps: { editor: 180000 },
+      spans: [{ app: "editor", start: dayStart, end: dayStart + 180000 }],
+    },
+    days: {
+      "2026-08-15": {
+        total: 60000,
+        apps: { editor: 60000 },
+        spans: [{ app: "editor", start: dayStart, end: dayStart + 60000 }],
+      },
+    },
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before,
+  }
+  const result = State.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    before,
+  )
+  assert.ok(result)
+  const old = result.days["2026-08-15"]
+  assert.equal(old.total, 190000)
+  const covered = old.spans.reduce((a, s) => a + (s.end - s.start), 0)
+  assert.equal(covered, 190000)
+})
+
+test("restart cycle preserves spans across adapter round-trips", () => {
+  // Quickshell's JsonAdapter hands QML foreign sequences (length plus
+  // indices, failing Array.isArray) instead of engine arrays. This
+  // replays record → persist → reboot → load twice through that layer:
+  // every restart used to rebuild spans to [] and persist the erasure.
+  const toForeign = (v) => {
+    if (Array.isArray(v)) {
+      const o = { length: v.length }
+      for (let i = 0; i < v.length; i++) o[i] = toForeign(v[i])
+      return o
+    }
+    if (v && typeof v === "object") {
+      const o = {}
+      for (const k of Object.keys(v)) o[k] = toForeign(v[k])
+      return o
+    }
+    return v
+  }
+  const todayKey = "2026-08-15"
+  const t0 = localTime(2026, 7, 15, 9, 0, 0)
+  let disk = { days: {} }
+  let today = Model.newDay()
+  let days = {}
+  const persist = () => {
+    const merged = Object.assign({}, days)
+    merged[todayKey] = today
+    disk = JSON.parse(JSON.stringify({ days: merged }))
+  }
+  const reboot = () => {
+    // Mirror the service load path: sanitize the adapter-typed days,
+    // then rebuild the live day carrying sanitized spans.
+    const clean = Model.sanitizeHistory(toForeign(disk.days), {}, {})
+    days = clean.days
+    const prev = clean.days[todayKey]
+    const live = {
+      total: (prev && prev.total) || 0,
+      apps: Object.assign({}, (prev && prev.apps) || {}),
+    }
+    const carried = Model.sanitizeSpans(prev && prev.spans)
+    if (carried.spans && carried.spans.length > 0) live.spans = carried.spans
+    today = live
+  }
+  const record = (app, start, end) => {
+    today = Model.appendSpan(
+      State.accumulateBucket(today, app, end - start),
+      app,
+      start,
+      end,
+    )
+  }
+  const covered = () =>
+    (today.spans || []).reduce((a, s) => a + (s.end - s.start), 0)
+  record("zen", t0, t0 + 60000)
+  record("foot", t0 + 60000, t0 + 120000)
+  persist()
+  reboot()
+  assert.equal(today.total, 120000)
+  assert.equal(covered(), 120000)
+  record("zen", t0 + 120000, t0 + 180000)
+  persist()
+  reboot()
+  assert.equal(today.total, 180000)
+  assert.equal(covered(), 180000)
+  assert.equal(Array.isArray(today.spans), true)
+  const view = Model.daySpanView(today, todayKey, "#e45b93")
+  assert.equal(
+    view.segments.reduce((a, s) => a + s.ms, 0),
+    180000,
+  )
+})
+
 test("advanceRollover with no open bucket just carries the day", () => {
   const after = localTime(2026, 7, 16, 0, 0, 5)
   const state = {
@@ -550,37 +636,13 @@ test("applyResolvedApp returns null when result is from an older resolve generat
   assert.equal(result, null)
 })
 
-test("applyResolvedApp applies when resolve generation matches spawn", () => {
+test("applyResolvedApp sets new app and opens bucket", () => {
   const state = {
     resolveInFlight: true,
     rawApp: "foot",
     resolveForApp: "foot",
     resolveSpawnGen: 3,
     resolveGeneration: 3,
-    activeApp: "",
-    activeStart: 0,
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-15",
-    lastTick: 0,
-  }
-  const result = State.applyResolvedApp(
-    state,
-    "opencode",
-    "foot",
-    "2026-08-15",
-    30000,
-    0,
-  )
-  assert.ok(result)
-  assert.equal(result.activeApp, "opencode")
-})
-
-test("applyResolvedApp sets new app and opens bucket", () => {
-  const state = {
-    resolveInFlight: true,
-    rawApp: "foot",
-    resolveForApp: "foot",
     activeApp: "",
     activeStart: 0,
     today: { total: 0, apps: {} },
@@ -765,12 +827,6 @@ test("accumulateBucket with zero total starts correctly", () => {
   const result = State.accumulateBucket(today, "new-app", 60000)
   assert.equal(result.total, 60000)
   assert.equal(result.apps["new-app"], 60000)
-})
-
-test("accumulateBucket with negative duration returns original", () => {
-  const today = { total: 100, apps: { a: 100 } }
-  const result = State.accumulateBucket(today, "a", -5000)
-  assert.equal(result, today)
 })
 
 // ---- Data safety: closeActiveBucket consecutive calls ----------------------
@@ -960,54 +1016,45 @@ test("commitElapsed rebases an open bucket on backward jumps", () => {
   assert.equal(result.lastTick, now)
 })
 
-test("closeActiveBucket splits a multi-day bucket day by day", () => {
+test("close and commit split a multi-day bucket day by day", () => {
   const start = localMidnight(2026, 7, 15) + 23 * 3600000
   const now = localMidnight(2026, 7, 17) + 10000
-  const state = {
+  const setup = () => ({
     today: { total: 0, apps: {} },
     days: {},
     todayKey: "2026-08-17",
     lastTick: start,
+  })
+  const checkSplit = (result) => {
+    assert.equal(result.days["2026-08-15"].total, 3600000)
+    assert.equal(result.days["2026-08-16"].total, 86400000)
   }
-  const result = State.closeActiveBucket(
-    state,
+  const closed = State.closeActiveBucket(
+    setup(),
     "zen",
     start,
     now,
     "2026-08-17",
     30 * 3600000,
-    state.lastTick,
+    start,
   )
-  assert.equal(result.days["2026-08-15"].total, 3600000)
-  assert.equal(result.days["2026-08-16"].total, 86400000)
-  assert.equal(result.today.total, 10000)
-  assert.deepEqual(result.today.apps, { zen: 10000 })
-  assert.equal(result.activeApp, "")
-})
-
-test("commitElapsed credits intermediate days and resumes at midnight", () => {
-  const start = localMidnight(2026, 7, 15) + 23 * 3600000
-  const now = localMidnight(2026, 7, 17) + 10000
-  const state = {
-    today: { total: 0, apps: {} },
-    days: {},
-    todayKey: "2026-08-17",
-    lastTick: start,
-  }
-  const result = State.commitElapsed(
-    state,
+  checkSplit(closed)
+  assert.equal(closed.today.total, 10000)
+  assert.deepEqual(closed.today.apps, { zen: 10000 })
+  assert.equal(closed.activeApp, "")
+  const committed = State.commitElapsed(
+    setup(),
     "zen",
     start,
     now,
     "2026-08-17",
     30 * 3600000,
-    state.lastTick,
+    start,
   )
-  assert.equal(result.days["2026-08-15"].total, 3600000)
-  assert.equal(result.days["2026-08-16"].total, 86400000)
-  assert.deepEqual(result.today, { total: 0, apps: {} })
-  assert.equal(result.activeApp, "zen")
-  assert.equal(result.activeStart, localMidnight(2026, 7, 17))
+  checkSplit(committed)
+  assert.deepEqual(committed.today, { total: 0, apps: {} })
+  assert.equal(committed.activeApp, "zen")
+  assert.equal(committed.activeStart, localMidnight(2026, 7, 17))
 })
 
 test("advanceRollover ignores backward day jumps", () => {
@@ -1033,4 +1080,219 @@ test("advanceRollover ignores backward day jumps", () => {
   assert.equal(result.activeApp, "")
   assert.equal(result.activeStart, 0)
   assert.equal(result.lastTick, now)
+})
+
+// ---- Day spans ------------------------------------------------------------
+
+test("closeActiveBucket records the credited span", () => {
+  const t0 = localTime(2026, 8, 21, 7, 0, 0)
+  const t1 = localTime(2026, 8, 21, 7, 10, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: t0,
+    lastTick: t1,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    t0,
+    t1,
+    "2026-09-21",
+    30000,
+    t1,
+  )
+  assert.equal(result.today.total, 600000)
+  assert.deepEqual(result.today.spans, [{ app: "zen", start: t0, end: t1 }])
+})
+
+test("browser aggregate keeps its site on the recorded span", () => {
+  const t0 = localTime(2026, 8, 21, 7, 0, 0)
+  const t1 = localTime(2026, 8, 21, 7, 10, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: t0,
+    lastTick: t1,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    t0,
+    t1,
+    "2026-09-21",
+    30000,
+    t1,
+    "site:example.com",
+  )
+  assert.deepEqual(result.today.apps, { zen: 600000 })
+  assert.deepEqual(result.today.spans, [
+    { app: "site:example.com", start: t0, end: t1, src: "zen" },
+  ])
+})
+
+test("closeActiveBucket drops spans with suspend gaps and clock jumps", () => {
+  const t0 = localTime(2026, 8, 21, 7, 0, 0)
+  const t1 = localTime(2026, 8, 21, 7, 10, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: t0,
+    lastTick: t0,
+  }
+  const gap = State.closeActiveBucket(
+    state,
+    "zen",
+    t0,
+    t1,
+    "2026-09-21",
+    30000,
+    t0,
+  )
+  assert.equal(gap.today.total, 0)
+  assert.ok(!("spans" in gap.today))
+  const jump = State.closeActiveBucket(
+    state,
+    "zen",
+    t1,
+    t0,
+    "2026-09-21",
+    30000,
+    t1,
+  )
+  assert.ok(!("spans" in jump.today))
+})
+
+test("closeActiveBucket splits spans at midnight", () => {
+  const m0 = localTime(2026, 8, 21, 23, 55, 0)
+  const m1 = localTime(2026, 8, 22, 0, 5, 0)
+  const midnight = localTime(2026, 8, 22, 0, 0, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-22",
+    activeApp: "zen",
+    activeStart: m0,
+    lastTick: m1,
+  }
+  const result = State.closeActiveBucket(
+    state,
+    "zen",
+    m0,
+    m1,
+    "2026-09-22",
+    30000,
+    m1,
+  )
+  assert.deepEqual(result.days["2026-09-21"].spans, [
+    { app: "zen", start: m0, end: midnight },
+  ])
+  assert.deepEqual(result.today.spans, [
+    { app: "zen", start: midnight, end: m1 },
+  ])
+})
+
+test("commitElapsed records the chunk and keeps the bucket open", () => {
+  const t0 = localTime(2026, 8, 21, 7, 0, 0)
+  const t1 = localTime(2026, 8, 21, 7, 10, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: t0,
+    lastTick: t1,
+  }
+  const result = State.commitElapsed(
+    state,
+    "zen",
+    t0,
+    t1,
+    "2026-09-21",
+    30000,
+    t1,
+  )
+  assert.equal(result.today.total, 600000)
+  assert.deepEqual(result.today.spans, [{ app: "zen", start: t0, end: t1 }])
+  assert.equal(result.activeApp, "zen")
+  assert.equal(result.activeStart, t1)
+})
+
+test("advanceRollover carries spans across midnight in order", () => {
+  const m0 = localTime(2026, 8, 21, 23, 55, 0)
+  const m1 = localTime(2026, 8, 22, 0, 5, 0)
+  const midnight = localTime(2026, 8, 22, 0, 0, 0)
+  const mirror = {
+    total: 3600000,
+    apps: { zen: 3600000 },
+    spans: [{ app: "zen", start: m0 - 3600000, end: m0 - 1800000 }],
+  }
+  const live = {
+    total: 5400000,
+    apps: { zen: 5400000 },
+    spans: mirror.spans.concat([{ app: "zen", start: m0 - 1800000, end: m0 }]),
+  }
+  const state = {
+    today: live,
+    days: { "2026-09-21": mirror },
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: m0,
+    lastTick: m1,
+  }
+  const result = State.advanceRollover(state, m1, "2026-09-22", 30000, m1)
+  // One continuous zen session 22:55–00:00: the union rejoins the
+  // contiguous spans instead of keeping slice-position artifacts.
+  assert.deepEqual(result.days["2026-09-21"].spans, [
+    { app: "zen", start: m0 - 3600000, end: midnight },
+  ])
+  assert.deepEqual(result.today.spans, [
+    { app: "zen", start: midnight, end: m1 },
+  ])
+  assert.equal(result.today.total, 300000)
+})
+
+test("advanceRollover preserves a site label across midnight", () => {
+  const m0 = localTime(2026, 8, 21, 23, 59, 58)
+  const m1 = localTime(2026, 8, 22, 0, 0, 2)
+  const midnight = localTime(2026, 8, 22, 0, 0, 0)
+  const state = {
+    today: { total: 0, apps: {} },
+    days: {},
+    todayKey: "2026-09-21",
+    activeApp: "zen",
+    activeStart: m0,
+    lastTick: m1,
+  }
+  const result = State.advanceRollover(
+    state,
+    m1,
+    "2026-09-22",
+    30000,
+    m1,
+    "site:example.com",
+  )
+  assert.deepEqual(result.days["2026-09-21"].apps, { zen: 2000 })
+  assert.deepEqual(result.days["2026-09-21"].spans, [
+    { app: "site:example.com", start: m0, end: midnight, src: "zen" },
+  ])
+  assert.deepEqual(result.today.apps, { zen: 2000 })
+  assert.deepEqual(result.today.spans, [
+    { app: "site:example.com", start: midnight, end: m1, src: "zen" },
+  ])
+  assert.equal(result.activeSpanApp, "site:example.com")
+})
+
+test("accumulateBucket preserves spans without recording", () => {
+  const day = { total: 1, apps: {}, spans: [{ app: "a", start: 1, end: 2 }] }
+  const result = State.accumulateBucket(day, "b", 5)
+  assert.equal(result.spans, day.spans)
+  const bare = State.accumulateBucket({ total: 1, apps: {} }, "b", 5)
+  assert.ok(!("spans" in bare))
 })

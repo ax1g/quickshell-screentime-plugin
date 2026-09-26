@@ -23,6 +23,8 @@ TestCase {
         accent: "#e45b93"
         urgent: "#ff5555"
         hideYearly: false
+        hideTimeline: false
+        expandBrowser: false
         hideDailyInsights: false
         hideYearInsights: false
         weekCount: 12
@@ -90,18 +92,15 @@ TestCase {
     }
 
     function test_dangerButtonsWarnOnHover() {
-        mouseMove(menu, 0, 0);
-        wait(1);
         var labels = ["RESET", "WIPE ALL"];
         for (var i = 0; i < labels.length; i++) {
             var label = labels[i];
             var button = findText(label);
             verify(button !== null, label + " exists");
-            verify(!button.parent.warning, label + " is neutral while idle");
+            compare(button.parent.parent.parent.stage, 0, label + " starts idle");
             mouseMove(button.parent, button.parent.width / 2, button.parent.height / 2);
             verify(button.parent.warning, label + " warns on hover");
         }
-        mouseMove(menu, 0, 0);
     }
 
     function collect(item, out) {
@@ -167,6 +166,8 @@ TestCase {
         var t = findText("Yearly overview");
         verify(t !== null, "toggle label exists");
         verify(t !== null && t.height > 0 && ancestorsOccupy(t), "toggle row occupies");
+        var expand = findText("Expand browsers by site");
+        verify(expand !== null && expand.height > 0 && ancestorsOccupy(expand), "expand row occupies");
     }
 
     function test_resetButtonOccupies() {
