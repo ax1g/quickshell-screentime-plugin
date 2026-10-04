@@ -15,13 +15,13 @@ import "../js/State.js" as State
 Item {
     id: root
 
-    // Injected by omarchy-shell.
+    // Injected by the host shell.
     property var shell: null
     // Passed explicitly; QML JS modules don't share imports.
     readonly property var stateModel: Model
 
     readonly property string home: Quickshell.env("HOME")
-    readonly property string dataDir: home + "/.config/omarchy/screen-time"
+    readonly property string dataDir: home + "/.local/state/agx-shell/screen-time"
     readonly property string historyPath: dataDir + "/history.json"
     // Shared process env (HOME for ~ expansion). Typed var so the
     // Map-vs-Hash literal inference stays in one audited place.
@@ -80,8 +80,7 @@ Item {
     property int resolveSpawnGen: 0
     property bool ready: false
     property bool startupPhase: true
-    // Mirrors omarchy's first-party session services (omarchy.lock,
-    // omarchy.idle) so tracking pauses during lock/screensaver without
+    // Mirrors the host lock service so tracking pauses while locked without
     // touching the compositor or spawning helpers on the hot path.
     // startedAt timestamps only report pause durations in debug logs.
     property bool sessionLocked: false
@@ -460,7 +459,7 @@ Item {
     Process {
         id: ensureDirProc
         environment: root.procEnv
-        command: ["bash", "-c", "mkdir -p \"$HOME/.config/omarchy/screen-time\"; f=\"$HOME/.config/omarchy/screen-time/history.json\"; [[ -f \"$f\" ]] || printf '{}\\n' > \"$f\""]
+        command: ["bash", "-c", "mkdir -p \"$HOME/.local/state/agx-shell/screen-time\"; f=\"$HOME/.local/state/agx-shell/screen-time/history.json\"; [[ -f \"$f\" ]] || printf '{}\\n' > \"$f\""]
         onExited: historyFile.reload()
     }
 
@@ -486,7 +485,7 @@ Item {
     Process {
         id: backupProc
         environment: root.procEnv
-        command: ["bash", "-c", "f=\"$HOME/.config/omarchy/screen-time/history.json\"; if [[ -s \"$f\" ]]; then if command -v python3 >/dev/null 2>&1 && python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then :; else mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi; fi"]
+        command: ["bash", "-c", "f=\"$HOME/.local/state/agx-shell/screen-time/history.json\"; if [[ -s \"$f\" ]]; then if command -v python3 >/dev/null 2>&1 && python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \"$f\" 2>/dev/null; then :; else mv -f \"$f\" \"$f.corrupt-$(date +%s)\"; fi; fi"]
         onExited: {
             // Unblock writes; queued state persists on the next tick.
             root.backupPending = false;
@@ -541,15 +540,18 @@ Item {
     }
 
     // ---- Session pause (lock / screensaver) ----------------------------------
-    // Lock state comes from omarchy.lock at the source instead of polling
+    // Lock state comes from the host lock service instead of polling
     // loginctl, so lock/unlock needs no extra process spawning. The shell's
-    // service registry fills asynchronously; lookups retry until both
-    // services resolve, transitions are event-driven afterward.
+    // service registry fills asynchronously; lookups retry until the lock
+    // service resolves, transitions are event-driven afterward.
     function refreshShellServices() {
         if (!root.shell)
             return;
-        root.lockService = root.shell.serviceFor("omarchy.lock");
-        root.idleService = root.shell.serviceFor("omarchy.idle");
+        root.lockService = root.shell.serviceFor("agx.lock");
+        // The host idle service is optional: keep it only when it carries
+        // the screensaver signals, so the Connections below stay quiet.
+        var idle = root.shell.serviceFor("agx.idle");
+        root.idleService = idle && ("screensaverStartedThisCycle" in idle || "screensaverWindowCount" in idle) ? idle : null;
         if (root.lockService) {
             root.setSessionLocked(root.lockService.locked);
             // Event-driven source wins once reachable; stop the fallback
@@ -558,7 +560,7 @@ Item {
         }
         if (root.idleService)
             root.setScreensaverActive(root.idleService.screensaverStartedThisCycle || root.idleService.screensaverWindowCount > 0);
-        if (root.lockService && root.idleService) {
+        if (root.lockService) {
             serviceLookupTimer.stop();
             root.serviceLookupWarned = false;
         }
@@ -656,7 +658,7 @@ Item {
         id: serviceLookupTimer
         interval: 250
         repeat: true
-        running: root.ready && (!root.lockService || !root.idleService)
+        running: root.ready && !root.lockService
         property int attempts: 0
         onTriggered: {
             root.refreshShellServices();
@@ -665,7 +667,7 @@ Item {
                 // Sandboxed serviceFor may never resolve these (scoped to a
                 // plugin's own service). Warn once instead of failing silent.
                 root.serviceLookupWarned = true;
-                console.warn("agx.screen-time: omarchy.lock/omarchy.idle services unavailable after 10s; " + "falling back to a persistent lock watcher (~10s pause accuracy)");
+                console.warn("agx.screen-time: lock service unavailable after 10s; tracking continues without lock pause");
             }
         }
     }

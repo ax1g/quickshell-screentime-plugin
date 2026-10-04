@@ -13,8 +13,8 @@ const service = fs.readFileSync(
 test("service tracks lock and screensaver state", () => {
   assert.match(service, /property bool sessionLocked: false/)
   assert.match(service, /property bool screensaverActive: false/)
-  assert.match(service, /serviceFor\("omarchy\.lock"\)/)
-  assert.match(service, /serviceFor\("omarchy\.idle"\)/)
+  assert.match(service, /serviceFor\("agx\.lock"\)/)
+  assert.match(service, /serviceFor\("agx\.idle"\)/)
   assert.match(service, /function setSessionLocked\(locked\)/)
   assert.match(service, /function setScreensaverActive\(active\)/)
 })
@@ -109,7 +109,7 @@ test("resume after pause is deferred and re-validated", () => {
 })
 
 test("warns once instead of failing silently when services never appear", () => {
-  assert.match(service, /services unavailable after 10s/)
+  assert.match(service, /lock service unavailable after 10s/)
 })
 
 test("tracking prefs filter ignored apps and rename via aliases", () => {
