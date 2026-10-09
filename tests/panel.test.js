@@ -182,7 +182,7 @@ test("week total mode persists instead of resetting on dismiss", () => {
 test("busiest week trophy color defaults to gold and persists via setting", () => {
   assert.match(
     panel,
-    /Model\.themeSwatches\(Color\.accent, Color\.foreground, Color\.muted\)/,
+    /Model\.themeSwatches\(Commons\.Color\.accent, Commons\.Color\.foreground, Commons\.Color\.muted\)/,
   )
   assert.match(
     panel,
@@ -207,7 +207,7 @@ test("hero icon color overrides hourglass, yearly and config glyphs", () => {
   const drawer = qml("YearDrawer.qml")
   assert.match(
     panel,
-    /Model\.themeSwatches\(Color\.accent, Color\.foreground, Color\.muted\)/,
+    /Model\.themeSwatches\(Commons\.Color\.accent, Commons\.Color\.foreground, Commons\.Color\.muted\)/,
   )
   assert.match(
     panel,
@@ -789,7 +789,7 @@ test("main surfaces badge hint letters", () => {
   assert.match(hero, /required property bool hintMode/)
   assert.match(hero, /required property color accent/)
   assert.match(panel, /hintMode: root\.hintMode/)
-  assert.match(panel, /accent: Color\.accent/)
+  assert.match(panel, /accent: Commons\.Color\.accent/)
   assert.match(trend, /required property bool hintMode/)
   for (const tag of ['label: "y"', 'label: "c"', 'label: "m"']) {
     assert.match(hero, new RegExp(tag))
@@ -1084,7 +1084,7 @@ test("year pager, back buttons and gear carry tooltips", () => {
   assert.match(hero, /tipText: "Settings"/)
   assert.match(
     panel,
-    /tipBackground: root\.bar \? root\.bar\.background : Color\.background/,
+    /tipBackground: root\.bar \? root\.bar\.background : Commons\.Color\.background/,
   )
 })
 test("week header nudges the next arrow after the range text", () => {

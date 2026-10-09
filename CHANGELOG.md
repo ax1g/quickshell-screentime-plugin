@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Theme colors remain correct after upgrading to Qt 6.12.
+
 ## [1.6.2] - 2026-09-17
 
 ### Added

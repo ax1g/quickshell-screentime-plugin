@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "../js/Model.js" as Model
 
@@ -58,7 +59,7 @@ Panel {
     // the default so old installs keep it. A stored pick stays selected
     // across theme switches (the menu shows it as a custom slot).
     readonly property string recordDefaultColor: "#ffd700"
-    readonly property var recordColorOptions: Model.themeSwatches(Color.accent, Color.foreground, Color.muted)
+    readonly property var recordColorOptions: Model.themeSwatches(Commons.Color.accent, Commons.Color.foreground, Commons.Color.muted)
     readonly property string recordColor: Model.pickSwatch(root.prefs.recordColor, root.recordDefaultColor)
 
     function selectRecordColor(color) {
@@ -72,7 +73,7 @@ Panel {
     // foreground, so old installs keep it. Stored picks survive theme
     // switches like the trophy color above.
     readonly property string heroDefaultColor: ""
-    readonly property var heroColorOptions: Model.themeSwatches(Color.accent, Color.foreground, Color.muted)
+    readonly property var heroColorOptions: Model.themeSwatches(Commons.Color.accent, Commons.Color.foreground, Commons.Color.muted)
     readonly property string heroColor: Model.pickSwatch(root.prefs.heroColor, root.heroDefaultColor)
 
     function selectHeroColor(color) {
@@ -194,7 +195,7 @@ Panel {
     readonly property int oldestDataYear: serviceReady ? Model.firstDataYear(root.days, root.months, root.years) : root.todayYear
     // Header total, month bars and retro cards share one year merge.
     // Skipped entirely while hidden; the drawer cannot open either.
-    readonly property var yearView: serviceReady && !root.hideYearly ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Color.accent) : null
+    readonly property var yearView: serviceReady && !root.hideYearly ? Model.yearView(root.days, root.months, root.years, root.currentYear, root.todayKey, Commons.Color.accent) : null
     readonly property string calendarYearTotal: root.yearView ? root.yearView.totalLabel : "0h"
     readonly property var yearFacts: root.yearView ? root.yearView.facts : []
     readonly property var yearMonths: root.yearView ? root.yearView.months : []
@@ -217,9 +218,9 @@ Panel {
 
     // Donut shows the grouped view; the legend expands inline.
     readonly property var segments: Model.arcSegments(root.groupedApps)
-    readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Color.accent)
+    readonly property var sliceColors: Model.sliceColors(root.groupedApps.length, Commons.Color.accent)
     readonly property int groupedCount: root.groupedApps.length
-    readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Color.accent) : Color.accent
+    readonly property color otherColor: root.groupedCount > 0 ? (root.sliceColors[root.groupedCount - 1] || Commons.Color.accent) : Commons.Color.accent
 
     // Donut diameter; also sizes the donut+legend row.
     readonly property real ringSize: Style.space(116)
@@ -228,7 +229,7 @@ Panel {
     readonly property real legendMaxHeight: Style.space(140)
 
     // Guarded so the widget renders before the bar is injected.
-    readonly property color contentForeground: bar ? bar.foreground : Color.foreground
+    readonly property color contentForeground: bar ? bar.foreground : Commons.Color.foreground
     readonly property string contentFontFamily: bar ? bar.fontFamily : Style.font.family
 
     function open() {
@@ -477,8 +478,8 @@ Panel {
                     id: yearDrawer
                     foreground: root.contentForeground
                     fontFamily: root.contentFontFamily
-                    panelBackground: root.bar ? root.bar.background : Color.background
-                    accent: Color.accent
+                    panelBackground: root.bar ? root.bar.background : Commons.Color.background
+                    accent: Commons.Color.accent
                     heroColor: root.heroColor
                     easterEggs: !root.hideEasterEggs
                     currentYear: root.currentYear
@@ -525,7 +526,7 @@ Panel {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: root.bar ? root.bar.background : Color.background
+                    color: root.bar ? root.bar.background : Commons.Color.background
                     radius: Style.space(6)
                 }
 
@@ -622,7 +623,7 @@ Panel {
                         foreground: root.contentForeground
                         fontFamily: root.contentFontFamily
                         tipText: "Back to screen time"
-                        tipBackground: root.bar ? root.bar.background : Color.background
+                        tipBackground: root.bar ? root.bar.background : Commons.Color.background
                         onClicked: root.openConfig(false)
                     }
 
@@ -631,7 +632,7 @@ Panel {
                     HintBadge {
                         label: configMenu.hintTag(configMenu.hintItems, "back", 0)
                         fontFamily: root.contentFontFamily
-                        accent: Color.accent
+                        accent: Commons.Color.accent
                         show: root.hintMode && label !== ""
                         anchors.top: configBack.top
                         anchors.right: configBack.right
@@ -660,8 +661,8 @@ Panel {
                             id: configMenu
                             foreground: root.contentForeground
                             fontFamily: root.contentFontFamily
-                            accent: Color.accent
-                            urgent: Color.urgent
+                            accent: Commons.Color.accent
+                            urgent: Commons.Color.urgent
                             onBackRequested: root.openConfig(false)
                             hideYearly: root.hideYearly
                             hideDailyInsights: root.hideDailyInsights
@@ -773,8 +774,8 @@ Panel {
                         activeDayLabel: root.activeDayLabel
                         goalProgress: root.goalProgress
                         hintMode: root.hintMode
-                        accent: Color.accent
-                        tipBackground: root.bar ? root.bar.background : Color.background
+                        accent: Commons.Color.accent
+                        tipBackground: root.bar ? root.bar.background : Commons.Color.background
                         onExpandToggled: root.toggleExpanded()
                         onCalendarToggled: root.openCalendar(!root.calendarOpen)
                         onConfigToggled: root.openConfig(!root.configOpen)
@@ -841,7 +842,7 @@ Panel {
                             dayTotal: root.dayTotal
                             foreground: root.contentForeground
                             fontFamily: root.contentFontFamily
-                            accent: Color.accent
+                            accent: Commons.Color.accent
                         }
 
                         AppLegend {
@@ -857,7 +858,7 @@ Panel {
                             otherColor: root.otherColor
                             foreground: root.contentForeground
                             fontFamily: root.contentFontFamily
-                            accent: Color.accent
+                            accent: Commons.Color.accent
                             maxHeight: root.legendMaxHeight
                         }
                     }
@@ -884,8 +885,8 @@ Panel {
                             WeekTrend {
                                 foreground: root.contentForeground
                                 fontFamily: root.contentFontFamily
-                                tipBackground: root.bar ? root.bar.background : Color.background
-                                accent: Color.accent
+                                tipBackground: root.bar ? root.bar.background : Commons.Color.background
+                                accent: Commons.Color.accent
                                 weekOffset: root.weekOffset
                                 maxOffset: root.maxWeekOffset
                                 hasPrevWeekData: root.hasPrevWeekData
@@ -919,8 +920,8 @@ Panel {
                                 rows: root.insightRows
                                 foreground: root.contentForeground
                                 fontFamily: root.contentFontFamily
-                                accent: Color.accent
-                                urgent: Color.urgent
+                                accent: Commons.Color.accent
+                                urgent: Commons.Color.urgent
                             }
                         }
                     }

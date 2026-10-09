@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 
 // Fact card; height fits content so neighbours never stretch it.
 Rectangle {
@@ -12,7 +13,7 @@ Rectangle {
     readonly property string label: String(modelData.label || "")
     readonly property string stat: String(modelData.value || "")
     readonly property string oneLiner: String(modelData.sub || "")
-    readonly property string accent: String(modelData.color || Color.accent)
+    readonly property string accent: String(modelData.color || Commons.Color.accent)
 
     width: parent.width
     implicitHeight: cardColumn.implicitHeight + Style.space(20)
