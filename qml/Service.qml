@@ -219,7 +219,12 @@ Item {
             return;
         var now = Date.now();
         applyState(State.closeActiveBucket(root, root.activeApp, root.activeStart, now, root.todayKey, root.suspendGapMs, root.lastTick));
-        root.persist();
+        // Coalesce: a multi-monitor workspace switch fires a dozen focus
+        // events within a few ms, and each persist() re-merges the whole
+        // history (and re-derives the Panel's week/year views). One deferred
+        // persist per burst keeps the shell responsive; the file save is
+        // already debounced separately via scheduleSave.
+        persistTimer.restart();
         var tl = ToplevelManager.activeToplevel;
         var app = tl && tl.appId ? tl.appId : "";
         root.rawApp = app;
@@ -351,6 +356,13 @@ Item {
         }
         root.days = ret.days;
         historyAdapter.days = ret.days;
+    }
+
+    Timer {
+        id: persistTimer
+        interval: 40
+        repeat: false
+        onTriggered: root.persist()
     }
 
     // Failure streak; any scheduled save resets it.
