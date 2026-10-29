@@ -214,9 +214,11 @@ function commitElapsed(
 }
 
 // Carry the live bucket into a new calendar day; null when unneeded.
-function rolloverIfNeeded(state, newKey) {
+// advanceRollover passes `model`: the object it rolls over comes from
+// closeActiveBucket and has no stateModel, and in QML Model is null.
+function rolloverIfNeeded(state, newKey, model) {
   if (newKey === state.todayKey) return null
-  var model = modelFor(state)
+  model = model || modelFor(state)
   var prev = state.days[newKey]
   var newToday =
     prev && typeof prev === "object"
@@ -257,7 +259,7 @@ function advanceRollover(state, now, newKey, suspendGapMs, lastTick) {
     suspendGapMs,
     lastTick,
   )
-  var patch = rolloverIfNeeded(closed, newKey)
+  var patch = rolloverIfNeeded(closed, newKey, modelFor(state))
   patch.activeApp = app
   patch.activeStart = app ? now : 0
   // Carry the split-off yesterday portion along or lose it.
