@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Time around midnight is no longer lost when an app is focused as the day rolls over.
+
 ## [1.6.2] - 2026-09-17
 
 ### Added

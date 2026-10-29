@@ -2,6 +2,9 @@
 
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
+const fs = require("node:fs")
+const path = require("node:path")
+const vm = require("node:vm")
 const State = require("../js/State.js")
 const Model = require("../js/Model.js")
 
@@ -476,6 +479,46 @@ test("advanceRollover with no open bucket just carries the day", () => {
   assert.equal(result.today.total, 0)
   assert.equal(result.activeApp, "")
   assert.equal(result.activeStart, 0)
+})
+
+// QML gives State.js no `module`, and its hoisted `var Model` hides the
+// importer's Model, so there the module-level Model is null and only
+// state.stateModel (set by Service.qml) works. require() never shows this.
+function loadStateLikeQml() {
+  const ctx = vm.createContext({})
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, "..", "js", "State.js"), "utf8"),
+    ctx,
+  )
+  return ctx
+}
+
+test("advanceRollover rolls an open bucket over when Model is null (QML)", () => {
+  const QmlState = loadStateLikeQml()
+  assert.equal(QmlState.Model, null)
+  const before = localTime(2026, 7, 15, 23, 59, 50)
+  const after = localTime(2026, 7, 16, 0, 0, 5)
+  const state = {
+    stateModel: Model,
+    todayKey: "2026-08-15",
+    today: { total: 1000, apps: { editor: 1000 } },
+    days: {},
+    activeApp: "editor",
+    activeStart: before,
+    lastTick: before,
+  }
+  const result = QmlState.advanceRollover(
+    state,
+    after,
+    "2026-08-16",
+    30000,
+    before,
+  )
+  assert.equal(result.todayKey, "2026-08-16")
+  assert.equal(result.days["2026-08-15"].total, 11000)
+  assert.equal(result.today.total, 5000)
+  assert.equal(result.activeApp, "editor")
+  assert.equal(result.activeStart, after)
 })
 
 test("rolloverIfNeeded starts empty when no previous day data", () => {
