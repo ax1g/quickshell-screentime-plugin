@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The screen-time popup opens correctly on current Omarchy shells.
+
 ## [1.6.2] - 2026-09-17
 
 ### Added

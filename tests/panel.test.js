@@ -1096,3 +1096,11 @@ test("week header nudges the next arrow after the range text", () => {
   assert.match(trend, /recordTrophy\.visible \? recordTrophy\.implicitWidth/)
   assert.doesNotMatch(trend, /space\(76\)/)
 })
+
+test("panel loader stays visible so its popup window can map", () => {
+  const widget = qml("BarWidget.qml")
+  const loader = widget.match(
+    /Loader\s*\{[\s\S]*?id: panelLoader[\s\S]*?onLoaded:/,
+  )[0]
+  assert.doesNotMatch(loader, /visible:\s*false/)
+})
