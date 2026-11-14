@@ -169,7 +169,6 @@ BarWidget {
         id: panelLoader
         active: true
         source: Qt.resolvedUrl("Panel.qml")
-        visible: false
         onLoaded: {
             root.injectPanel();
             Qt.callLater(root.injectPanel);
